@@ -1,0 +1,35 @@
+{
+  "name": "@crm/automation",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\"",
+    "trigger:dev": "trigger dev",
+    "trigger:deploy": "trigger deploy"
+  },
+  "dependencies": {
+    "@crm/config": "workspace:*",
+    "@crm/core": "workspace:*",
+    "@crm/db": "workspace:*",
+    "@crm/observability": "workspace:*",
+    "@trigger.dev/sdk": "4.7.2",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@crm/eslint-config": "workspace:*",
+    "@crm/tsconfig": "workspace:*",
+    "@trigger.dev/build": "4.7.2",
+    "@trigger.dev/core": "4.7.2",
+    "@types/node": "^24",
+    "eslint": "9.39.2",
+    "trigger.dev": "4.7.2",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}

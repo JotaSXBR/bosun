@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.next/
+out/
+build/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# misc
+.DS_Store
+*.log
+.vercel
+
+# trigger.dev self-host checkout
+.trigger-selfhost/

@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: development
+  APP_URL: http://localhost:3000
+  DATABASE_URL: postgres://crm_app:crm_app@localhost:5432/crm
+  DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/crm
+  BETTER_AUTH_SECRET: ci-secret-ci-secret-ci-secret-ci
+  STORAGE_S3_ENDPOINT: http://localhost:9000
+  STORAGE_S3_REGION: us-east-1
+  STORAGE_S3_BUCKET: crm
+  STORAGE_S3_ACCESS_KEY_ID: rustfsadmin
+  STORAGE_S3_SECRET_ACCESS_KEY: rustfsadmin
+  STORAGE_S3_FORCE_PATH_STYLE: "true"
+  EMAIL_PROVIDER: console
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run lint typecheck test build
+
+  integration:
+    needs: quality
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg18-trixie
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: crm
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d crm"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Start RustFS (local S3)
+        run: |
+          docker run -d --name rustfs \
+            -p 9000:9000 \
+            -e RUSTFS_ACCESS_KEY=rustfsadmin \
+            -e RUSTFS_SECRET_KEY=rustfsadmin \
+            -e RUSTFS_ADDRESS=:9000 \
+            rustfs/rustfs:1.0.0 /data
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:9000/health/live && exit 0 || sleep 1
+          done
+          echo "RustFS did not become healthy" && exit 1
+
+      - name: Create crm_app role (same script as docker-compose init)
+        run: |
+          PG_CONTAINER=$(docker ps --filter "ancestor=pgvector/pgvector:0.8.7-pg18-trixie" -q | head -1)
+          docker cp docker/postgres/init/01-app-role.sh "$PG_CONTAINER":/tmp/01-app-role.sh
+          docker exec \
+            -e POSTGRES_USER=postgres -e POSTGRES_DB=crm -e CRM_APP_PASSWORD=crm_app \
+            "$PG_CONTAINER" sh /tmp/01-app-role.sh
+
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+      - run: pnpm storage:init
+      - run: pnpm test:integration
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: pnpm test:e2e
+        working-directory: apps/web
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          if-no-files-found: ignore

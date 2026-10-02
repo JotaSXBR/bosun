@@ -1,0 +1,52 @@
+{
+  "message": {
+    "event": "message",
+    "session": "default",
+    "timestamp": 1704067200000,
+    "payload": {
+      "id": "false_1234567890@c.us_ABC123",
+      "timestamp": 1704067200,
+      "from": "1234567890@c.us",
+      "to": "9876543210@c.us",
+      "body": "Hello World!",
+      "fromMe": false,
+      "hasMedia": false,
+      "notifyName": "Alice"
+    }
+  },
+  "messageFromMe": {
+    "event": "message",
+    "session": "default",
+    "timestamp": 1704067200000,
+    "payload": {
+      "id": "true_9876543210@c.us_XYZ",
+      "from": "9876543210@c.us",
+      "fromMe": true,
+      "body": "outgoing"
+    }
+  },
+  "ackDelivered": {
+    "event": "message.ack",
+    "session": "default",
+    "timestamp": 1704067200000,
+    "payload": { "id": "false_1234567890@c.us_ABC123", "ack": 2 }
+  },
+  "ackFailed": {
+    "event": "message.ack",
+    "session": "default",
+    "timestamp": 1704067200000,
+    "payload": { "id": "false_1234567890@c.us_ABC123", "ack": -1 }
+  },
+  "sessionStatus": {
+    "event": "session.status",
+    "session": "default",
+    "timestamp": 1704067200000,
+    "payload": { "name": "default", "status": "WORKING" }
+  },
+  "unknown": {
+    "event": "engine.event",
+    "session": "default",
+    "timestamp": 1704067200000,
+    "payload": {}
+  }
+}

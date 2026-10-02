@@ -1,0 +1,30 @@
+{
+  "name": "@crm/storage",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\"",
+    "init-bucket": "node --experimental-transform-types src/init-bucket.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1146.0",
+    "@aws-sdk/s3-request-presigner": "3.1146.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@crm/config": "workspace:*",
+    "@crm/eslint-config": "workspace:*",
+    "@crm/tsconfig": "workspace:*",
+    "@types/node": "^24",
+    "eslint": "9.39.2",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}

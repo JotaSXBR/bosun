@@ -1,0 +1,139 @@
+# AGENTS.md
+
+Guidance for AI agents and contributors working on this repo.
+
+## What this is
+
+Multi-tenant SaaS CRM — a **modular monolith**: one Next.js app + Trigger.dev
+background jobs + shared `@crm/*` packages. pnpm/Turborepo monorepo.
+
+## Architecture & layering
+
+```
+UI (React) → Server Action / Route Handler → @crm/core service → repository → Postgres
+```
+
+- `apps/web` — Next.js 16 app (UI, Server Actions, API routes, auth handler).
+- `packages/core` — domain modules (organizations, audit). No provider SDKs.
+- `packages/db` — Drizzle schema, client, `withTenant`/`withPlatformScope`.
+- `packages/auth` — Better Auth composition (organization + admin plugins).
+- `packages/permissions` — role/permission matrix (single source of truth).
+- `packages/config` — Zod-parsed env (`getServerEnv`, `isConfigured`).
+- `packages/observability` — JSON logger + `captureException` facade.
+- `packages/channels|billing|storage|email|ai` — provider abstractions;
+  provider-specific code lives only in `src/adapters/*`.
+- `packages/automation` — Trigger.dev tasks + enqueue helpers.
+- `packages/ui` — shadcn components.
+- `tooling/*` — shared tsconfig/eslint/prettier.
+
+Dependency direction: app → core/providers → db/config/permissions. Never
+import an adapter outside its registry factory. The only `switch` on provider
+kind is each package's `create*Provider`.
+
+## Commands
+
+`pnpm install` · `pnpm dev` · `pnpm build` · `pnpm lint` · `pnpm typecheck` ·
+`pnpm test` (unit) · `pnpm test:integration` (needs infra) · `pnpm test:e2e`
+(playwright) · `pnpm infra:up|down` · `pnpm db:generate|migrate|seed|studio` ·
+`pnpm storage:init` · `pnpm jobs:dev` (Trigger.dev dev)
+
+## Code rules
+
+- Strict TypeScript, **no `any`**, no speculative abstractions.
+- Zod-validate every external payload (webhooks, provider responses, action
+  inputs).
+- Server Actions return `{ ok: true, ... } | { ok: false, error: string }`;
+  never throw raw errors to the client.
+- Explicit, readable code; imports only via each module's index exports.
+
+## Database & migrations
+
+1. Edit `packages/db/src/schema/*` → `pnpm db:generate` → review SQL →
+   `pnpm db:migrate`.
+2. Never edit an already-applied migration; RLS policies and grants are done
+   via custom migrations (see `packages/db/migrations`).
+3. New tenant-owned table checklist: `organization_id` column + `pgPolicy` on
+   `app.organization_id` + `.enableRLS()` + migration granting to `crm_app` +
+   integration test proving cross-org isolation.
+
+## Security rules (non-negotiable)
+
+- Tenant isolation is application-layer primary + Postgres RLS as
+  defense-in-depth. **Never accept `organizationId` from the client** — it
+  comes from the session's active organization.
+- `withPlatformScope` only after a platform-admin check.
+- Webhooks: `verifyWebhook` on the raw body BEFORE parsing. Provider secrets
+  live in env only.
+- No secrets/PII in logs; logger redacts token/secret/password keys anyway.
+- AI agents reach capabilities only through permissioned tools — never a DB
+  handle.
+- Uploads only via `tenantObjectKey(organizationId, ...)`.
+- Errors in domain/packages go through `captureException` — never Sentry
+  directly.
+
+## How-tos
+
+- **New domain module**: `packages/core/src/modules/<name>/{index,service,repository,schemas}.ts`,
+  export from module index; take `db` + `TenantContext`, assert permissions
+  inside the service.
+- **New tenant-owned table**: follow the checklist in "Database & migrations"
+  and `docs/database/README.md`.
+- **New ChannelProvider** (e.g. Instagram, Telegram): add
+  `packages/channels/src/adapters/<name>.ts` implementing `ChannelProvider`
+  (`src/provider.ts`), normalize webhooks into `ChannelEvent`
+  (`src/domain.ts`), add the kind to `ChannelProviderKind` and one `case` in
+  `createChannelProvider` (`src/registry.ts`). Fixture-based tests for
+  signature verification, parsing and outbound requests.
+- **New BillingProvider**: `packages/billing/src/adapters/<name>.ts`
+  implementing `BillingProvider`; money is integer cents in the domain,
+  conversion only inside the adapter; webhook `eventId` is the idempotency
+  key; register in `createBillingProvider` (`src/registry.ts`).
+- **New AI provider**: add the `@ai-sdk/<provider>` package to `packages/ai`,
+  extend `ModelRef["provider"]` and the switch in `resolveLanguageModel`
+  (`src/model.ts`), add the API key to `@crm/config`. Agents only reference a
+  `ModelRef`; never import a provider SDK elsewhere.
+- **New agent tool**: `defineAgentTool({ requiredPermissions, execute(ctx, input) })`
+  calling `@crm/core` services; register it and list it in the agent's `tools`.
+- **New StorageProvider**: implement `StorageProvider`
+  (`packages/storage/src/domain.ts`) next to `S3StorageProvider`; keep keys
+  produced by `tenantObjectKey`.
+- **New EmailProvider**: `packages/email/src/providers/<name>.ts` +
+  one branch in `createEmailProvider` + `EMAIL_PROVIDER` enum in `@crm/config`.
+- **New Trigger task**: `packages/automation/src/tasks/<name>.ts` via
+  `schemaTask`; rebuild TenantContext from the DB, never trust payload beyond
+  identity; enqueue helper goes in `src/enqueue.ts` and must no-op when
+  Trigger.dev is not configured. Run locally with `pnpm jobs:dev`
+  (see `docs/development/jobs-trigger-dev.md`).
+
+## Running locally
+
+`pnpm install` → `cp .env.example .env` → `pnpm infra:up` → `pnpm db:migrate`
+→ `pnpm db:seed` → `pnpm storage:init` → `pnpm dev` (http://localhost:3000).
+Seed logins (`Password123!`): platform admin `superadmin@crm.local`; demo org
+`owner@`, `admin@`, `manager@`, `agent@crm.local`.
+External integrations are optional; the app boots with only the required env.
+
+## Further reading
+
+`docs/architecture/` (overview, multi-tenancy, providers, realtime,
+observability, security, stack), `docs/adr/`, `docs/domains/`,
+`docs/database/`, `docs/development/`.
+
+## Testing
+
+Unit: `*.test.ts` (vitest, no infra). Integration: `*.int.test.ts` (real
+Postgres/RustFS). E2E: `apps/web/e2e/*.spec.ts` (playwright). Fake providers
+live in each package's `testing` export.
+
+## Definition of done
+
+`pnpm lint && pnpm typecheck && pnpm test` green, plus relevant integration
+tests for anything touching DB/providers.
+
+## Do NOT
+
+- No `apps/worker` without an ADR (see docs/adr/0010).
+- No new infrastructure services or dependencies without justification.
+- No Terraform/Kubernetes (yet). No microservices, extra queues or extra
+  databases — ask "what concrete problem does this solve now?" first.
+- Commits follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`...).

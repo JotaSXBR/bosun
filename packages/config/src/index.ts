@@ -1,0 +1,234 @@
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { z } from "zod";
+
+let envFileLoaded = false;
+
+/**
+ * Loads the repository root `.env` into process.env (single env source for the
+ * whole monorepo). Next.js additionally loads it via `loadEnvConfig` in
+ * apps/web/next.config.ts. Safe to call multiple times.
+ */
+export function loadRootEnv(): void {
+  if (envFileLoaded) return;
+  envFileLoaded = true;
+  const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+  const envPath = resolve(rootDir, ".env");
+  if (!existsSync(envPath)) return;
+  try {
+    process.loadEnvFile(envPath);
+  } catch (error) {
+    throw new Error(`Failed to load ${envPath}: ${(error as Error).message}`);
+  }
+}
+
+const optionalString = z
+  .string()
+  .optional()
+  .transform((value) => (value === "" || value === undefined ? undefined : value));
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]),
+  APP_URL: z.url(),
+
+  DATABASE_URL: z.string().min(1),
+  DATABASE_ADMIN_URL: optionalString,
+  REDIS_URL: optionalString,
+
+  BETTER_AUTH_SECRET: z.string().min(32),
+
+  OPENAI_API_KEY: optionalString,
+  ANTHROPIC_API_KEY: optionalString,
+
+  WAHA_BASE_URL: optionalString,
+  WAHA_API_KEY: optionalString,
+  WAHA_WEBHOOK_HMAC_KEY: optionalString,
+
+  META_APP_SECRET: optionalString,
+  META_VERIFY_TOKEN: optionalString,
+  META_ACCESS_TOKEN: optionalString,
+  META_PHONE_NUMBER_ID: optionalString,
+  META_GRAPH_API_VERSION: z.string().default("v26.0"),
+
+  STORAGE_S3_ENDPOINT: optionalString,
+  STORAGE_S3_REGION: optionalString,
+  STORAGE_S3_BUCKET: optionalString,
+  STORAGE_S3_ACCESS_KEY_ID: optionalString,
+  STORAGE_S3_SECRET_ACCESS_KEY: optionalString,
+  STORAGE_S3_FORCE_PATH_STYLE: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
+
+  ASAAS_API_KEY: optionalString,
+  ASAAS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
+  ASAAS_WEBHOOK_TOKEN: optionalString,
+
+  EMAIL_PROVIDER: z.enum(["console", "resend", "smtp"]).default("console"),
+  EMAIL_FROM: optionalString,
+  RESEND_API_KEY: optionalString,
+  SMTP_HOST: optionalString,
+  SMTP_PORT: z.coerce.number().int().optional(),
+  SMTP_USER: optionalString,
+  SMTP_PASSWORD: optionalString,
+  SMTP_SECURE: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
+
+  SENTRY_DSN: optionalString,
+  OTEL_EXPORTER_OTLP_ENDPOINT: optionalString,
+  OTEL_SERVICE_NAME: optionalString,
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+
+  TRIGGER_SECRET_KEY: optionalString,
+  TRIGGER_API_URL: optionalString,
+  TRIGGER_PROJECT_REF: optionalString,
+});
+
+const serverEnvSchema = envSchema.transform((env) => ({
+  nodeEnv: env.NODE_ENV,
+  appUrl: env.APP_URL,
+  logLevel: env.LOG_LEVEL,
+  database: {
+    url: env.DATABASE_URL,
+    adminUrl: env.DATABASE_ADMIN_URL,
+  },
+  redis: { url: env.REDIS_URL },
+  auth: { secret: env.BETTER_AUTH_SECRET },
+  ai: {
+    openaiApiKey: env.OPENAI_API_KEY,
+    anthropicApiKey: env.ANTHROPIC_API_KEY,
+  },
+  whatsapp: {
+    waha: {
+      baseUrl: env.WAHA_BASE_URL,
+      apiKey: env.WAHA_API_KEY,
+      webhookHmacKey: env.WAHA_WEBHOOK_HMAC_KEY,
+    },
+    meta: {
+      appSecret: env.META_APP_SECRET,
+      verifyToken: env.META_VERIFY_TOKEN,
+      accessToken: env.META_ACCESS_TOKEN,
+      phoneNumberId: env.META_PHONE_NUMBER_ID,
+      graphApiVersion: env.META_GRAPH_API_VERSION,
+    },
+  },
+  storage: {
+    endpoint: env.STORAGE_S3_ENDPOINT,
+    region: env.STORAGE_S3_REGION,
+    bucket: env.STORAGE_S3_BUCKET,
+    accessKeyId: env.STORAGE_S3_ACCESS_KEY_ID,
+    secretAccessKey: env.STORAGE_S3_SECRET_ACCESS_KEY,
+    forcePathStyle: env.STORAGE_S3_FORCE_PATH_STYLE,
+  },
+  billing: {
+    asaasApiKey: env.ASAAS_API_KEY,
+    asaasEnvironment: env.ASAAS_ENVIRONMENT,
+    asaasWebhookToken: env.ASAAS_WEBHOOK_TOKEN,
+  },
+  email: {
+    provider: env.EMAIL_PROVIDER,
+    from: env.EMAIL_FROM,
+    resendApiKey: env.RESEND_API_KEY,
+    smtp: {
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+      user: env.SMTP_USER,
+      password: env.SMTP_PASSWORD,
+      secure: env.SMTP_SECURE,
+    },
+  },
+  observability: {
+    sentryDsn: env.SENTRY_DSN,
+    otelEndpoint: env.OTEL_EXPORTER_OTLP_ENDPOINT,
+    otelServiceName: env.OTEL_SERVICE_NAME,
+  },
+  trigger: {
+    secretKey: env.TRIGGER_SECRET_KEY,
+    apiUrl: env.TRIGGER_API_URL,
+    projectRef: env.TRIGGER_PROJECT_REF,
+  },
+}));
+
+export type ServerEnv = z.output<typeof serverEnvSchema>;
+
+/**
+ * Whether all required settings of an integration group are present.
+ * Groups the app boots without; use these before touching an integration.
+ */
+export function isConfigured(env: ServerEnv, group: IntegrationGroup): boolean {
+  switch (group) {
+    case "ai":
+      return Boolean(env.ai.openaiApiKey ?? env.ai.anthropicApiKey);
+    case "waha":
+      return Boolean(env.whatsapp.waha.baseUrl && env.whatsapp.waha.apiKey);
+    case "meta":
+      return Boolean(
+        env.whatsapp.meta.appSecret &&
+        env.whatsapp.meta.verifyToken &&
+        env.whatsapp.meta.accessToken &&
+        env.whatsapp.meta.phoneNumberId,
+      );
+    case "storage":
+      return Boolean(
+        env.storage.endpoint &&
+        env.storage.bucket &&
+        env.storage.accessKeyId &&
+        env.storage.secretAccessKey,
+      );
+    case "billing":
+      return Boolean(env.billing.asaasApiKey);
+    case "resend":
+      return env.email.provider === "resend" && Boolean(env.email.resendApiKey);
+    case "smtp":
+      return env.email.provider === "smtp" && Boolean(env.email.smtp.host);
+    case "redis":
+      return Boolean(env.redis.url);
+    case "sentry":
+      return Boolean(env.observability.sentryDsn);
+    case "otel":
+      return Boolean(env.observability.otelEndpoint);
+    case "trigger":
+      return Boolean(env.trigger.secretKey && env.trigger.projectRef);
+  }
+}
+
+export type IntegrationGroup =
+  | "ai"
+  | "waha"
+  | "meta"
+  | "storage"
+  | "billing"
+  | "resend"
+  | "smtp"
+  | "redis"
+  | "sentry"
+  | "otel"
+  | "trigger";
+
+let cached: ServerEnv | undefined;
+
+/**
+ * Parses process.env (after loading the root .env) once and caches the result.
+ * Throws an error listing every invalid variable — the app must boot with only
+ * the required vars set.
+ */
+export function getServerEnv(): ServerEnv {
+  if (cached) return cached;
+  loadRootEnv();
+  const result = serverEnvSchema.safeParse(process.env);
+  if (!result.success) {
+    const details = z.prettifyError(result.error);
+    throw new Error(`Invalid environment variables:\n${details}`);
+  }
+  cached = result.data;
+  return cached;
+}
+
+/** Test hook: clears the cached env so a new process.env can be parsed. */
+export function resetServerEnvCache(): void {
+  cached = undefined;
+}

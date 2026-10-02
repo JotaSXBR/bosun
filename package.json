@@ -1,0 +1,39 @@
+{
+  "name": "crm",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "vitest run",
+    "test:integration": "vitest run --typecheck.enabled=false -c vitest.integration.config.ts",
+    "test:e2e": "turbo test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "pnpm --filter @crm/db generate",
+    "db:migrate": "pnpm --filter @crm/db migrate",
+    "db:seed": "pnpm --filter @crm/auth seed",
+    "db:studio": "pnpm --filter @crm/db studio",
+    "infra:up": "docker compose -f docker/compose.yml up -d --wait",
+    "infra:down": "docker compose -f docker/compose.yml down",
+    "infra:logs": "docker compose -f docker/compose.yml logs -f",
+    "storage:init": "pnpm --filter @crm/storage init-bucket",
+    "infra:trigger:up": "bash docker/trigger/selfhost.sh up",
+    "infra:trigger:down": "bash docker/trigger/selfhost.sh down",
+    "jobs:dev": "pnpm --filter @crm/automation trigger:dev"
+  },
+  "devDependencies": {
+    "turbo": "2.11.7",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3",
+    "prettier": "3.9.9",
+    "@crm/tsconfig": "workspace:*",
+    "@crm/prettier-config": "workspace:*"
+  }
+}

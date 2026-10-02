@@ -1,0 +1,18 @@
+{
+  "extends": "@crm/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo"
+  },
+  "include": [
+    "next-env.d.ts",
+    "src",
+    "next.config.ts",
+    "instrumentation.ts",
+    "playwright.config.ts",
+    "e2e"
+  ],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,74 @@
+# NOTE: named `crmv2` (not `crm`) because a sibling project (C:\Projetos\CRM)
+# already runs a compose project named `crm` on this machine — sharing the
+# name would make `infra:up/down` adopt/stop that project's containers.
+name: crmv2
+
+# Local development infrastructure only. Trigger.dev is intentionally NOT here
+# (too heavy for local dev — see docs/architecture/stack.md).
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg18-trixie
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-crm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crm}
+      POSTGRES_DB: ${POSTGRES_DB:-crm}
+      # Password for the least-privileged app role (see postgres/init).
+      CRM_APP_PASSWORD: ${CRM_APP_PASSWORD:-crm_app}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # PG18 images keep PGDATA under /var/lib/postgresql/18/docker —
+      # the volume must be mounted at /var/lib/postgresql.
+      - postgres_data:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    # Available for future use (rate limiting, cache, queues).
+    # Nothing in the codebase depends on Redis yet.
+    image: redis:8.8-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  storage:
+    # RustFS — local S3-compatible storage. Bucket creation is done by an
+    # app-side script (later phase); this only brings the service up.
+    image: rustfs/rustfs:1.0.0
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY_ID:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_HEALTH_ENDPOINT_ENABLE: "true"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/health/live || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    command: ["/data"]
+
+volumes:
+  postgres_data:
+  redis_data:
+  rustfs_data:

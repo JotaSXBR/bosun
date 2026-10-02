@@ -1,0 +1,11 @@
+{
+  "extends": "@crm/tsconfig/library.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "paths": {
+      "@crm/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}
