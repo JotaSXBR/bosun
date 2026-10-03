@@ -18,6 +18,7 @@
     "@crm/config": "workspace:*",
     "@crm/db": "workspace:*",
     "@crm/email": "workspace:*",
+    "@crm/observability": "workspace:*",
     "@crm/permissions": "workspace:*",
     "better-auth": "1.7.7",
     "zod": "4.6.5",

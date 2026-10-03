@@ -3,8 +3,10 @@ import { getServerEnv, isConfigured } from "@crm/config";
 import { createLogger } from "@crm/observability";
 import { tasks } from "@trigger.dev/sdk";
 
-import type { organizationOnboardingTask } from "./tasks/organization-onboarding";
-import type { OrganizationOnboardingPayload } from "./tasks/organization-onboarding";
+import type {
+  OrganizationOnboardingPayload,
+  organizationOnboardingTask,
+} from "./tasks/organization-onboarding";
 
 const logger = createLogger({ bindings: { component: "automation" } });
 

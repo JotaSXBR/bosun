@@ -1,21 +1,18 @@
-import { listAuditEvents } from "@crm/core/audit";
-import { listUserOrganizations } from "@crm/core/organizations";
-import { getDb } from "@crm/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm/ui/components/card";
 
 import { SignOutButton } from "@/components/sign-out-button";
+import { listMyOrganizations, listRecentAuditEvents } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
 
 // Reads the session + database → must never be prerendered at build time.
 export const dynamic = "force-dynamic";
 
 export default async function AppPage() {
-  const db = getDb();
   const ctx = await requireTenantContext();
-  const orgs = await listUserOrganizations(db, ctx.userId);
+  const orgs = await listMyOrganizations(ctx.userId);
   const org = orgs.find((o) => o.organizationId === ctx.organizationId);
   const canReadAudit = ctx.isPlatformAdmin || ctx.role !== "agent";
-  const events = canReadAudit ? await listAuditEvents(db, ctx, { limit: 10 }) : [];
+  const events = canReadAudit ? await listRecentAuditEvents(ctx, { limit: 10 }) : [];
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-8">

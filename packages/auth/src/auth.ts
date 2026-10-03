@@ -2,6 +2,7 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import type { ServerEnv } from "@crm/config";
 import type { Database } from "@crm/db";
 import { schema } from "@crm/db";
+import { createLogger } from "@crm/observability";
 import { ac, roles } from "@crm/permissions";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
@@ -24,8 +25,14 @@ export type AuthOptions = {
   sendEmail?: ((message: EmailMessage) => Promise<void>) | undefined;
 };
 
+const defaultSendEmailLogger = createLogger({ bindings: { component: "auth:email" } });
+
 const defaultSendEmail = (message: EmailMessage): Promise<void> => {
-  console.log(`[auth:email] to=${message.to} subject=${message.subject}\n${message.text}`);
+  defaultSendEmailLogger.info("sending auth email (default hook)", {
+    to: message.to,
+    subject: message.subject,
+    text: message.text,
+  });
   return Promise.resolve();
 };
 

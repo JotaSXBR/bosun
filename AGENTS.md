@@ -7,6 +7,24 @@ Guidance for AI agents and contributors working on this repo.
 Multi-tenant SaaS CRM — a **modular monolith**: one Next.js app + Trigger.dev
 background jobs + shared `@crm/*` packages. pnpm/Turborepo monorepo.
 
+## Working agreement
+
+- **State assumptions before coding.** If a request has multiple plausible
+  readings, say which one you picked and why — or ask when it's genuinely
+  ambiguous. Don't silently pick an interpretation.
+- **Simplest sufficient solution.** Minimum code that solves the problem: no
+  speculative features, no abstractions for single-use code, no unrequested
+  configurability.
+- **Surgical diffs.** Touch only what the change requires and match the
+  surrounding style. Don't refactor, reformat, or "improve" adjacent code that
+  wasn't part of the task.
+- **Goal-driven execution.** Turn the task into verifiable goals: reproduce
+  the problem → fix → verify. Before finishing, run `pnpm typecheck` and
+  `pnpm lint` (plus the relevant tests) and report what you ran.
+- **Delegate mechanical work.** When the environment supports it, fan out
+  multi-file mechanical edits and exploration to subagents; keep planning and
+  review in the main session.
+
 ## Architecture & layering
 
 ```
@@ -25,6 +43,8 @@ UI (React) → Server Action / Route Handler → @crm/core service → repositor
 - `packages/automation` — Trigger.dev tasks + enqueue helpers.
 - `packages/ui` — shadcn components.
 - `tooling/*` — shared tsconfig/eslint/prettier.
+- `research/` — external reference material (e.g. vibe-coding-toolkit),
+  gitignored; read for ideas, never edit or import from it.
 
 Dependency direction: app → core/providers → db/config/permissions. Never
 import an adapter outside its registry factory. The only `switch` on provider
