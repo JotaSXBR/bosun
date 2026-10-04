@@ -4,8 +4,10 @@ Guidance for AI agents and contributors working on this repo.
 
 ## What this is
 
-Multi-tenant SaaS CRM — a **modular monolith**: one Next.js app + Trigger.dev
-background jobs + shared `@crm/*` packages. pnpm/Turborepo monorepo.
+**Bosun** — multi-tenant customer operations platform (SaaS CRM). A
+**modular monolith**: one Next.js app + Trigger.dev background jobs +
+shared `@crm/*` packages. pnpm/Turborepo monorepo.
+Private repo: `github.com/JotaSXBR/bosun`.
 
 ## Working agreement
 
@@ -155,7 +157,8 @@ External integrations are optional; the app boots with only the required env.
 
 `docs/architecture/` (overview, multi-tenancy, providers, realtime,
 observability, security, stack), `docs/adr/`, `docs/domains/`,
-`docs/database/`, `docs/development/`.
+`docs/database/`, `docs/development/` (incl. `cicd.md` —
+GitHub Actions → GHCR → Coolify pipeline).
 
 ## Testing
 

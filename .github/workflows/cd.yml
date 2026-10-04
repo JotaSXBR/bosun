@@ -1,0 +1,155 @@
+name: CD
+
+# Delivery pipeline — the VPS never builds anything.
+#
+#   push main  → build image → push ghcr :staging + :sha-* → scan → deploy staging
+#   tag v*.*.* → build image → push ghcr :prod + :v*.*.*   → scan → deploy production
+#   dispatch   → retag :prod to an older image → deploy production (rollback)
+#
+# Deploy = authenticated Coolify webhook; the Coolify "Docker Image" apps
+# pull the mutable :staging / :prod tags. The v* tag IS the approve gate —
+# production only moves when a release tag is cut.
+#
+# Secrets: COOLIFY_TOKEN (deploy-permission API token),
+#          COOLIFY_WEBHOOK_STAGING, COOLIFY_WEBHOOK_PRODUCTION.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      rollback_ref:
+        description: "Image ref to roll production back to (e.g. v1.2.3 or sha-abc1234)"
+        required: true
+        type: string
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
+            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=prod,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Scan after push: a failing scan blocks the deploy jobs below, so a
+      # vulnerable image may exist in GHCR but is never deployed.
+      - name: Scan image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/main'
+    needs: image
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      # Secrets can't be used in `if:` — check inside the script. Until the
+      # Coolify side is configured the step skips loudly instead of failing
+      # every push (see docs/development/deployment-coolify.md).
+      - name: Trigger Coolify deploy (staging)
+        run: |
+          if [ -z "$COOLIFY_WEBHOOK" ] || [ -z "$COOLIFY_TOKEN" ]; then
+            echo "::warning::COOLIFY_WEBHOOK_STAGING/COOLIFY_TOKEN not set — skipping deploy"
+            exit 0
+          fi
+          curl -fsSL -X POST "$COOLIFY_WEBHOOK" -H "Authorization: Bearer $COOLIFY_TOKEN"
+        env:
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK_STAGING }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+
+  deploy-production:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: image
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Trigger Coolify deploy (production)
+        run: |
+          if [ -z "$COOLIFY_WEBHOOK" ] || [ -z "$COOLIFY_TOKEN" ]; then
+            echo "::warning::COOLIFY_WEBHOOK_PRODUCTION/COOLIFY_TOKEN not set — skipping deploy"
+            exit 0
+          fi
+          curl -fsSL -X POST "$COOLIFY_WEBHOOK" -H "Authorization: Bearer $COOLIFY_TOKEN"
+        env:
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK_PRODUCTION }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+
+  # Rollback: retag the mutable :prod pointer to a previous image and
+  # redeploy. No rebuild — imagetools copies the existing manifest.
+  rollback:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Retag :prod to ${{ inputs.rollback_ref }}
+        run: docker buildx imagetools create --tag "$IMAGE:prod" "$IMAGE:${{ inputs.rollback_ref }}"
+
+      - name: Trigger Coolify deploy (production)
+        run: |
+          if [ -z "$COOLIFY_WEBHOOK" ] || [ -z "$COOLIFY_TOKEN" ]; then
+            echo "::warning::COOLIFY_WEBHOOK_PRODUCTION/COOLIFY_TOKEN not set — skipping deploy"
+            exit 0
+          fi
+          curl -fsSL -X POST "$COOLIFY_WEBHOOK" -H "Authorization: Bearer $COOLIFY_TOKEN"
+        env:
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK_PRODUCTION }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}

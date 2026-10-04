@@ -1,7 +1,7 @@
-# NOTE: named `crmv2` (not `crm`) because a sibling project (C:\Projetos\CRM)
-# already runs a compose project named `crm` on this machine — sharing the
-# name would make `infra:up/down` adopt/stop that project's containers.
-name: crmv2
+# NOTE: named `bosun` — unique on this machine (a sibling project under
+# C:\Projetos\CRM runs a compose project named `crm`; sharing a name would
+# make `infra:up/down` adopt/stop that project's containers).
+name: bosun
 
 # Local development infrastructure only. Trigger.dev is intentionally NOT here
 # (too heavy for local dev — see docs/architecture/stack.md).

@@ -1,7 +1,8 @@
-# CRM
+# Bosun
 
-Multi-tenant SaaS CRM monorepo (pnpm + Turborepo). Modular monolith: Next.js 16
-app + shared `@crm/*` packages + Trigger.dev jobs. See
+Multi-tenant customer operations platform (SaaS CRM) — pnpm + Turborepo
+monorepo. Modular monolith: Next.js 16 app + shared `@crm/*` packages +
+Trigger.dev jobs. Private repo: `github.com/JotaSXBR/bosun`. See
 `docs/architecture/stack.md` for pinned versions and `docs/architecture/` for
 design docs.
 
@@ -10,7 +11,7 @@ design docs.
 ```bash
 pnpm install
 cp .env.example .env        # single env source for the whole monorepo
-pnpm infra:up               # Postgres 18 + pgvector, Redis, RustFS (compose project: crmv2)
+pnpm infra:up               # Postgres 18 + pgvector, Redis, RustFS (compose project: bosun)
 pnpm db:migrate             # applies migrations as the owner role
 pnpm db:seed                # demo org + users (dev only)
 pnpm storage:init           # create the local RustFS bucket
@@ -33,7 +34,7 @@ demo org `Demo`: `owner@crm.local`, `admin@crm.local`, `manager@crm.local`, `age
 | `pnpm format` / `format:check`                              | Prettier                                                   |
 | `pnpm db:generate` / `db:migrate` / `db:seed` / `db:studio` | drizzle-kit / seed                                         |
 | `pnpm storage:init`                                         | create the local S3 bucket (RustFS)                        |
-| `pnpm infra:up` / `infra:down` / `infra:logs`               | docker compose lifecycle (project `crmv2`)                 |
+| `pnpm infra:up` / `infra:down` / `infra:logs`               | docker compose lifecycle (project `bosun`)                 |
 | `pnpm infra:trigger:up` / `infra:trigger:down`              | optional self-hosted Trigger.dev                           |
 | `pnpm jobs:dev`                                             | Trigger.dev dev runner                                     |
 
@@ -52,5 +53,6 @@ demo org `Demo`: `owner@crm.local`, `admin@crm.local`, `manager@crm.local`, `age
   observability, security, stack
 - `docs/adr/` — architecture decision records
 - `docs/database/`, `docs/domains/` — schema + domain map
-- `docs/development/` — getting started, testing, jobs, Coolify deployment
+- `docs/development/` — getting started, testing, jobs, workflow, CI/CD +
+  Coolify deployment
 - `AGENTS.md` — rules for AI agents/contributors

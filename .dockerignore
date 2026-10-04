@@ -3,7 +3,16 @@
 **/.turbo
 **/test-results
 **/playwright-report
+**/e2e
 **/.env
 **/.env.local
 .git
+.github
+.vscode
+.devin
 docs
+research
+graft
+docker/postgres
+docker/trigger
+.task-brief*

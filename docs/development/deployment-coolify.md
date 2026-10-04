@@ -1,10 +1,48 @@
 # Deployment — Coolify
 
+Server-side setup for the pipeline in `docs/development/cicd.md`. Staging
+and production run on the same VPS (4 CPU / 10 GB RAM / 100 GB disk) — the
+machine only pulls images; all building happens in GitHub Actions.
+
+## One-time setup
+
+### 1. GHCR registry auth (private image)
+
+Coolify needs credentials to pull `ghcr.io/jotasxbr/bosun` (private repo ⇒
+private package):
+
+1. GitHub → Settings → Developer settings → Personal access tokens (classic)
+   → create a PAT with **`read:packages`** scope.
+2. Coolify → server → Docker registries (or project registry settings) →
+   add `ghcr.io` with your GitHub username + the PAT.
+
+### 2. Two "Docker Image" applications
+
+| App             | Image                            | Domain       |
+| --------------- | -------------------------------- | ------------ |
+| `bosun-staging` | `ghcr.io/jotasxbr/bosun:staging` | staging host |
+| `bosun`         | `ghcr.io/jotasxbr/bosun:prod`    | prod host    |
+
+Each: **Ports Exposes** `3000`, health check `/api/health`, env vars below.
+The mutable tags mean Coolify always pulls the latest pointer on deploy.
+
+### 3. Deploy webhooks + API token
+
+Per app: Configuration → Webhooks → copy **Deploy Webhook (auth required)**
+(`https://<coolify>/api/v1/deploy?uuid=<uuid>&force=false`).
+
+Then: Keys & Tokens → API Tokens → create token with **deploy** permission.
+
+Store in GitHub repo secrets: `COOLIFY_WEBHOOK_STAGING`,
+`COOLIFY_WEBHOOK_PRODUCTION`, `COOLIFY_TOKEN`.
+
 ## Components
 
-- **Web** (`apps/web/Dockerfile`): standalone Next.js image; port 3000.
+- **Web**: the GHCR image (root `Dockerfile`); port 3000. Migrations run
+  automatically in the container entrypoint before the server starts.
 - **PostgreSQL 18 + pgvector**: Coolify Postgres service
-  (`pgvector/pgvector:0.8.7-pg18-trixie`). Bootstrap the app role once:
+  (`pgvector/pgvector:0.8.7-pg18-trixie`). Bootstrap the app role once
+  (mirrors `docker/postgres/init/01-app-role.sh`):
 
   ```sql
   CREATE ROLE crm_app LOGIN PASSWORD '<strong>' NOSUPERUSER NOBYPASSRLS;
@@ -23,10 +61,16 @@
 - **Proxy**: Traefik/Caddy handled by Coolify; set `APP_URL` to the public
   origin.
 
-## Migrations (pre-deploy)
+## Migrations
 
-Run `pnpm db:migrate` with `DATABASE_ADMIN_URL` before starting the new web
-image (Coolify "Execute Command" or a pre-deploy job).
+No manual step — `entrypoint.sh` runs `node /migrate/migrate.mjs`
+(idempotent) on every container start, using
+`DATABASE_ADMIN_URL ?? DATABASE_URL`. Because migrations run as the owner
+role, keep `DATABASE_ADMIN_URL` pointing at the privileged user.
+
+Caveat: a bad migration blocks the container from starting (the previous
+container keeps serving until the new one is healthy, per Coolify's
+deployment behavior). Rollback plan lives in `cicd.md`.
 
 ## Environment variables
 

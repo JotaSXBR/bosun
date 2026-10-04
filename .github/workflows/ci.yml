@@ -95,3 +95,20 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report
           if-no-files-found: ignore
+
+  # Filesystem scan: vulnerable deps (pnpm-lock) + accidentally committed
+  # secrets. Runs after build passes — the last gate of the CI stage.
+  # CodeQL/secret scanning need GitHub Advanced Security on private repos,
+  # so Trivy covers both here. Image scanning happens in cd.yml.
+  scan:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"

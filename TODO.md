@@ -44,6 +44,14 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   limites corretos multi-instância. Custo: baixo.
 - **P2 — Sentry sourcemaps/upload wiring**. Benefício: stacks legíveis em
   produção. Custo: baixo.
+- **P2 — Branch protection na `main`**: exige GitHub Pro em repo privado
+  (API retornou 403). Quando o plano subir: required checks
+  `quality`/`integration`/`scan` + bloquear force-push. Ver
+  `docs/development/cicd.md`.
+- **P2 — Coolify: criar apps staging/prod + secrets** (depende do usuário):
+  apps Docker Image apontando `ghcr.io/jotasxbr/bosun:{staging,prod}`, PAT
+  `read:packages` no registry do Coolify, webhooks + `COOLIFY_TOKEN` nos
+  secrets do repo. Passo a passo em `docs/development/deployment-coolify.md`.
 
 ## Pesquisa / upgrades futuros
 
@@ -71,6 +79,14 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 
 ## Concluído
 
+- **P1 — Repo + CI/CD** ✅ 2026-10-05 — repo privado `JotaSXBR/bosun`;
+  marca "Bosun" (pacote root, compose project, README); CI com job `scan`
+  (Trivy fs: deps+secrets, HIGH/CRIT fixável); CD `cd.yml`: imagem → GHCR
+  → Trivy image → deploy staging em push na `main` / prod em tag `v*.*.*`
+  / rollback via dispatch (retag `:prod`); `Dockerfile` multi-stage
+  (standalone + migrator isolado), entrypoint roda migrations antes do
+  server; `/api/health` com DB ping. ADR 0015, `docs/development/cicd.md` +
+  `deployment-coolify.md`.
 - **P1 — Billing: idempotência do webhook ASAAS** ✅ 2026-10-03 —
   `billing_customers` (1:1 org ↔ customer ASAAS), `billing_subscriptions`,
   `billing_payments` e `billing_webhook_events` (dedup por `event_id`) com
