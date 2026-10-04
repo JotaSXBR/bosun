@@ -77,7 +77,7 @@ jobs:
       # Scan after push: a failing scan blocks the deploy jobs below, so a
       # vulnerable image may exist in GHCR but is never deployed.
       - name: Scan image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
           severity: CRITICAL,HIGH
