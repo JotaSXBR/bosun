@@ -7,6 +7,10 @@ import type {
   OrganizationOnboardingPayload,
   organizationOnboardingTask,
 } from "./tasks/organization-onboarding";
+import type {
+  ProcessChannelEventPayload,
+  processChannelEventTask,
+} from "./tasks/process-channel-event";
 
 const logger = createLogger({ bindings: { component: "automation" } });
 
@@ -26,5 +30,25 @@ export async function enqueueOrganizationOnboarding(
     return { skipped: true };
   }
   await tasks.trigger<typeof organizationOnboardingTask>("organization-onboarding", payload);
+  return { skipped: false };
+}
+
+/**
+ * Enqueues process-channel-event after a webhook event was persisted; no-ops
+ * with `{ skipped: true }` when Trigger.dev isn't configured so ingestion
+ * never fails because of the background layer.
+ */
+export async function enqueueChannelEventProcessed(
+  payload: ProcessChannelEventPayload,
+  env: ServerEnv = getServerEnv(),
+): Promise<{ skipped: boolean }> {
+  if (!isConfigured(env, "trigger")) {
+    logger.info("Trigger.dev not configured; skipping process-channel-event", {
+      organizationId: payload.organizationId,
+      eventType: payload.eventType,
+    });
+    return { skipped: true };
+  }
+  await tasks.trigger<typeof processChannelEventTask>("process-channel-event", payload);
   return { skipped: false };
 }

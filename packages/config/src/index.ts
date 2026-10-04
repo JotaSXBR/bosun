@@ -29,6 +29,12 @@ const optionalString = z
   .optional()
   .transform((value) => (value === "" || value === undefined ? undefined : value));
 
+// Optional, but when present must be exactly 32 bytes as hex (AES-256 key).
+const optionalHex64 = optionalString.refine(
+  (value) => value === undefined || /^[0-9a-f]{64}$/i.test(value),
+  "must be 64 hex characters (32 bytes); generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
   APP_URL: z.url(),
@@ -51,6 +57,8 @@ const envSchema = z.object({
   META_ACCESS_TOKEN: optionalString,
   META_PHONE_NUMBER_ID: optionalString,
   META_GRAPH_API_VERSION: z.string().default("v26.0"),
+
+  CHANNEL_CREDENTIALS_KEY: optionalHex64,
 
   STORAGE_S3_ENDPOINT: optionalString,
   STORAGE_S3_REGION: optionalString,
@@ -115,6 +123,9 @@ const serverEnvSchema = envSchema.transform((env) => ({
       phoneNumberId: env.META_PHONE_NUMBER_ID,
       graphApiVersion: env.META_GRAPH_API_VERSION,
     },
+  },
+  channels: {
+    credentialsKey: env.CHANNEL_CREDENTIALS_KEY,
   },
   storage: {
     endpoint: env.STORAGE_S3_ENDPOINT,

@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: [
     "@crm/auth",
+    "@crm/channels",
     "@crm/config",
     "@crm/core",
     "@crm/db",

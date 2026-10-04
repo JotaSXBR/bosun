@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@crm/ui/components/card";
+import Link from "next/link";
 
 import { SignOutButton } from "@/components/sign-out-button";
 import { listMyOrganizations, listRecentAuditEvents } from "@/server/services";
@@ -20,7 +21,15 @@ export default async function AppPage() {
         <h1 className="text-2xl font-semibold" data-testid="org-name">
           {org?.name ?? "Organização"}
         </h1>
-        <SignOutButton />
+        <div className="flex items-center gap-4">
+          <Link href="/app/inbox" className="text-muted-foreground text-sm underline">
+            Inbox
+          </Link>
+          <Link href="/app/integrations" className="text-muted-foreground text-sm underline">
+            Integrações
+          </Link>
+          <SignOutButton />
+        </div>
       </div>
       <Card>
         <CardHeader>

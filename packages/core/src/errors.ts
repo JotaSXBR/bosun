@@ -19,3 +19,10 @@ export class NotFoundError extends DomainError {
     super("NOT_FOUND", id ? `${resource} "${id}" was not found` : `${resource} was not found`);
   }
 }
+
+/** Raised when a webhook request fails the provider's signature check. */
+export class WebhookVerificationError extends DomainError {
+  constructor(message = "Webhook signature verification failed") {
+    super("WEBHOOK_VERIFICATION_FAILED", message);
+  }
+}

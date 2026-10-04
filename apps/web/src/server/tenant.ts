@@ -18,6 +18,23 @@ export async function requireSession(): Promise<Session> {
   return session;
 }
 
+async function resolveTenantContext(
+  session: Session,
+  organizationId: string,
+): Promise<TenantContext | null> {
+  const membership = await getMembership(getDb(), {
+    userId: session.user.id,
+    organizationId,
+  });
+  if (!membership) return null;
+  return {
+    organizationId,
+    userId: session.user.id,
+    role: membership.role,
+    isPlatformAdmin: session.user.role === "platform_admin",
+  };
+}
+
 /**
  * Builds the TenantContext for the current request. Redirects to /sign-in
  * when unauthenticated and to /onboarding when the user has no organization.
@@ -40,16 +57,25 @@ export async function requireTenantContext(): Promise<TenantContext> {
     organizationId = first.organizationId;
   }
 
-  const membership = await getMembership(db, {
-    userId: session.user.id,
-    organizationId,
-  });
-  if (!membership) redirect("/onboarding");
+  const ctx = await resolveTenantContext(session, organizationId);
+  if (!ctx) redirect("/onboarding");
+  return ctx;
+}
 
-  return {
-    organizationId,
-    userId: session.user.id,
-    role: membership.role,
-    isPlatformAdmin: session.user.role === "platform_admin",
-  };
+/**
+ * Same TenantContext derivation as requireTenantContext but returns null
+ * instead of redirecting — for route handlers that must answer 401 rather
+ * than send the client to /sign-in or /onboarding. The active organization
+ * still comes from the Better Auth session, never from request input.
+ */
+export async function getTenantContext(): Promise<TenantContext | null> {
+  const session = await getSession();
+  if (!session) return null;
+
+  const organizationId =
+    session.session.activeOrganizationId ??
+    (await listUserOrganizations(getDb(), session.user.id))[0]?.organizationId;
+  if (!organizationId) return null;
+
+  return resolveTenantContext(session, organizationId);
 }

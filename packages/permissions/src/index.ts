@@ -8,6 +8,9 @@ const statement = {
   member: ["create", "update", "delete"],
   invitation: ["create", "cancel"],
   audit: ["read"],
+  integrations: ["read", "manage"],
+  messaging: ["read"],
+  billing: ["read"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -18,18 +21,29 @@ export const roles = {
     member: ["create", "update", "delete"],
     invitation: ["create", "cancel"],
     audit: ["read"],
+    integrations: ["read", "manage"],
+    messaging: ["read"],
+    billing: ["read"],
   }),
   admin: ac.newRole({
     organization: ["update"],
     member: ["create", "update", "delete"],
     invitation: ["create", "cancel"],
     audit: ["read"],
+    integrations: ["read", "manage"],
+    messaging: ["read"],
+    billing: ["read"],
   }),
   manager: ac.newRole({
     invitation: ["create"],
     audit: ["read"],
+    integrations: ["read", "manage"],
+    messaging: ["read"],
   }),
-  agent: ac.newRole({}),
+  agent: ac.newRole({
+    integrations: ["read"],
+    messaging: ["read"],
+  }),
 } as const;
 
 export type Statement = typeof statement;

@@ -8,6 +8,12 @@ test("health endpoint returns ok", async ({ request }) => {
   expect(body.db).toBe("ok");
 });
 
+test("document responses carry a nonce-based Content-Security-Policy", async ({ request }) => {
+  const response = await request.get("/sign-in");
+  const csp = response.headers()["content-security-policy"];
+  expect(csp).toContain("script-src 'self' 'nonce-");
+});
+
 test("sign up → create organization → app shows org and audit entry", async ({ page }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const email = `e2e-${suffix}@crm.local`;

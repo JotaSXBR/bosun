@@ -20,6 +20,20 @@ with the same shape: `src/domain.ts` (types + interface), `src/adapters/*`
 - Webhook flow: `provider → route → verifyWebhook(raw request) → adapter
 parse → domain events`. Verification always precedes parsing; unsigned or
   unconfigured-verifier webhooks are rejected.
+- Channel webhooks hit `POST /api/webhooks/channels/<webhookToken>`: the token
+  resolves the `channel_connections` row under `withServiceAccess`,
+  credentials are decrypted (`CHANNEL_CREDENTIALS_KEY`), the signature is
+  verified on the raw body, and events are ingested inside the connection's
+  `withTenant` scope — idempotent via the messages partial unique index —
+  then fanned out to the `process-channel-event` Trigger task.
+- Billing webhooks hit `POST /api/webhooks/billing/asaas` (single
+  platform-level ASAAS account, credentials in env): `handleAsaasWebhook`
+  (`@crm/core` billing) verifies the shared `asaas-access-token` header
+  against `ASAAS_WEBHOOK_TOKEN`, then in one `withServiceAccess` transaction
+  records the raw event in `billing_webhook_events` — the unique `event_id`
+  is the idempotency key, replays return `{ duplicate: true }` — resolves the
+  tenant via `billing_customers.external_id`, upserts `billing_payments` by
+  payment `external_id` and marks the event processed.
 - Money crosses adapter boundaries as integer cents; ids map to
   `externalId`/`channelUserId` inside adapters.
 - Provider secrets come only from env (`@crm/config`); never logged

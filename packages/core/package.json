@@ -6,6 +6,10 @@
   "exports": {
     ".": "./src/index.ts",
     "./audit": "./src/modules/audit/index.ts",
+    "./billing": "./src/modules/billing/index.ts",
+    "./crypto": "./src/lib/crypto.ts",
+    "./integrations": "./src/modules/integrations/index.ts",
+    "./messaging": "./src/modules/messaging/index.ts",
     "./organizations": "./src/modules/organizations/index.ts"
   },
   "scripts": {
@@ -14,7 +18,10 @@
     "test": "vitest run --passWithNoTests --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\""
   },
   "dependencies": {
+    "@crm/billing": "workspace:*",
+    "@crm/channels": "workspace:*",
     "@crm/db": "workspace:*",
+    "@crm/observability": "workspace:*",
     "@crm/permissions": "workspace:*",
     "zod": "4.6.5",
     "drizzle-orm": "0.45.3"

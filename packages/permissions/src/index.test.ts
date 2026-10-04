@@ -44,4 +44,26 @@ describe("hasPermission", () => {
     expect(hasPermission("agent", { invitation: ["create"] })).toBe(false);
     expect(hasPermission("agent", {})).toBe(true);
   });
+
+  it("every member can read integrations and messaging", () => {
+    for (const role of ORG_ROLES) {
+      expect(hasPermission(role, { integrations: ["read"] })).toBe(true);
+      expect(hasPermission(role, { messaging: ["read"] })).toBe(true);
+    }
+  });
+
+  it("only owner/admin/manager can manage integrations", () => {
+    for (const role of ["owner", "admin", "manager"] as const) {
+      expect(hasPermission(role, { integrations: ["manage"] })).toBe(true);
+    }
+    expect(hasPermission("agent", { integrations: ["manage"] })).toBe(false);
+  });
+
+  it("only owner/admin can read billing (finance)", () => {
+    for (const role of ["owner", "admin"] as const) {
+      expect(hasPermission(role, { billing: ["read"] })).toBe(true);
+    }
+    expect(hasPermission("manager", { billing: ["read"] })).toBe(false);
+    expect(hasPermission("agent", { billing: ["read"] })).toBe(false);
+  });
 });

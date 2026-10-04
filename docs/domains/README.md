@@ -1,17 +1,21 @@
 # Domain map
 
-| Domain                                         | Status         | Where                                                            |
-| ---------------------------------------------- | -------------- | ---------------------------------------------------------------- |
-| Identity / Organizations / Users / Permissions | implemented    | `@crm/auth`, `@crm/permissions`, `@crm/core` organizations       |
-| Audit                                          | implemented    | `@crm/core` audit module + `audit_logs` table                    |
-| CRM (contacts, pipelines)                      | planned        | future `@crm/core` module                                        |
-| Messaging                                      | provider layer | `@crm/channels` (WAHA, Meta Cloud) — inbox/conversations planned |
-| AI                                             | provider layer | `@crm/ai` (agents, permissioned tools) — features planned        |
-| Automation                                     | provider layer | `@crm/automation` (Trigger.dev) — onboarding task implemented    |
-| Campaigns                                      | planned        | —                                                                |
-| Billing                                        | provider layer | `@crm/billing` (Asaas) — plan enforcement planned                |
-| Storage                                        | provider layer | `@crm/storage` (S3/RustFS)                                       |
-| Notifications                                  | provider layer | `@crm/email` (console/Resend/SMTP)                               |
+Product-side source of truth: `docs/product/` (modelo, regras, IA,
+roadmap — ADR 0014).
+
+| Domain                                         | Status         | Where                                                                                                                                                                                                                        |
+| ---------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity / Organizations / Users / Permissions | implemented    | `@crm/auth`, `@crm/permissions`, `@crm/core` organizations                                                                                                                                                                   |
+| Audit                                          | implemented    | `@crm/core` audit module + `audit_logs` table                                                                                                                                                                                |
+| Integrations (channel connections)             | implemented    | `@crm/core` integrations + `channel_connections`, `/app/integrations`                                                                                                                                                        |
+| CRM (contacts, pipelines)                      | planned        | future `@crm/core` module                                                                                                                                                                                                    |
+| Messaging                                      | implemented    | `@crm/channels` providers + `@crm/core` messaging (ingest via `POST /api/webhooks/channels/<token>` → `contacts`/`conversations`/`messages`); `/app/inbox` com atualização ao vivo via SSE (`docs/architecture/realtime.md`) |
+| AI                                             | provider layer | `@crm/ai` (agents, permissioned tools) — features planned                                                                                                                                                                    |
+| Automation                                     | provider layer | `@crm/automation` (Trigger.dev) — onboarding task implemented                                                                                                                                                                |
+| Campaigns                                      | planned        | —                                                                                                                                                                                                                            |
+| Billing                                        | implemented    | `@crm/billing` (Asaas) + `@crm/core` billing + `billing_*` tables; ingest via `POST /api/webhooks/billing/asaas` (idempotent on `event_id`) — plan enforcement/UI planned                                                    |
+| Storage                                        | provider layer | `@crm/storage` (S3/RustFS)                                                                                                                                                                                                   |
+| Notifications                                  | provider layer | `@crm/email` (console/Resend/SMTP)                                                                                                                                                                                           |
 
 ## Module template
 

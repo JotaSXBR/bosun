@@ -9,6 +9,32 @@ PostgreSQL 18 + pgvector, Drizzle ORM, postgres.js.
   owned by Better Auth; plural snake_case; NOT under tenant RLS.
 - **`audit_logs`**: tenant-scoped; `organization_id` + RLS policy — the
   reference example for new tenant tables.
+- **`channel_connections`**: tenant-scoped provider accounts (WAHA/Meta
+  Cloud). `credentials_encrypted` holds AES-256-GCM JSON
+  (`CHANNEL_CREDENTIALS_KEY`); `webhook_token` (unique) authenticates inbound
+  webhooks at `/api/webhooks/channels/<token>`.
+- **`contacts`**: tenant-scoped channel contacts, unique per
+  (organization_id, channel_user_id).
+- **`conversations`**: tenant-scoped threads, unique per
+  (channel_connection_id, external_id).
+- **`messages`**: tenant-scoped normalized messages (ChannelEvent
+  MessageContent in `content`). Partial unique index on
+  (channel_connection_id, external_id) WHERE external_id IS NOT NULL is the
+  webhook idempotency key (inserts use ON CONFLICT DO NOTHING).
+- **`billing_customers`**: tenant-scoped, 1:1 org ↔ ASAAS customer
+  (`organization_id` and `external_id` unique); `external_id` resolves
+  inbound webhook payloads to a tenant.
+- **`billing_subscriptions`**: tenant-scoped ASAAS subscriptions, unique per
+  `external_id`; status in (pending, active, overdue, canceled), cycle in
+  (monthly, yearly), amounts in integer cents.
+- **`billing_payments`**: tenant-scoped payments upserted by unique
+  `external_id` (ASAAS payment id — webhook idempotency).
+  `billing_subscription_id` nullable: payment events can arrive before the
+  subscription row exists.
+- **`billing_webhook_events`**: ASAAS webhook dedup — `event_id` unique,
+  inserts ON CONFLICT DO NOTHING. `organization_id` nullable (resolved during
+  processing); null-org rows are platform-internal and invisible to tenant
+  contexts by the same policy.
 
 ## Roles
 

@@ -20,8 +20,8 @@ export const crmAppRole = pgRole("crm_app").existing();
 
 // Tenant-scoped RLS predicate reused by every tenant-owned table:
 // either the row belongs to the tenant set via withTenant(), or the
-// transaction runs under platform scope (withPlatformScope()).
-const tenantPredicate = sql`organization_id = nullif(current_setting('app.organization_id', true), '')::uuid OR current_setting('app.platform_scope', true) = 'on'`;
+// transaction runs under platform scope (withPlatformScope()/withServiceAccess()).
+export const tenantPredicate = sql`organization_id = nullif(current_setting('app.organization_id', true), '')::uuid OR current_setting('app.platform_scope', true) = 'on'`;
 
 export const auditLogs = pgTable(
   "audit_logs",

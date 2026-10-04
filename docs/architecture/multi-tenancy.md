@@ -42,6 +42,12 @@ all rows; scoping them would break sign-in and org switching.
 as full access. Use only after verifying `isPlatformAdmin` (platform admin
 operations, Trigger job bootstrapping that must read membership across orgs).
 
+`withServiceAccess` is the same mechanism with a distinct entry point for
+system paths that legitimately have no tenant context yet — webhook ingestion
+authenticates by unguessable `webhook_token` + provider signature, resolves
+the connection under service scope, then enters
+`withTenant(connection.organizationId)` for all tenant writes.
+
 ## Trigger jobs
 
 Job payloads carry only **identity** (`organizationId`, `actorUserId`). The

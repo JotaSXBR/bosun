@@ -15,6 +15,7 @@
 | 0011 | [TypeScript 6 + ESLint 9](0011-typescript-6-and-eslint-9.md)           |
 | 0012 | [Local S3 via RustFS](0012-local-s3-rustfs.md)                         |
 | 0013 | [Engineering tooling reference](0013-engineering-tooling-reference.md) |
+| 0014 | [Product model](0014-product-model.md)                                 |
 
 ## Template
 

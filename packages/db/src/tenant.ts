@@ -40,3 +40,18 @@ export async function withPlatformScope<T>(
     return fn(tx);
   });
 }
+
+/**
+ * Same transaction mechanism as withPlatformScope (sets app.platform_scope),
+ * but the documented entry point for system paths that legitimately have no
+ * tenant context yet — e.g. webhook ingestion, which authenticates by
+ * unguessable webhook token + provider signature and only afterwards enters
+ * withTenant(connection.organizationId) for tenant writes. Performs no
+ * authorization itself; callers must authenticate the request first.
+ */
+export async function withServiceAccess<T>(
+  db: Database,
+  fn: (tx: Transaction) => Promise<T>,
+): Promise<T> {
+  return withPlatformScope(db, fn);
+}

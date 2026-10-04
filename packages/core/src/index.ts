@@ -1,3 +1,3 @@
-export { AuthorizationError, DomainError, NotFoundError } from "./errors";
+export { AuthorizationError, DomainError, NotFoundError, WebhookVerificationError } from "./errors";
 export type { TenantContext } from "./tenant/context";
 export { assertPermission } from "./tenant/context";
