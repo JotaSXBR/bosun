@@ -28,3 +28,9 @@ playwright/.cache/
 
 # External reference material (re-cloneable, see research/README.md)
 research/vibe-coding-toolkit/
+
+# Session-local task briefs + Devin local overrides
+.task-brief*.md
+.devin/config.local.json
+.devin/mcp_config.local.json
+.devin/hooks/.edited-*

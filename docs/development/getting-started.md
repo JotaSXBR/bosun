@@ -14,6 +14,11 @@ Seed logins (dev password `Password123!`): `superadmin@crm.local` (platform admi
 demo org: `owner@crm.local`, `admin@crm.local`, `manager@crm.local`, `agent@crm.local`.
 Demo org: `Demo` (`demo`).
 
+Optional env: `CHANNEL_CREDENTIALS_KEY` (64 hex chars) encrypts
+`channel_connections` credentials — required only for the Integrations
+feature. Generate:
+`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+
 ## Windows notes
 
 - Run commands from Git Bash (scripts use `sh` semantics; compose/selfhost

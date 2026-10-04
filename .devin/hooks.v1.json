@@ -1,0 +1,70 @@
+{
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "cd \"${DEVIN_PROJECT_DIR:-.}\" && node .devin/hooks/workflow.mjs",
+          "timeout": 10
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "cd \"${DEVIN_PROJECT_DIR:-.}\" && node .devin/hooks/workflow.mjs",
+          "timeout": 5
+        }
+      ]
+    }
+  ],
+  "PreToolUse": [
+    {
+      "matcher": "^(edit|write|notebook_edit)$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "cd \"${DEVIN_PROJECT_DIR:-.}\" && node .devin/hooks/workflow.mjs",
+          "timeout": 10
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "^(edit|write|notebook_edit)$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "cd \"${DEVIN_PROJECT_DIR:-.}\" && node .devin/hooks/workflow.mjs",
+          "timeout": 5
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "cd \"${DEVIN_PROJECT_DIR:-.}\" && node .devin/hooks/workflow.mjs",
+          "timeout": 10
+        }
+      ]
+    }
+  ],
+  "SessionEnd": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "cd \"${DEVIN_PROJECT_DIR:-.}\" && node .devin/hooks/workflow.mjs",
+          "timeout": 5
+        }
+      ]
+    }
+  ]
+}

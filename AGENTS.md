@@ -50,6 +50,18 @@ Dependency direction: app → core/providers → db/config/permissions. Never
 import an adapter outside its registry factory. The only `switch` on provider
 kind is each package's `create*Provider`.
 
+## Development workflow
+
+Lifecycle: `docs/product/*` (spec) → `/brief` (`.task-brief.md` scope
+contract) → `/plan` → `/build` → `/test` → `/review` → `/ship`. Skill
+pack lives in `.devin/skills/` (addyosmani/agent-skills + project skills).
+
+Hooks (`.devin/hooks.v1.json` → `.devin/hooks/workflow.mjs`): block edits
+outside the brief's `## Escopo` globs (docs/markdown always free) and
+require the verification gate before a session with edits can stop.
+One active brief at a time; expand scope by editing the brief with user
+approval. Full process: `docs/development/workflow.md`.
+
 ## Commands
 
 `pnpm install` · `pnpm dev` · `pnpm build` · `pnpm lint` · `pnpm typecheck` ·
@@ -98,6 +110,12 @@ kind is each package's `create*Provider`.
   inside the service.
 - **New tenant-owned table**: follow the checklist in "Database & migrations"
   and `docs/database/README.md`.
+- **Channel webhook ingestion**: `POST /api/webhooks/channels/<webhookToken>`
+  resolves the connection under `withServiceAccess` (unguessable token),
+  verifies the provider signature on the raw body, then ingests each
+  `ChannelEvent` via `@crm/core/messaging` inside `withTenant` and enqueues
+  `process-channel-event`. Connection credentials are AES-256-GCM under
+  `CHANNEL_CREDENTIALS_KEY` (`@crm/core/crypto`).
 - **New ChannelProvider** (e.g. Instagram, Telegram): add
   `packages/channels/src/adapters/<name>.ts` implementing `ChannelProvider`
   (`src/provider.ts`), normalize webhooks into `ChannelEvent`

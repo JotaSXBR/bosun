@@ -20,6 +20,9 @@ pnpm-lock.yaml
 research/
 .trigger-selfhost/
 
+# Vendored skill pack (third-party, keep as published)
+.devin/skills/
+
 # Env files (keep the example formatted)
 .env*
 !.env.example
