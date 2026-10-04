@@ -75,11 +75,13 @@ jobs:
           cache-to: type=gha,mode=max
 
       # Scan after push: a failing scan blocks the deploy jobs below, so a
-      # vulnerable image may exist in GHCR but is never deployed. Trivy runs
-      # via its official image (the action's bundled installer was flaky) —
-      # docker.sock gives it the daemon's GHCR auth for the private package.
+      # vulnerable image may exist in GHCR but is never deployed. The pull
+      # uses the daemon's GHCR auth (private package); the trivy container
+      # then reads the image via the shared docker.sock. Trivy runs via its
+      # official image — the action's bundled installer proved flaky.
       - name: Scan image
         run: |
+          docker pull "${IMAGE}@${{ steps.build.outputs.digest }}"
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy:0.65.0 image \
             --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
