@@ -44,6 +44,11 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
+# Update the bundled npm — its shipped deps lag behind fixes and trip the
+# Trivy image gate (brace-expansion/tar/undici CVEs). npm is unused at
+# runtime but a green scan must stay meaningful.
+RUN npm install -g npm@latest && npm cache clean --force
+
 RUN addgroup -S bosun && adduser -S bosun -G bosun
 
 COPY --from=build /repo/apps/web/.next/standalone ./
