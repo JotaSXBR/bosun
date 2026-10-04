@@ -99,16 +99,15 @@ jobs:
   # Filesystem scan: vulnerable deps (pnpm-lock) + accidentally committed
   # secrets. Runs after build passes — the last gate of the CI stage.
   # CodeQL/secret scanning need GitHub Advanced Security on private repos,
-  # so Trivy covers both here. Image scanning happens in cd.yml.
+  # so Trivy covers both here (via its official image — the action's
+  # bundled installer proved flaky). Image scanning happens in cd.yml.
   scan:
     needs: quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          scan-type: fs
-          scanners: vuln,secret
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: "1"
+      - name: Scan filesystem (vulnerabilities + secrets)
+        run: |
+          docker run --rm -v "$PWD:/repo" aquasec/trivy:0.65.0 \
+            fs /repo --scanners vuln,secret \
+            --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1

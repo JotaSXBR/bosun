@@ -37,9 +37,13 @@ install+lint+unit+build are green.
 
 **Why Trivy and not CodeQL/secret scanning:** GitHub's native scanners
 require GitHub Advanced Security on private repos. Trivy covers dependency
-vulns + secrets in one action, free. Image scanning uses the same tool in
-CD for consistency. Revisit if the repo ever goes public or the plan
-upgrades.
+vulns + secrets in one pass, free. Image scanning uses the same tool in CD
+for consistency. Revisit if the repo ever goes public or the plan upgrades.
+
+Trivy runs via the official `aquasec/trivy:0.65.0` **container image** (not
+`trivy-action`) — the action's bundled binary installer failed
+deterministically on GitHub runners; the container path has zero install
+surface and pins the scanner version by tag.
 
 ## CD stages
 
