@@ -44,10 +44,12 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-# Update the bundled npm — its shipped deps lag behind fixes and trip the
-# Trivy image gate (brace-expansion/tar/undici CVEs). npm is unused at
-# runtime but a green scan must stay meaningful.
-RUN npm install -g npm@latest && npm cache clean --force
+# Remove the package toolchain — the runner only executes server.js.
+# Bundled npm's transitive deps lag fixes (brace-expansion/undici CVEs even
+# on npm@latest) and trip the Trivy gate; deleting beats chasing versions.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm /usr/local/bin/npx \
+           /usr/local/bin/corepack /opt/corepack
 
 RUN addgroup -S bosun && adduser -S bosun -G bosun
 
