@@ -34,3 +34,6 @@ research/vibe-coding-toolkit/
 .devin/config.local.json
 .devin/mcp_config.local.json
 .devin/hooks/.edited-*
+
+# Session secrets staging file (never commit)
+.coolify-secrets.tmp
