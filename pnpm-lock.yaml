@@ -225,7 +225,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   apps/web:
     dependencies:
@@ -270,7 +270,7 @@ importers:
         version: 2.1.3(@opentelemetry/api-logs@0.222.0)(@opentelemetry/api@1.9.1)(@opentelemetry/instrumentation@0.222.0(@opentelemetry/api@1.9.1)(supports-color@7.2.0))(@opentelemetry/resources@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))
       better-auth:
         specifier: 1.7.7
-        version: 1.7.7(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9))(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)))
+        version: 1.7.7(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9))(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3)
       drizzle-orm:
         specifier: 0.45.3
         version: 0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9)
@@ -320,6 +320,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.3.0(@types/react@19.3.0)
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -328,7 +331,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/ai:
     dependencies:
@@ -360,6 +363,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -368,7 +374,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/auth:
     dependencies:
@@ -392,7 +398,7 @@ importers:
         version: link:../permissions
       better-auth:
         specifier: 1.7.7
-        version: 1.7.7(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9))(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)))
+        version: 1.7.7(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9))(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3)
       drizzle-orm:
         specifier: 0.45.3
         version: 0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9)
@@ -409,6 +415,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -420,7 +429,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/automation:
     dependencies:
@@ -458,6 +467,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@10.2.2)
@@ -469,7 +481,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/billing:
     dependencies:
@@ -489,6 +501,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -497,7 +512,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/channels:
     dependencies:
@@ -517,6 +532,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -525,7 +543,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/config:
     dependencies:
@@ -542,6 +560,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -550,7 +571,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/core:
     dependencies:
@@ -588,6 +609,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -596,7 +620,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/db:
     dependencies:
@@ -622,6 +646,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
@@ -633,7 +660,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/email:
     dependencies:
@@ -662,6 +689,9 @@ importers:
       '@types/nodemailer':
         specifier: ^7
         version: 7.0.12
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -670,7 +700,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/observability:
     dependencies:
@@ -687,6 +717,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -695,13 +728,13 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/permissions:
     dependencies:
       better-auth:
         specifier: 1.7.7
-        version: 1.7.7(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9))(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)))
+        version: 1.7.7(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9))(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3)
     devDependencies:
       '@crm/eslint-config':
         specifier: workspace:*
@@ -712,6 +745,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -720,7 +756,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/storage:
     dependencies:
@@ -746,6 +782,9 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.19.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -754,7 +793,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   packages/ui:
     dependencies:
@@ -819,6 +858,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.3.0(@types/react@19.3.0)
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -827,7 +869,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
 
   tooling/eslint:
     dependencies:
@@ -836,7 +878,7 @@ importers:
         version: 9.39.2
       '@vitest/eslint-plugin':
         specifier: 1.6.27
-        version: 1.6.27(@typescript-eslint/eslint-plugin@8.71.0(@typescript-eslint/parser@8.71.0(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)(vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)))
+        version: 1.6.27(@typescript-eslint/eslint-plugin@8.71.0(@typescript-eslint/parser@8.71.0(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)(vitest@5.0.3)
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.7.0)(supports-color@7.2.0)
@@ -1049,6 +1091,10 @@ packages:
   '@babel/types@7.29.8':
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
+
+  '@bcoe/v8-coverage@1.0.2':
+    resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
+    engines: {node: '>=18'}
 
   '@better-auth/core@1.7.7':
     resolution: {integrity: sha512-srgFzHEjB2WWlokFz1i4BfG41sNhsA105Pukgqu6RrEh5A+LSkzf1mCHydVipkjt9l5qswtBMi7IL6ouHbZL4Q==}
@@ -4046,6 +4092,15 @@ packages:
       '@opentelemetry/sdk-metrics': '>=2.0.0 <3.0.0'
       '@opentelemetry/sdk-trace-base': '>=2.0.0 <3.0.0'
 
+  '@vitest/coverage-v8@5.0.3':
+    resolution: {integrity: sha512-+klsyz7BvT1vCU28Zkfzms1Ia78XD0V41U3FUtRaa3S+vOr/EXvK1O6BvVD7l1RzEjm6SONR2aybOvDDf9u0mQ==}
+    peerDependencies:
+      '@vitest/browser': 5.0.3
+      vitest: 5.0.3
+    peerDependenciesMeta:
+      '@vitest/browser':
+        optional: true
+
   '@vitest/eslint-plugin@1.6.27':
     resolution: {integrity: sha512-X1RCAfwbatG4GFbJ/1PIHP9MSZMt0JJThqbYID+vS4L783k6QGlLPe421wQE8dHXuGCcenVLsydiM4qzsYWxhg==}
     engines: {node: '>=18'}
@@ -4061,6 +4116,14 @@ packages:
         optional: true
       vitest:
         optional: true
+
+  '@vitest/istanbul-lib-coverage@1.0.1':
+    resolution: {integrity: sha512-k3DJZ8LhMBK9NS4SclF1ASD3OgXEWDorbIcPTRDK0/Zae6fRvu+fJRxtFdLfHsa9Y24beCdPnoNZ4LviTNstfA==}
+    engines: {node: '>=22'}
+
+  '@vitest/istanbul-lib-report@1.0.1':
+    resolution: {integrity: sha512-1EOLRfsTMnyAr3+kEAsP4o9dhaDlGPpD7H5iLBBeq//YpNB1VIahkPhB+eRp9N2Dkfw8oySROjE3yf9XDeaIkQ==}
+    engines: {node: '>=22'}
 
   '@vitest/mocker@5.0.3':
     resolution: {integrity: sha512-T8sWAIbkSyAjkwTcaEc3Iu0o9A27X1/kdXrizhZkGuSKScRQtRzclfAMpOTcGdXCsqxeWlpGy3XjqaW8CpLORg==}
@@ -4182,6 +4245,9 @@ packages:
 
   ast-types-flow@0.0.8:
     resolution: {integrity: sha512-OH/2E5Fg20h2aPrbe+QL8JZQFko0YZaF+j4mnQ7BGhfavO7OpSLa8a0y9sBwomHdSbkhTS8TQNayBfnW5DwbvQ==}
+
+  ast-v8-to-istanbul@1.0.6:
+    resolution: {integrity: sha512-fvpl29helSO2w/z7utIbrkNXILdrLwDwAMH2I/zPKlGf5244+gf+B4cyS1sANcrPY2h+hWCGSgC8N61s/+AF9A==}
 
   async-function@1.0.0:
     resolution: {integrity: sha512-hsU18Ae8CDTR6Kgu9DYf0EbCr/a5iGL0rytQDobUcdpYOKokk8LEjVphnXkDkgpi0wYVsqrXuP0bZxJaTqdgoA==}
@@ -5386,6 +5452,9 @@ packages:
   jose@6.2.12:
     resolution: {integrity: sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==}
 
+  js-tokens@10.0.0:
+    resolution: {integrity: sha512-lM/UBzQmfJRo9ABXbPWemivdCW8V2G8FHaHdypQaIy523snUjog0W71ayWXTjiR+ixeMyVHN2XcpnTd/liPg/Q==}
+
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -5636,6 +5705,9 @@ packages:
 
   magicast@0.3.5:
     resolution: {integrity: sha512-L0WhttDl+2BOsybvEOLK7fW3UA0OQ0IQ2d6Zl2x/a6vVRs3bAY0ECOSHHeL5jD+SbOpOCUEi0y1DgHEn9Qn1AQ==}
+
+  magicast@0.5.5:
+    resolution: {integrity: sha512-UicdXN8zQ3JHlxVq+28afMXPr1z7WNY6+7EJnzTdQWkTAlMLF5fNCCKxJHBQwGaNGR11581EiQmQzx73+MvszA==}
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -6485,6 +6557,10 @@ packages:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
 
+  tinyrainbow@3.1.1:
+    resolution: {integrity: sha512-yau8yJdTt989Mm0Bd/236QnzEiPf2xLLTqUZRUJOo/3CB078LSwzei343DgtJVmfJKJE3TMINY1u42SQsP6mXw==}
+    engines: {node: '>=14.0.0'}
+
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
@@ -7128,6 +7204,8 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
+
+  '@bcoe/v8-coverage@1.0.2': {}
 
   '@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.9.1)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.4)':
     dependencies:
@@ -9661,7 +9739,19 @@ snapshots:
       '@opentelemetry/sdk-metrics': 2.11.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 2.11.0(@opentelemetry/api@1.9.1)
 
-  '@vitest/eslint-plugin@1.6.27(@typescript-eslint/eslint-plugin@8.71.0(@typescript-eslint/parser@8.71.0(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)(vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)))':
+  '@vitest/coverage-v8@5.0.3(vitest@5.0.3)':
+    dependencies:
+      '@bcoe/v8-coverage': 1.0.2
+      '@vitest/istanbul-lib-coverage': 1.0.1
+      '@vitest/istanbul-lib-report': 1.0.1
+      ast-v8-to-istanbul: 1.0.6
+      magicast: 0.5.5
+      obug: 2.2.1
+      std-env: 4.3.0
+      tinyrainbow: 3.1.1
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+
+  '@vitest/eslint-plugin@1.6.27(@typescript-eslint/eslint-plugin@8.71.0(@typescript-eslint/parser@8.71.0(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)(vitest@5.0.3)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.71.0
       '@typescript-eslint/utils': 8.71.0(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
@@ -9669,9 +9759,15 @@ snapshots:
     optionalDependencies:
       '@typescript-eslint/eslint-plugin': 8.71.0(@typescript-eslint/parser@8.71.0(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.2(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
       typescript: 6.0.3
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
     transitivePeerDependencies:
       - supports-color
+
+  '@vitest/istanbul-lib-coverage@1.0.1': {}
+
+  '@vitest/istanbul-lib-report@1.0.1':
+    dependencies:
+      '@vitest/istanbul-lib-coverage': 1.0.1
 
   '@vitest/mocker@5.0.3(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))':
     dependencies:
@@ -9822,6 +9918,12 @@ snapshots:
 
   ast-types-flow@0.0.8: {}
 
+  ast-v8-to-istanbul@1.0.6:
+    dependencies:
+      '@jridgewell/trace-mapping': 0.3.31
+      estree-walker: 3.0.3
+      js-tokens: 10.0.0
+
   async-function@1.0.0: {}
 
   available-typed-arrays@1.0.7:
@@ -9838,7 +9940,7 @@ snapshots:
 
   baseline-browser-mapping@2.11.27: {}
 
-  better-auth@1.7.7(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9))(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))):
+  better-auth@1.7.7(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9))(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3):
     dependencies:
       '@better-auth/core': 1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.9.1)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.4)
       '@better-auth/drizzle-adapter': 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.9.1)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.4))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6)(postgres@3.4.9))
@@ -9863,7 +9965,7 @@ snapshots:
       next: 16.3.8(@babel/core@7.29.7(supports-color@7.2.0))(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
@@ -11207,6 +11309,8 @@ snapshots:
 
   jose@6.2.12: {}
 
+  js-tokens@10.0.0: {}
+
   js-tokens@4.0.0: {}
 
   js-yaml@4.3.2:
@@ -11396,6 +11500,12 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.6.0
 
   magicast@0.3.5:
+    dependencies:
+      '@babel/parser': 7.29.9
+      '@babel/types': 7.29.8
+      source-map-js: 1.2.2
+
+  magicast@0.5.5:
     dependencies:
       '@babel/parser': 7.29.9
       '@babel/types': 7.29.8
@@ -12368,6 +12478,8 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
 
+  tinyrainbow@3.1.1: {}
+
   to-regex-range@5.0.1:
     dependencies:
       is-number: 7.0.0
@@ -12621,7 +12733,7 @@ snapshots:
       jiti: 2.7.0
       tsx: 4.21.0
 
-  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)):
+  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.3(vite@8.3.2(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0))
@@ -12640,6 +12752,7 @@ snapshots:
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
       '@types/node': 24.19.0
+      '@vitest/coverage-v8': 5.0.3(vitest@5.0.3)
     transitivePeerDependencies:
       - msw
 

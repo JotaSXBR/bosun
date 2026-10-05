@@ -14,7 +14,8 @@
     "studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run --passWithNoTests --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\""
+    "test": "vitest run --passWithNoTests --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\"",
+    "test:coverage": "vitest run --passWithNoTests --coverage --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\""
   },
   "dependencies": {
     "@crm/config": "workspace:*",
@@ -29,6 +30,7 @@
     "drizzle-kit": "0.31.11",
     "eslint": "9.39.2",
     "typescript": "6.0.3",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "@vitest/coverage-v8": "5.0.3"
   }
 }

@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\" --exclude \"e2e/**\"",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:coverage": "vitest run --passWithNoTests --coverage --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\" --exclude \"e2e/**\""
   },
   "dependencies": {
     "@crm/auth": "workspace:*",
@@ -47,6 +48,7 @@
     "@types/react-dom": "^19",
     "eslint": "9.39.2",
     "typescript": "6.0.3",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "@vitest/coverage-v8": "5.0.3"
   }
 }
