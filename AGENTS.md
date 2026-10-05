@@ -182,8 +182,9 @@ tests for anything touching DB/providers.
 
 ## Tooling (integrations)
 
-- **GitHub**: only via the `github-mcp-server` MCP tools — never the `gh`
-  CLI.
+- **GitHub**: prefer the `github-mcp-server` MCP tools. For pull-request
+  operations, if the MCP call fails on the first attempt, fall back to the
+  `gh` CLI.
 - **Coolify**: only via the `coolify` MCP tools — never raw REST/curl to
   `panel.fluxie.com.br`. The MCP is read + deploy + start/stop/restart; for
   config writes it doesn't expose (envs, fqdn, healthcheck), escalate to the

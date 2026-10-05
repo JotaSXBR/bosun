@@ -78,8 +78,9 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   variant `edge` do logger.
 - **P3 — GitHub MCP instável**: `github-mcp-server` responde reads
   (`get_me` ok) mas falha conexão em writes (`create_pull_request` —
-  PR #1 foi criada via `gh` com autorização pontual). Diagnosticar se é
-  transporte/sessão do MCP local; regra de "GitHub só via MCP" segue.
+  PRs #1 e #2 foram criadas via `gh` fallback). Diagnosticar se é
+  transporte/sessão do MCP local. Regra atual: MCP primeiro, `gh` CLI como
+  fallback em operações de pull request após a primeira falha (AGENTS.md).
 - **P3 — Promover warns a error** — contagem **zerada** em
   `chore/lint-warnings` (PR separado): `prefer-nullish-coalescing`,
   `no-unnecessary-condition`, `complexity` e `max-statements` resolvidos
