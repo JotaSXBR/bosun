@@ -26,6 +26,25 @@ arriscadas), `source-driven-development` (conferir docs oficiais),
 (contratos novos), `constraint-driven-development` (barra de qualidade),
 `documentation-and-adrs` (ADRs).
 
+## Gate de esclarecimento (antes de /brief, sempre)
+
+Trabalho não-trivial **começa com perguntas, não com código**. Mudança feita
+sobre suposição é a definição de risco (CRAP: complexo × sem cobertura de
+entendimento). Regra:
+
+- Antes de escrever o brief, o agente identifica ambiguidades que afetam
+  **escopo ou arquitetura** e pergunta ao usuário (menu de múltipla escolha
+  com opção de texto livre — `ask_user_question`).
+- Pergunta só o que muda decisão — preferências cosméticas seguem o default
+  documentado e são registradas no brief como decisões provisórias.
+- As respostas entram no `## Contexto` do `.task-brief.md` — fica o registro
+  do porquê, não só do quê.
+- Pedido já claro e fechado ("rode X", "corrija o typo em Y") não exige
+  gate — usar julgamento. Na dúvida, perguntar: uma pergunta é mais barata
+  que um retrabalho.
+- `interview-me` e `spec-driven-development` são as skills para quando a
+  ambiguidade é de produto, não de implementação.
+
 ## A trava de escopo (`.task-brief.md` + hooks)
 
 `.devin/hooks.v1.json` → `.devin/hooks/workflow.mjs` registra:

@@ -62,7 +62,8 @@ Hooks (`.devin/hooks.v1.json` → `.devin/hooks/workflow.mjs`): block edits
 outside the brief's `## Escopo` globs (docs/markdown always free) and
 require the verification gate before a session with edits can stop.
 One active brief at a time; expand scope by editing the brief with user
-approval. Full process: `docs/development/workflow.md`.
+approval. Non-trivial work starts with clarifying questions — never guess
+scope-affecting decisions (see `docs/development/workflow.md`).
 
 ## Commands
 
@@ -178,3 +179,12 @@ tests for anything touching DB/providers.
 - No Terraform/Kubernetes (yet). No microservices, extra queues or extra
   databases — ask "what concrete problem does this solve now?" first.
 - Commits follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`...).
+
+## Tooling (integrations)
+
+- **GitHub**: only via the `github-mcp-server` MCP tools — never the `gh`
+  CLI.
+- **Coolify**: only via the `coolify` MCP tools — never raw REST/curl to
+  `panel.fluxie.com.br`. The MCP is read + deploy + start/stop/restart; for
+  config writes it doesn't expose (envs, fqdn, healthcheck), escalate to the
+  user instead of bypassing.

@@ -16,6 +16,12 @@ Create `.task-brief.md` at the repo root from `docs/development/task-brief.templ
 1. Identify the work item: the user's request, the matching `TODO.md` entry
    ("Produto — backlog" or "Implementação futura"), and the relevant
    `docs/product/*` doc. Read them first.
+1b. Clarification gate (see `docs/development/workflow.md`): before writing
+   the brief, surface ambiguities that change scope or architecture and ask
+   the user via `ask_user_question` (multiple-choice menu, free-text allowed).
+   Record the answers in `## Contexto`. Never guess scope-affecting
+   decisions — cosmetic defaults may be assumed but must be written down as
+   provisional.
 2. Fill Objetivo in one sentence — what gets delivered.
 3. Write `## Escopo` globs — the directories/files this work may touch.
    Be generous enough to avoid false blocks (include the tests, the package

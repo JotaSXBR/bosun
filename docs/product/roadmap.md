@@ -15,7 +15,7 @@ agents → leads/sales → activities → settings**.
 
 | Phase                | Contents                                                                                                                                                       | Status                 |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| Foundation           | monorepo, auth, tenancy+RLS, providers, Trigger, docs                                                                                                          | ✅ done                |
+| Foundation           | monorepo, auth, tenancy+RLS, providers, docs (Trigger.dev → pg-boss pendente, ver TODO)                                                                        | ✅ done                |
 | Integrations         | `channel_connections`, encrypted creds, webhook ingest, `/app/integrations`                                                                                    | ✅ done                |
 | Messaging core       | contacts/conversations/messages, idempotent ingest                                                                                                             | ✅ done                |
 | Realtime             | SSE inbox via LISTEN/NOTIFY                                                                                                                                    | ✅ done                |
