@@ -22,36 +22,63 @@ sector**, and statuses show "time responsável". Sectors do NOT assign
 agents automatically; a human still picks conversations manually.
 Management UI is deferred to the P2 Settings item.
 
-## Messaging — implemented, needs extension
+## Messaging — implemented
 
-`contacts`, `conversations`, `messages`, `channel_connections` exist.
-`conversations.sector_id`/`assignee_id` and the lifecycle below are
-implemented; `archived` was removed (folded into `resolved`). The
-assignment/transfer actions and queue views are still to come.
+`contacts`, `conversations`, `messages`, `channel_connections`,
+`ticket_counters` exist. `conversations.sector_id`/`assignee_id`, the
+ticket columns and the lifecycle below are implemented; `archived` was
+removed (folded into `resolved`).
+
+**Ticket semantics (Zendesk-style solved/closed)**: a `conversations` row is
+one ticket — `resolved` is terminal **for the customer**: a new inbound (or
+an explicit `resumeTicket`) on a resolved chat creates a NEW ticket linked
+via `preceded_by_id`; it starts `open`, unassigned, with no sector. Agents
+may `reopenTicket` inside the org's reopen window
+(`organization_settings.ticket_reopen_window_hours`, default 48h) — past it
+the ticket is effectively closed (a materialized `closed` status waits for
+the jobs layer). Reopen requires no active ticket for the chat (a follow-up
+wins) and keeps ticket_number/ticket_seq. The partial unique index
+`(channel_connection_id, external_id) WHERE status != 'resolved'` enforces
+one active ticket per chat.
+
+Numbering (both implemented):
+
+- `ticket_number` — org-wide sequence (`ticket_counters` row per org).
+- `ticket_seq` — per-contact sequence (`contacts.ticket_counter`); display
+  is `contact seq` + `ticket seq` (e.g. `12-3`) plus the date — UI slice.
+- Metrics: `resolved_at`, `first_response_at` (first agent reply).
 
 Conversation lifecycle (implemented):
 
-| Status (enum)      | Meaning                                                 | Responsible |
-| ------------------ | ------------------------------------------------------- | ----------- |
-| `open`             | In the queue (Fila) or routed to a sector, no agent yet | —           |
-| `in_progress`      | An agent is handling it                                 | agent       |
-| `waiting_customer` | Agent replied, waiting on the customer                  | agent       |
-| `resolved`         | Done                                                    | sector      |
+| Status (enum)      | Meaning                                                                         | Responsible |
+| ------------------ | ------------------------------------------------------------------------------- | ----------- |
+| `open`             | In the queue (Fila) or routed to a sector, no agent yet                         | —           |
+| `in_progress`      | An agent is handling it                                                         | agent       |
+| `waiting_customer` | Agent replied, waiting on the customer                                          | agent       |
+| `resolved`         | Done — terminal for the customer; reopenable by agents inside the reopen window | —           |
 
-Derived views (not statuses): **Fila** = `open` + `assignee_id IS NULL`
-sorted by oldest waiting (wait time = last inbound message); **Aguardando
-atendimento** = `open` + `sector_id` set (routed, awaiting pickup);
-**Minhas** = `assignee_id = me`; **Resolvidas**.
+Derived views (`listConversations` `view` param, implemented): **Fila**
+(`queue`) = `open` + `assignee_id IS NULL`, oldest `last_message_at` first;
+**Minhas** (`mine`) = `assignee_id = me` and not resolved; **Resolvidas**
+(`resolved`) = resolved, newest `resolved_at` first; `inbox` = all.
 
-`conversations.sector_id` (FK teams, nullable) and `assignee_id` (FK users,
-nullable) exist. Status transitions: manual pickup, transfer (sector/agent),
-resolve (all pending — actions/UI slices); inbound message on `resolved`
-reopens to `open` (implemented); inbound while `waiting_customer` →
-`in_progress` (implemented).
+Actions (implemented in `@crm/core/messaging`, all `messaging:write` —
+viewer denied): `pickupConversation` (free tickets only — assignee=me,
+`in_progress`), `transferConversation` (member → `in_progress`; team →
+`open` + unassigned; writes a private system note to the timeline —
+the audited handoff), `resolveConversation` (`resolved` + `resolved_at` +
+`resolved_by_id`), `setConversationWaiting`, `setConversationInProgress`,
+`sendOutboundMessage` (provider send outside the DB tx, persists
+sent/failed, → `waiting_customer`, auto-assigns the caller, stamps
+`first_response_at`), `addInternalNote` (`private` message, never sent),
+`resumeTicket` (follow-up `in_progress` assigned to caller), `reopenTicket`
+(undo resolve — window + no-active-follow-up guards). Actions on resolved
+tickets throw `TICKET_RESOLVED`; actions on a ticket assigned to another
+agent throw `TICKET_ASSIGNED` (transfer first).
 
-`messages.private` exists — internal notes invisible to the client (team
-notes, handoff context, later AI suggestions). The note-writing action is
-still to come.
+`messages.private` (internal notes) and `messages.author_id` (which agent
+replied/annotated) exist; `conversations.resolved_by_id` records who closed
+a ticket.
 
 ## Leads / funil — spec
 

@@ -11,8 +11,27 @@ Agreed in the questionnaire/interview (2026-10-03). Items marked
   No round-robin, no auto-assign in v1.
 - **Sectors route, humans pick**: AI triage (when enabled) sets `sector_id`;
   pickup is still manual.
-- **Reopen**: inbound message on a `resolved` conversation reopens it to
-  `open` (provisional: keeps previous sector, drops assignee).
+- **Tickets, not threads**: `resolved` is terminal **for the customer**. A
+  new inbound on a resolved chat opens a **follow-up ticket**
+  (`preceded_by_id`) — fresh queue, no sector/assignee carry-over. Agents
+  can also create a follow-up explicitly (`resumeTicket`).
+- **Ownership**: a ticket in attendance belongs to its assignee — working
+  actions (reply, note, waiting, in_progress, resolve, pickup) on someone
+  else's ticket are rejected (`TICKET_ASSIGNED`). Ownership changes only via
+  `transferConversation` — the explicit, audited path for covering an absent
+  agent; every transfer writes a private system note in the ticket timeline
+  (`metadata.system: "transfer"`), visible to operators, never to the
+  customer.
+- **Reopen (undo)**: any agent may reopen a resolved ticket within
+  `ticket_reopen_window_hours` (default 48h, per-org) — the "closed by
+  accident" escape. Impossible once a follow-up is active; past the window
+  the ticket is effectively closed (a real `closed` status waits for the
+  jobs layer). Reopening keeps the assignee and clears resolution stamps.
+- **Ticket numbering**: global per org (`#47`) + per-contact sequence
+  (`12-3` = contact 12's 3rd ticket) + date.
+- **Reply assigns**: sending an outbound reply moves the ticket to
+  `waiting_customer` and auto-assigns the sender when unassigned (it never
+  steals an assigned ticket).
 - **Customer reply** while `waiting_customer` → back to `in_progress`
   (provisional).
 - **Conversa → lead is a human decision** — never automatic.
