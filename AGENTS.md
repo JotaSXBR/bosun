@@ -169,8 +169,8 @@ live in each package's `testing` export.
 
 ## Definition of done
 
-`pnpm lint && pnpm typecheck && pnpm test` green, plus relevant integration
-tests for anything touching DB/providers.
+`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` green, plus
+relevant integration tests for anything touching DB/providers.
 
 ## Do NOT
 

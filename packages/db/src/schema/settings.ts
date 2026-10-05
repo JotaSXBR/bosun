@@ -1,13 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  jsonb,
-  pgPolicy,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { jsonb, pgPolicy, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { crmAppRole, tenantPredicate } from "./audit";
 import { organizations } from "./auth";

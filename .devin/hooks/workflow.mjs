@@ -90,7 +90,7 @@ switch (event) {
       emit({
         decision: "block",
         reason:
-          "Files were edited this session. Before finishing: run the minimal gate (pnpm typecheck && pnpm lint + relevant tests), update TODO.md/docs touched by the work, and report what was verified.",
+          "Files were edited this session. Before finishing: run the minimal gate (pnpm format:check && pnpm typecheck && pnpm lint + relevant tests), update TODO.md/docs touched by the work, and report what was verified.",
       });
     } else {
       if (edited) unlinkSync(marker);

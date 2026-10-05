@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-const hhmm = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "expected HH:mm");
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "expected HH:mm");
 
 const weekday = z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
 

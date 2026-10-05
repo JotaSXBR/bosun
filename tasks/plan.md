@@ -45,38 +45,44 @@ auto-reply off-hours (slices 2 e 3).
 Detalhamento em `tasks/todo.md`.
 
 ### Phase 1 — Foundation
+
 - Task 1: Schema + migração (teams, team_members, organization_settings,
   conversations/messages)
 - Task 2: Papel `viewer` + resource `teams` em `@crm/permissions`
 
 ### Checkpoint: Foundation
+
 - `pnpm typecheck && pnpm lint && pnpm test` verdes; migração aplicada local
 
 ### Phase 2 — Domain
+
 - Task 3: Módulo `@crm/core` teams (CRUD + membros) + int tests
 - Task 4: `organization_settings` get-or-create/update + int tests
 - Task 5: Lifecycle no `ingestChannelEvent` + `messages.private` + int tests
 
 ### Checkpoint: Domain
+
 - `pnpm test:integration` verde (transições + isolamento cross-org)
 
 ### Phase 3 — Wrap-up
+
 - Task 6: Seed (viewer@crm.local + times demo)
 - Task 7: Docs (domain-model → implemented; TODO.md)
 
 ### Checkpoint: Complete
+
 - `pnpm typecheck && pnpm lint && pnpm test` + int verdes; brief criteria
   cumpridos
 
 ## Risks and Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| drizzle-kit não gera diff do check de status | Med | Revisar SQL gerado; editar a migração NOVA à mão (data migration + drop/add check) antes de `db:migrate` |
-| Replay de webhook re-abre conversa resolvida manualmente depois | Med | Transição só roda quando `insertMessage` retorna row (dedup por external_id) |
-| `viewer` quebrar better-auth org plugin | Low | `roles` é consumido via objeto; member.role é text sem check no DB |
-| Ordem escopo→FORCE RLS na migração | Low | Seguir padrão 0004: policies no generate, `ALTER ... FORCE RLS` no fim |
-| STATUS_LABELS em `inbox/page.tsx` menciona `archived` | Low | Chave morta e inócua; UI é slice 3 (fora de escopo agora) |
+| Risk                                                            | Impact | Mitigation                                                                                               |
+| --------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------- |
+| drizzle-kit não gera diff do check de status                    | Med    | Revisar SQL gerado; editar a migração NOVA à mão (data migration + drop/add check) antes de `db:migrate` |
+| Replay de webhook re-abre conversa resolvida manualmente depois | Med    | Transição só roda quando `insertMessage` retorna row (dedup por external_id)                             |
+| `viewer` quebrar better-auth org plugin                         | Low    | `roles` é consumido via objeto; member.role é text sem check no DB                                       |
+| Ordem escopo→FORCE RLS na migração                              | Low    | Seguir padrão 0004: policies no generate, `ALTER ... FORCE RLS` no fim                                   |
+| STATUS_LABELS em `inbox/page.tsx` menciona `archived`           | Low    | Chave morta e inócua; UI é slice 3 (fora de escopo agora)                                                |
 
 ## Open Questions
 
