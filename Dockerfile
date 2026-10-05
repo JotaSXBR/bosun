@@ -9,6 +9,10 @@ FROM node:24-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 
+# No .git in the build context (.dockerignore) — CI=true makes lefthook's
+# `prepare` script skip hook installation instead of failing the install.
+ENV CI=true
+
 # Prime the pnpm store from the lockfile alone so this layer is only busted
 # when dependencies change, not on every source edit.
 # package.json included so corepack activates the pinned pnpm version
