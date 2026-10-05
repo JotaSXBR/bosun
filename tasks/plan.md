@@ -1,91 +1,94 @@
-# Implementation Plan: Multi-atendimento (slice 1) — schema + ciclo de conversa
+# Implementation Plan: Multi-atendimento slice 2 — tickets + ações
 
 ## Overview
 
-Fundação do multi-atendimento conforme `.task-brief.md`: três tabelas
-tenant-owned novas (`teams`, `team_members`, `organization_settings`),
-extensão de `conversations` (`sector_id`, `assignee_id`, ciclo
-`open|in_progress|waiting_customer|resolved`) e `messages.private`, papel
-`viewer`, módulo `@crm/core` teams + service de settings, transições
-automáticas no inbound, seed atualizado. Sem UI, sem server actions, sem
-auto-reply off-hours (slices 2 e 3).
+Converter `conversations` em tickets (resolved terminal; inbound cria nova
+conversa linkada por `preceded_by_id`, numeração dupla, timestamps de
+métricas) e entregar as ações de atendimento (`@crm/core` service + Server
+Actions, sem UI). Brief: `.task-brief.md`.
 
 ## Architecture Decisions
 
-- **`team_members` carrega `organization_id` denormalizado** — todas as
-  tabelas tenant-owned seguem o checklist (org column + `tenantPredicate` +
-  `.enableRLS()`); uma policy por subquery em `teams` seria a única exceção
-  do repo. Duas FKs: `team_id` (cascade) + `organization_id` (cascade).
-- **Transição de status no inbound roda DEPOIS do `insertMessage`**, não no
-  `onConflictDoUpdate` do `upsertConversation`: o guard `if (message)` que já
-  protege `emitDomainEvent` passa a proteger também a transição — replay de
-  webhook não re-abre conversa resolvida nem altera assignee.
-- **Check constraint de status via SQL editado à mão na migração nova**:
-  drizzle-kit historicamente não difa `check()` — o passo "review SQL" do
-  workflow cobre isso (migrações só são imutáveis depois de aplicadas).
-  Ordem: `UPDATE conversations SET status='resolved' WHERE status='archived'`
-  → drop do check antigo → create do check novo.
-- **`viewer` read-only**: `messaging:read`, `integrations:read`,
-  `audit:read`, `teams:read` — sem billing, sem escrita (provisório, ver
-  brief). Novo resource `teams: ["read","manage"]`: manage para
-  owner/admin/manager, read para todos os membros.
-- **`organization_settings` 1:1** (`organization_id` unique), get-or-create
-  no service. `business_hours` jsonb com shape zod provisório
-  `{ timezone, windows: { mon..sun: [{start,end}] } }` — definido agora para
-  os dados já nascerem válidos para o auto-reply futuro.
-- **Notas internas** = `messages` com `private=true` (`direction='outbound'`,
-  nunca enviadas ao provider) — a coluna entra agora; a action de criar nota
-  é slice 2.
-- **`conversation.updated`** é emitido quando o inbound muda o status —
-  `domainEventSchema` é loose (type é string livre), sem mudança em
-  `packages/db/src/realtime.ts`.
+- **Ticket = conversation row.** Nenhuma entidade nova de episódio: a linha
+  `conversations` é o ticket. Chat thread = siblings por
+  `(channel_connection_id, external_id)` ordenados por `created_at`; o
+  anterior direto = `preceded_by_id`. Zendesk-style: resolved imutável,
+  follow-up referencia o fechado.
+- **Unique parcial** `(channel_connection_id, external_id) WHERE status !=
+'resolved'` — só 1 ticket ativo por chat (como Chatwoot/Zendesk). Insert
+  concorrente em resolved → 23505 → reselect.
+- **Contadores em tx**: `ticket_counters` (org) via upsert+RETURNING;
+  `contacts.ticket_counter` via UPDATE+RETURNING. Ambos atômicos por row
+  lock dentro da tx do `withTenant`.
+- **Outbound fora da tx**: ler conn+creds (withTenant) → `provider.sendMessage`
+  (boundary externo) → gravar message+transições (withTenant). Falha no
+  provider → message `failed` persistida + DomainError (agente vê a falha).
+- **Provider seam para teste**: `sendOutboundMessage` aceita dep opcional
+  `{ provider }` — int test injeta `FakeChannelProvider`; produção resolve
+  via `providerFromCredentials` (exportado de integrations).
+- **`messaging:write`** novo no statement: owner/admin/manager/agent;
+  viewer continua só read.
+- Transições manuais como funções discretas (permissão/evento claros):
+  `pickupConversation`, `transferConversation`, `markConversationWaiting`,
+  `markConversationInProgress`, `resolveConversation`,
+  `sendOutboundMessage`, `addInternalNote`, `resumeTicket`.
 
 ## Task List
 
-Detalhamento em `tasks/todo.md`.
+### Phase 1 — Schema + ingest
 
-### Phase 1 — Foundation
-
-- Task 1: Schema + migração (teams, team_members, organization_settings,
-  conversations/messages)
-- Task 2: Papel `viewer` + resource `teams` em `@crm/permissions`
+- [ ] Task 1: Migração 0006 — unique parcial, colunas de ticket/métricas,
+      `contacts.ticket_counter`, `ticket_counters` (RLS+FORCE+grants),
+      backfill dos rows existentes; `db:generate` + revisar SQL + `db:migrate`
+- [ ] Task 2: Repository + ingest — `findOrCreateTicket` (ativo ou novo com
+      counters+preceded_by+sector null, retry em 23505), transição inbound só
+      `waiting_customer`→`in_progress`; int tests (novo ticket em resolved,
+      seqs, dedup)
 
 ### Checkpoint: Foundation
 
-- `pnpm typecheck && pnpm lint && pnpm test` verdes; migração aplicada local
+- [ ] typecheck+lint+test verdes; migração aplicada; int tests de ingest verdes
 
-### Phase 2 — Domain
+### Phase 2 — Ações
 
-- Task 3: Módulo `@crm/core` teams (CRUD + membros) + int tests
-- Task 4: `organization_settings` get-or-create/update + int tests
-- Task 5: Lifecycle no `ingestChannelEvent` + `messages.private` + int tests
+- [ ] Task 3: `messaging:write` em `@crm/permissions` (statement+roles+teste)
+- [ ] Task 4: Service actions de status/assignment — pickup, transfer
+      (valida setor via teams repo + membro via org_members), markWaiting,
+      markInProgress, resolve (+resolved_at); eventos `conversation.updated`;
+      `listTenantConversations` ganha `view` (queue = open + assignee null,
+      mais antigo esperando primeiro via last inbound; mine = assignee self;
+      resolved); int tests (transições + permissões + RLS + view)
+- [ ] Task 5: `sendOutboundMessage` + `addInternalNote` + `resumeTicket` —
+      helper `providerForConnection` exportado de integrations; outbound
+      →waiting_customer+auto-assign+first_response_at; nota privada; resume
+      cria ticket linkado; int tests com `FakeChannelProvider`
 
 ### Checkpoint: Domain
 
-- `pnpm test:integration` verde (transições + isolamento cross-org)
+- [ ] int tests verdes (transições, outbound fake, nota, resume, RLS,
+      viewer negado)
 
-### Phase 3 — Wrap-up
+### Phase 3 — Actions + docs
 
-- Task 6: Seed (viewer@crm.local + times demo)
-- Task 7: Docs (domain-model → implemented; TODO.md)
+- [ ] Task 6: `apps/web/src/server/actions/messaging.ts` — wrappers
+      `{ok}|{ok:false,error}` (pattern integrations.ts) + revalidatePath
+- [ ] Task 7: Docs — domain-model/rules refletem tickets (resolved
+      terminal, preceded_by, numeração, métricas); TODO.md
 
 ### Checkpoint: Complete
 
-- `pnpm typecheck && pnpm lint && pnpm test` + int verdes; brief criteria
-  cumpridos
+- [ ] `pnpm format:check && pnpm typecheck && pnpm lint && pnpm test` +
+      `pnpm test:integration` verdes; critérios do brief cumpridos
 
 ## Risks and Mitigations
 
-| Risk                                                            | Impact | Mitigation                                                                                               |
-| --------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------- |
-| drizzle-kit não gera diff do check de status                    | Med    | Revisar SQL gerado; editar a migração NOVA à mão (data migration + drop/add check) antes de `db:migrate` |
-| Replay de webhook re-abre conversa resolvida manualmente depois | Med    | Transição só roda quando `insertMessage` retorna row (dedup por external_id)                             |
-| `viewer` quebrar better-auth org plugin                         | Low    | `roles` é consumido via objeto; member.role é text sem check no DB                                       |
-| Ordem escopo→FORCE RLS na migração                              | Low    | Seguir padrão 0004: policies no generate, `ALTER ... FORCE RLS` no fim                                   |
-| STATUS_LABELS em `inbox/page.tsx` menciona `archived`           | Low    | Chave morta e inócua; UI é slice 3 (fora de escopo agora)                                                |
+| Risk                                                        | Impact | Mitigation                                                                           |
+| ----------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
+| drizzle-kit não gera unique parcial/data migration          | Med    | Revisar SQL à mão como na 0005 (backfill + DROP INDEX + CREATE UNIQUE ... WHERE)     |
+| Send provider ok, write tx falha → msg enviada sem registro | Med    | Aceitar v1 (raro); nota em código; reconciliação via `message.status` webhook depois |
+| Concorrência inbound vs resolved                            | Low    | Unique parcial + retry/reselect em 23505 dentro da mesma tx                          |
+| `providerFromCredentials` privado                           | Low    | Exportar de integrations como helper interno (sem mudar contrato)                    |
 
 ## Open Questions
 
-- Nenhuma bloqueante. Provisórias registradas no `## Contexto` do brief
-  (reopen mantém setor/zera assignee; escopo de leitura do viewer; shape de
-  `business_hours`).
+- Nenhuma — decisões travadas no brief (Zendesk-style).

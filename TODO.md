@@ -11,15 +11,23 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 - **P1 — Multi-atendimento**: `teams`/`team_members` (setores) ✅;
   `conversations` ganha `sector_id`, `assignee_id` e ciclo de status
   `open|in_progress|waiting_customer|resolved` ✅ (`archived` removido);
-  views Fila/Aguardando/Minhas/Resolvidas (fila = open + sem assignee,
-  mais antiga primeiro); `messages.private` (notas internas) ✅ coluna;
-  página de conversa + envio outbound via `provider.sendMessage`; reabrir
-  conversa em inbound ✅ + `waiting_customer`→`in_progress` ✅; papel
-  `viewer` (read-only) ✅; `organization_settings` ✅ (auto-reply fora de
-  horário 1×/dia ainda pendente). **Slice 1 entregue** (schema + lifecycle +
-  viewer + settings); faltam slice 2 (ações/outbound/notas/off-hours) e
-  slice 3 (UI views/conversa/teams). Ver `docs/product/domain-model.md` +
-  `rules.md`.
+  papel `viewer` (read-only) ✅; `organization_settings` ✅ (auto-reply
+  fora de horário 1×/dia ainda pendente). **Slice 2 entregue**: modelo de
+  tickets — `resolved` terminal; inbound cria follow-up (`preceded_by_id`,
+  sem herdar setor/assignee); `ticket_number` org + `ticket_seq` por
+  contato; `resolved_at`/`first_response_at`; `messages.author_id`; views
+  inbox/queue/mine/resolved ✅; ações pickup/transfer/resolve/waiting/
+  in_progress ✅; `sendOutboundMessage` (provider fora da tx, gap
+  send-ok/write-fail aceito v1) ✅; `addInternalNote` ✅; `resumeTicket` ✅;
+  `reopenTicket` ✅ (qualquer agente; janela `ticket_reopen_window_hours`
+  default 48h por org; bloqueado se follow-up ativo; `resolved_by_id` p/
+  auditoria — status `closed` materializado espera camada de jobs);
+  `messaging:write` (viewer negado) ✅; Server Actions
+  `apps/web/src/server/actions/messaging.ts` ✅. Falta slice 3 (UI:
+  views/conversa/notas/teams + divisor de ticket anterior + **expor
+  `ticketReopenWindowHours` em `updateOrgSettingsInput`/`upsertSettings`**
+  — hoje a janela só muda via SQL). Ver
+  `docs/product/domain-model.md` + `rules.md`.
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.
 - **P1 — Site chat**: provider `site_chat` + widget embarcável + endpoint

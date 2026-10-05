@@ -142,6 +142,21 @@ export async function applyConnectionStatus(
   });
 }
 
+/**
+ * Internal — resolves a stored connection to a ready ChannelProvider (tenant
+ * read, credentials decrypted in-memory only). The returned provider must
+ * never reach the client; callers pass it to send/connect only.
+ */
+export async function providerForConnection(
+  db: Database,
+  organizationId: string,
+  connectionId: string,
+): Promise<ChannelProvider> {
+  const conn = await getChannelConnection(db, organizationId, connectionId);
+  if (!conn) throw new NotFoundError("Channel connection", connectionId);
+  return providerFromCredentials(conn.kind, decryptJson(conn.credentialsEncrypted));
+}
+
 async function getConnectionOrThrow(
   db: Database,
   ctx: TenantContext,

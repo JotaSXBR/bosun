@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
+  bigint,
   boolean,
   check,
   index,
@@ -76,6 +78,9 @@ export const contacts = pgTable(
     channelUserId: text().notNull(),
     displayName: text(),
     avatarUrl: text(),
+    // Per-contact ticket sequence source — incremented in the same tx that
+    // creates a ticket, so ticket_seq is that contact's Nth attendance.
+    ticketCounter: bigint({ mode: "number" }).notNull().default(0),
     metadata: jsonb().notNull().default({}),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -93,10 +98,15 @@ export const contacts = pgTable(
 ).enableRLS();
 
 /**
- * One conversation thread per (connection, provider chat id). Lifecycle:
- * open → in_progress ⇄ waiting_customer → resolved; inbound on resolved
- * reopens to open (keeps sector, drops assignee). `sector_id` routes the
- * conversation to a team; `assignee_id` is the agent handling it.
+ * One ticket per attendance episode on a (connection, provider chat id).
+ * `resolved` is terminal for the CUSTOMER — a new inbound creates a NEW row
+ * linked by `preceded_by_id` (Zendesk-style follow-up), so at most one
+ * non-resolved row exists per chat (partial unique). Agents may still
+ * reopen a resolved ticket inside the org's reopen window
+ * (`organization_settings.ticket_reopen_window_hours`) — past the window it
+ * is effectively closed. `ticket_number` is the org-wide sequence;
+ * `ticket_seq` is the contact's Nth attendance. `resolved_at`/`resolved_by`/
+ * `first_response_at` feed per-episode metrics.
  */
 export const conversations = pgTable(
   "conversations",
@@ -117,14 +127,28 @@ export const conversations = pgTable(
     status: text().notNull().default("open"),
     sectorId: uuid().references(() => teams.id, { onDelete: "set null" }),
     assigneeId: uuid().references(() => users.id, { onDelete: "set null" }),
+    precededById: uuid().references((): AnyPgColumn => conversations.id, {
+      onDelete: "set null",
+    }),
+    ticketNumber: bigint({ mode: "number" }).notNull(),
+    ticketSeq: bigint({ mode: "number" }).notNull(),
+    resolvedAt: timestamp({ withTimezone: true }),
+    // Who closed it — audit + reopen window logic (cleared on reopen).
+    resolvedById: uuid().references(() => users.id, { onDelete: "set null" }),
+    firstResponseAt: timestamp({ withTimezone: true }),
     lastMessageAt: timestamp({ withTimezone: true }),
     metadata: jsonb().notNull().default({}),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("conversations_connection_external_idx").on(t.channelConnectionId, t.externalId),
+    // One ACTIVE ticket per chat — resolved rows are excluded so follow-ups
+    // coexist with the closed history.
+    uniqueIndex("conversations_connection_external_idx")
+      .on(t.channelConnectionId, t.externalId)
+      .where(sql`${t.status} != 'resolved'`),
     index("conversations_org_last_message_idx").on(t.organizationId, t.lastMessageAt.desc()),
+    index("conversations_org_status_idx").on(t.organizationId, t.status),
     index("conversations_org_sector_idx").on(t.organizationId, t.sectorId),
     index("conversations_org_assignee_idx").on(t.organizationId, t.assigneeId),
     check(
@@ -166,6 +190,8 @@ export const messages = pgTable(
     externalId: text(),
     // Internal note — visible to the team, never sent to the customer.
     private: boolean().notNull().default(false),
+    // Agent who authored an outbound reply or internal note (null = inbound).
+    authorId: uuid().references(() => users.id, { onDelete: "set null" }),
     status: text().notNull().default("received"),
     sentAt: timestamp({ withTimezone: true }),
     metadata: jsonb().notNull().default({}),
@@ -183,6 +209,29 @@ export const messages = pgTable(
       sql`${t.status} in ('received', 'queued', 'sent', 'delivered', 'read', 'failed')`,
     ),
     pgPolicy("messages_tenant_isolation", {
+      for: "all",
+      to: crmAppRole,
+      using: tenantPredicate,
+      withCheck: tenantPredicate,
+    }),
+  ],
+).enableRLS();
+
+/**
+ * Org-wide ticket sequence — one row per org, `value` is the last
+ * `ticket_number` handed out. Incremented atomically inside the creating
+ * transaction (row lock serializes concurrent ticket inserts).
+ */
+export const ticketCounters = pgTable(
+  "ticket_counters",
+  {
+    organizationId: uuid()
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    value: bigint({ mode: "number" }).notNull().default(0),
+  },
+  () => [
+    pgPolicy("ticket_counters_tenant_isolation", {
       for: "all",
       to: crmAppRole,
       using: tenantPredicate,

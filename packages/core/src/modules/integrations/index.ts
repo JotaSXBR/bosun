@@ -11,6 +11,7 @@ export {
   createChannelConnection,
   getConnectionWebhookUrl,
   listChannelConnectionsForTenant,
+  providerForConnection,
   refreshConnectionStatus,
   removeChannelConnection,
   resolveWebhookConnection,

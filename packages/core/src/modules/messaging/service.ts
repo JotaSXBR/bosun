@@ -1,7 +1,8 @@
 import type { ChannelEvent, RawWebhookRequest } from "@crm/channels";
 import { applyConnectionStatus, resolveWebhookConnection } from "@crm/core/integrations";
 import type { Database, DbExecutor } from "@crm/db";
-import { emitDomainEvent, withTenant } from "@crm/db";
+import { emitDomainEvent, schema, withTenant } from "@crm/db";
+import { eq } from "drizzle-orm";
 
 import { NotFoundError, WebhookVerificationError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
@@ -9,16 +10,18 @@ import { assertPermission } from "../../tenant/context";
 import type { ConversationListRow, MessageRow } from "./repository";
 import {
   applyInboundStatusTransition,
+  findOrCreateTicket,
   insertMessage,
   listConversations,
   listMessages,
   updateConversationLastMessage,
   updateMessageStatus,
   upsertContact,
-  upsertConversation,
 } from "./repository";
 import type { ListConversationsInput, ListMessagesInput } from "./schemas";
 import { listConversationsInput, listMessagesInput } from "./schemas";
+
+const { conversations } = schema;
 
 /**
  * Minimal connection identity needed for ingestion. The row was already
@@ -59,7 +62,7 @@ export async function ingestChannelEvent(
         channelUserId: event.from.channelUserId,
         displayName: event.from.displayName,
       });
-      const conversation = await upsertConversation(executor, {
+      const { conversation, created } = await findOrCreateTicket(executor, {
         organizationId: conn.organizationId,
         channelConnectionId: conn.id,
         contactId: contact.id,
@@ -86,6 +89,16 @@ export async function ingestChannelEvent(
           conversation.id,
           conversation.status,
         );
+        if (created) {
+          await emitDomainEvent(executor, {
+            type: "conversation.created",
+            organizationId: conn.organizationId,
+            conversationId: conversation.id,
+            contactId: contact.id,
+            ticketNumber: conversation.ticketNumber,
+            precededById: conversation.precededById,
+          });
+        }
         await emitDomainEvent(executor, {
           type: "message.received",
           organizationId: conn.organizationId,
@@ -102,6 +115,11 @@ export async function ingestChannelEvent(
             status: transitioned.status,
           });
         }
+      } else if (created) {
+        // Replayed webhook on a resolved chat: the follow-up ticket was
+        // created before the deduped insert — drop the empty ticket so a
+        // replay can't manufacture a phantom ticket.
+        await executor.delete(conversations).where(eq(conversations.id, conversation.id));
       }
       return { eventType: event.type, messageId: message?.id ?? null };
     }
@@ -161,7 +179,11 @@ export async function listTenantConversations(
 ): Promise<ConversationListRow[]> {
   assertPermission(ctx, { messaging: ["read"] });
   const parsed = listConversationsInput.parse(input ?? {});
-  return listConversations(db, ctx.organizationId, parsed.limit);
+  return listConversations(db, ctx.organizationId, {
+    view: parsed.view,
+    limit: parsed.limit,
+    userId: ctx.userId,
+  });
 }
 
 /** Requires messaging:read (every org member). */

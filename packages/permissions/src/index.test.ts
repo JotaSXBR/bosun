@@ -68,6 +68,13 @@ describe("hasPermission", () => {
     expect(hasPermission("viewer", { billing: ["read"] })).toBe(false);
   });
 
+  it("everyone but viewer can write messaging", () => {
+    for (const role of ["owner", "admin", "manager", "agent"] as const) {
+      expect(hasPermission(role, { messaging: ["write"] })).toBe(true);
+    }
+    expect(hasPermission("viewer", { messaging: ["write"] })).toBe(false);
+  });
+
   it("only owner/admin/manager can manage teams; everyone can read", () => {
     for (const role of ["owner", "admin", "manager"] as const) {
       expect(hasPermission(role, { teams: ["manage"] })).toBe(true);
@@ -95,6 +102,7 @@ describe("hasPermission", () => {
       { member: ["create"] },
       { invitation: ["create"] },
       { integrations: ["manage"] },
+      { messaging: ["write"] },
       { teams: ["manage"] },
     ] as const;
     for (const check of writes) {
