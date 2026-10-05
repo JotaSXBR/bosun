@@ -123,8 +123,11 @@ interna apenas; abrir via proxy do Coolify se precisar da UI).
 Healthcheck: `GET /health` na porta 3000 (desde WAHA `2026.6.1` o Plus
 virou Core — `/health` existe em toda imagem `devlikeapro/waha` e verifica
 server + sessions, melhor que `/ping`) + env
-`WAHA_API_KEY_EXCLUDE_PATH=ping,health` para os endpoints não ficarem
-atrás do auth da API.
+`WHATSAPP_API_KEY_EXCLUDE_PATH=ping,health` para os endpoints não ficarem
+atrás do auth. **Atenção ao nome**: a doc do WAHA mostra
+`WAHA_API_KEY_EXCLUDE_PATH` mas o código lê `WHATSAPP_API_KEY_EXCLUDE_PATH`
+(`config.service.ts` → `getExcludedPaths`) — a variante `WAHA_` é ignorada
+e `/health` responde 401 → healthcheck falha → rollback.
 
 RustFS recebe `RUSTFS_ACCESS_KEY`/`SECRET_KEY`, `RUSTFS_ADDRESS=:9000`,
 `RUSTFS_VOLUMES=/data`, console desabilitado por padrão. Bucket `bosun`
