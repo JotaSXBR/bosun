@@ -72,10 +72,17 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `process.stdout/stderr` não existem lá (warning de build, não erro).
   Opções: isolar o registro de streams atrás de uma checagem de runtime ou
   variant `edge` do logger.
-- **P3 — Promover warns a error** quando a contagem zerar:
-  `prefer-nullish-coalescing` (1), `no-unnecessary-condition` (4),
-  `complexity` (4), `max-statements` (3) — workflow em
-  `docs/development/tooling.md`.
+- **P3 — GitHub MCP instável**: `github-mcp-server` responde reads
+  (`get_me` ok) mas falha conexão em writes (`create_pull_request` —
+  PR #1 foi criada via `gh` com autorização pontual). Diagnosticar se é
+  transporte/sessão do MCP local; regra de "GitHub só via MCP" segue.
+- **P3 — Promover warns a error** — contagem **zerada** em
+  `chore/lint-warnings` (PR separado): `prefer-nullish-coalescing`,
+  `no-unnecessary-condition`, `complexity` e `max-statements` resolvidos
+  via refactor (mapa de predicados em `isConfigured`, handlers por evento
+  nos parsers de webhook, helpers extraídos em `seed`/`organization`).
+  Falta só flipar warn→error no eslint-config quando o PR mergear —
+  workflow em `docs/development/tooling.md`.
 
 ## Concluído
 
@@ -93,8 +100,11 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `CHANNEL_CREDENTIALS_KEY` fora do formato hex64 (corrigida) +
   healthcheck host `localhost`→`127.0.0.1` + `start_period` 120s +
   `curl` na imagem. O "404 + TRAEFIK DEFAULT CERT" era sintoma de
-  rollback contínuo, não falha de proxy. Ver
-  `docs/development/deployment-coolify.md`.
+  rollback contínuo, não falha de proxy. Healthchecks completos: WAHA
+  `GET /ping:3000` (`WAHA_API_KEY_EXCLUDE_PATH=ping` libera o endpoint do
+  auth), RustFS `GET /health/live:9000`; fqdn público acidental do
+  rustfs-staging removido — **todos os 6 apps (3 por ambiente) em
+  `running:healthy`**. Ver `docs/development/deployment-coolify.md`.
 - **Decisão — background jobs** (2026-10-04): **pg-boss** escolhido sobre
   BullMQ e self-host Trigger.dev — enqueue transacional com a escrita no
   Postgres (sem outbox), zero infra nova. Trigger.dev sai; migração dos

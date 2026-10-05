@@ -19,7 +19,7 @@ function makeProvider(): S3StorageProvider | null {
     bucket: env.storage.bucket as string,
     region: env.storage.region ?? "us-east-1",
     endpoint: env.storage.endpoint,
-    forcePathStyle: env.storage.forcePathStyle ?? true,
+    forcePathStyle: env.storage.forcePathStyle,
     accessKeyId: env.storage.accessKeyId as string,
     secretAccessKey: env.storage.secretAccessKey as string,
   });

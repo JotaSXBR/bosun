@@ -25,21 +25,17 @@ export type MetaCloudConfig = {
   graphApiVersion?: string | undefined;
 };
 
+const changeValueSchema = z.looseObject({
+  messages: z.array(z.looseObject({})).optional(),
+  statuses: z.array(z.looseObject({})).optional(),
+});
+
 const webhookSchema = z.looseObject({
   object: z.string().optional(),
   entry: z
     .array(
       z.looseObject({
-        changes: z
-          .array(
-            z.looseObject({
-              value: z.looseObject({
-                messages: z.array(z.looseObject({})).optional(),
-                statuses: z.array(z.looseObject({})).optional(),
-              }),
-            }),
-          )
-          .optional(),
+        changes: z.array(z.looseObject({ value: changeValueSchema })).optional(),
       }),
     )
     .optional(),
@@ -190,27 +186,37 @@ export class MetaCloudChannelProvider implements ChannelProvider {
     const events: ChannelEvent[] = [];
     for (const entry of parsed.data.entry ?? []) {
       for (const change of entry.changes ?? []) {
-        for (const raw of change.value.messages ?? []) {
-          const msg = metaMessageSchema.safeParse(raw);
-          if (!msg.success) continue;
-          events.push(metaMessageToEvent(msg.data));
-        }
-        for (const raw of change.value.statuses ?? []) {
-          const status = metaStatusSchema.safeParse(raw);
-          if (!status.success) continue;
-          const mapped = mapStatus(status.data.status);
-          if (!mapped) continue;
-          events.push({
-            type: "message.status",
-            externalMessageId: status.data.id,
-            status: mapped,
-            timestamp: new Date(Number(status.data.timestamp ?? 0) * 1000),
-          });
-        }
+        events.push(...metaChangeToEvents(change.value));
       }
     }
     return events;
   }
+}
+
+function metaChangeToEvents(value: z.infer<typeof changeValueSchema>): ChannelEvent[] {
+  const events: ChannelEvent[] = [];
+  for (const raw of value.messages ?? []) {
+    const msg = metaMessageSchema.safeParse(raw);
+    if (msg.success) events.push(metaMessageToEvent(msg.data));
+  }
+  for (const raw of value.statuses ?? []) {
+    const event = metaStatusToEvent(raw);
+    if (event) events.push(event);
+  }
+  return events;
+}
+
+function metaStatusToEvent(raw: unknown): ChannelEvent | null {
+  const status = metaStatusSchema.safeParse(raw);
+  if (!status.success) return null;
+  const mapped = mapStatus(status.data.status);
+  if (!mapped) return null;
+  return {
+    type: "message.status",
+    externalMessageId: status.data.id,
+    status: mapped,
+    timestamp: new Date(Number(status.data.timestamp ?? 0) * 1000),
+  };
 }
 
 function mapStatus(status: string): "sent" | "delivered" | "read" | "failed" | null {
@@ -231,45 +237,32 @@ function metaMessageToEvent(msg: z.infer<typeof metaMessageSchema>): ChannelEven
   };
 }
 
+type MetaMediaKind = "image" | "video" | "audio" | "document";
+
+type MetaMediaFile = {
+  id: string;
+  mime_type?: string | undefined;
+  caption?: string | undefined;
+  filename?: string | undefined;
+};
+
 function metaContent(msg: z.infer<typeof metaMessageSchema>): MessageContent {
-  if (msg.type !== "text" && (msg.image ?? msg.video ?? msg.audio ?? msg.document)) {
-    if (msg.image) {
-      return {
-        type: "media",
-        mediaKind: "image",
-        source: { type: "provider", id: msg.image.id },
-        ...(msg.image.mime_type ? { mimeType: msg.image.mime_type } : {}),
-        ...(msg.image.caption ? { caption: msg.image.caption } : {}),
-      };
-    }
-    if (msg.video) {
-      return {
-        type: "media",
-        mediaKind: "video",
-        source: { type: "provider", id: msg.video.id },
-        ...(msg.video.mime_type ? { mimeType: msg.video.mime_type } : {}),
-        ...(msg.video.caption ? { caption: msg.video.caption } : {}),
-      };
-    }
-    if (msg.audio) {
-      return {
-        type: "media",
-        mediaKind: "audio",
-        source: { type: "provider", id: msg.audio.id },
-        ...(msg.audio.mime_type ? { mimeType: msg.audio.mime_type } : {}),
-      };
-    }
-    const doc = msg.document;
-    if (doc) {
-      return {
-        type: "media",
-        mediaKind: "document",
-        source: { type: "provider", id: doc.id },
-        ...(doc.mime_type ? { mimeType: doc.mime_type } : {}),
-        ...(doc.caption ? { caption: doc.caption } : {}),
-        ...(doc.filename ? { filename: doc.filename } : {}),
-      };
-    }
+  if (msg.type !== "text") {
+    if (msg.image) return metaMediaContent("image", msg.image);
+    if (msg.video) return metaMediaContent("video", msg.video);
+    if (msg.audio) return metaMediaContent("audio", msg.audio);
+    if (msg.document) return metaMediaContent("document", msg.document);
   }
   return { type: "text", text: msg.text?.body ?? "" };
+}
+
+function metaMediaContent(mediaKind: MetaMediaKind, file: MetaMediaFile): MessageContent {
+  return {
+    type: "media",
+    mediaKind,
+    source: { type: "provider", id: file.id },
+    ...(file.mime_type ? { mimeType: file.mime_type } : {}),
+    ...(mediaKind !== "audio" && file.caption ? { caption: file.caption } : {}),
+    ...(mediaKind === "document" && file.filename ? { filename: file.filename } : {}),
+  };
 }

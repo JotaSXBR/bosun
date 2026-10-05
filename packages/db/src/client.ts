@@ -31,8 +31,6 @@ let singleton: Database | undefined;
 
 /** Lazy app-wide client. Always connects as crm_app (subject to RLS). */
 export function getDb(): Database {
-  if (!singleton) {
-    singleton = createDb(getServerEnv().database.url);
-  }
+  singleton ??= createDb(getServerEnv().database.url);
   return singleton;
 }

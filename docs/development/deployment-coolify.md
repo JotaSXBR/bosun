@@ -119,10 +119,16 @@ WAHA recebe `REDIS_URL` apontando para o redis do mesmo ambiente (jobs/apps
 do WAHA), `WHATSAPP_DEFAULT_ENGINE=GOWS`, `WAHA_API_KEY`,
 dashboard/swagger ligados com credenciais próprias — **sem FQDN** (rede
 interna apenas; abrir via proxy do Coolify se precisar da UI).
+Healthcheck: `GET /ping` na porta 3000 (o `/health` é WAHA Plus-only) +
+env `WAHA_API_KEY_EXCLUDE_PATH=ping` para o endpoint não ficar atrás do
+auth da API.
 
 RustFS recebe `RUSTFS_ACCESS_KEY`/`SECRET_KEY`, `RUSTFS_ADDRESS=:9000`,
 `RUSTFS_VOLUMES=/data`, console desabilitado por padrão. Bucket `bosun`
-permanece **privado** — sem `anonymous` grants.
+permanece **privado** — sem `anonymous` grants. Healthcheck:
+`GET /health/live` na porta 9000. **Sem FQDN** — um domínio sslip
+auto-gerado do staging foi removido (limpar via `PATCH
+/applications/{uuid}` com `{"domains":""}`; `fqdn` não é campo gravável).
 
 Secrets reais vivem **só** no Coolify + `.env` local (gitignored) —
 `.coolify-secrets.tmp` local guarda os gerados nesta sessão; migrar para
