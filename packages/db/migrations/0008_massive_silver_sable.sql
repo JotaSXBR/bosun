@@ -1,0 +1,3 @@
+ALTER TABLE "conversations" ADD COLUMN "resolved_by_id" uuid;--> statement-breakpoint
+ALTER TABLE "organization_settings" ADD COLUMN "ticket_reopen_window_hours" integer DEFAULT 48 NOT NULL;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_resolved_by_id_users_id_fk" FOREIGN KEY ("resolved_by_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

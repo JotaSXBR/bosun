@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { jsonb, pgPolicy, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  integer,
+  jsonb,
+  pgPolicy,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { crmAppRole, tenantPredicate } from "./audit";
 import { organizations } from "./auth";
@@ -23,6 +32,10 @@ export const organizationSettings = pgTable(
     offHoursMessage: text(),
     timezone: text().notNull().default("America/Sao_Paulo"),
     locale: text().notNull().default("pt-BR"),
+    // A resolved ticket stays reopenable for this many hours — after that it
+    // is effectively closed (reopen rejected) until a jobs layer materializes
+    // a real `closed` status.
+    ticketReopenWindowHours: integer().notNull().default(48),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
