@@ -1,0 +1,14 @@
+# Pre-commit: staged files are prettier-formatted so format failures never
+# reach CI. Installed by `pnpm install` via the `prepare` script; lefthook
+# itself skips installation when CI=true (Docker build stage + Actions).
+#
+# ESLint is intentionally not here: flat config resolves from cwd, so
+# per-file lint must run inside each package — `pnpm lint` (turbo, cached)
+# covers it in the verification gate and CI.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: prettier
+      glob: "*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,md,mdx,yml,yaml,css}"
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true

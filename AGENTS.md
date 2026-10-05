@@ -72,6 +72,9 @@ scope-affecting decisions (see `docs/development/workflow.md`).
 (playwright) · `pnpm infra:up|down` · `pnpm db:generate|migrate|seed|studio` ·
 `pnpm storage:init` · `pnpm jobs:dev` (Trigger.dev dev)
 
+`pnpm install` also installs the **lefthook** pre-commit hook (prettier on
+staged files) — skipped automatically under `CI=true`.
+
 ## Code rules
 
 - Strict TypeScript, **no `any`**, no speculative abstractions.
