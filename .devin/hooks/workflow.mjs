@@ -182,11 +182,15 @@ function alwaysAllowed(rel) {
 
 // Minimal glob → regex: ** crosses /, * and ? stay within a segment.
 function globMatch(glob, path) {
+  // Placeholders keep the single-"*"/"?" replaces from re-processing the
+  // substitution text inserted for "**/" and "**".
   const re = glob
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*\*\//g, "(.+/)?")
-    .replace(/\*\*/g, ".*")
+    .replace(/\*\*\//g, "\x01")
+    .replace(/\*\*/g, "\x02")
     .replace(/\*/g, "[^/]*")
-    .replace(/\?/g, "[^/]");
+    .replace(/\?/g, "[^/]")
+    .replace(/\x01/g, "(.+/)?")
+    .replace(/\x02/g, ".*");
   return new RegExp(`^${re}$`).test(path);
 }
