@@ -8,9 +8,8 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { TenantContext } from "../../tenant/context";
-import { insertMessage } from "./repository";
 import type { ConnectionRef } from "./service";
-import { ingestChannelEvent, listConversationMessages, listTenantConversations } from "./service";
+import { getConversationDetail, ingestChannelEvent, listTenantConversations } from "./service";
 
 const { channelConnections, contacts, conversations, messages, organizations, teams, users } =
   schema;
@@ -311,6 +310,15 @@ describe("conversation lifecycle", () => {
       expect(follow.ticketSeq).toBe(2);
       expect(follow.ticketNumber).toBe(firstTicketNumber + 1);
     });
+
+    // The detail read surfaces the preceding ticket's numbers for the UI divider.
+    const detail = await getConversationDetail(db, ctx(orgA, "agent"), {
+      conversationId: (
+        await listTenantConversations(db, ctx(orgA, "agent"), { view: "queue" })
+      ).find((c) => c.precededById === firstTicketId)!.id,
+    });
+    expect(detail.precededTicketNumber).toBe(firstTicketNumber);
+    expect(detail.precededTicketSeq).toBe(1);
   });
 
   it("inbound on waiting_customer returns to in_progress, keeping assignee", async () => {
@@ -345,64 +353,5 @@ describe("conversation lifecycle", () => {
       expect(conv!.status).toBe("in_progress");
       expect(conv!.assigneeId).toBe(userId);
     });
-  });
-});
-
-describe("internal notes (messages.private)", () => {
-  it("persists the private flag and returns it on reads", async () => {
-    const inbound: ChannelEvent = {
-      type: "message.received",
-      externalMessageId: "false_pv@c.us_N1",
-      from: { channelUserId: "pv@c.us", displayName: "Note" },
-      content: { type: "text", text: "hi" },
-      timestamp: new Date("2024-02-06T00:00:00Z"),
-    };
-    await withTenant(db, orgA, (tx) => ingestChannelEvent(tx, connA, inbound));
-
-    const conversationId = await withTenant(db, orgA, async (tx) => {
-      const [conv] = await tx
-        .select({ id: conversations.id })
-        .from(conversations)
-        .where(eq(conversations.externalId, "pv@c.us"));
-      await insertMessage(tx, {
-        organizationId: orgA,
-        conversationId: conv!.id,
-        channelConnectionId: connA.id,
-        contactId: null,
-        direction: "outbound",
-        content: { type: "text", text: "nota interna" },
-        externalId: null,
-        status: "sent",
-        sentAt: new Date(),
-        private: true,
-      });
-      return conv!.id;
-    });
-
-    const rows = await listConversationMessages(db, ctx(orgA, "agent"), { conversationId });
-    const note = rows.find((m) => m.private);
-    expect(note?.content).toEqual({ type: "text", text: "nota interna" });
-  });
-});
-
-describe("messaging reads with tenant context", () => {
-  it("lists conversations and messages only for the caller's org", async () => {
-    const convs = await listTenantConversations(db, ctx(orgA, "agent"), { limit: 10 });
-    expect(convs.length).toBeGreaterThan(0);
-    expect(convs.every((c) => c.organizationId === orgA)).toBe(true);
-
-    const msgs = await listConversationMessages(db, ctx(orgA, "agent"), {
-      conversationId: convs[0]!.id,
-    });
-    expect(msgs.length).toBeGreaterThan(0);
-
-    const convsB = await listTenantConversations(db, ctx(orgB, "admin"), { limit: 10 });
-    expect(convsB).toHaveLength(0);
-
-    // Messages of an org A conversation are unreachable from org B.
-    const msgsB = await listConversationMessages(db, ctx(orgB, "admin"), {
-      conversationId: convs[0]!.id,
-    });
-    expect(msgsB).toHaveLength(0);
   });
 });

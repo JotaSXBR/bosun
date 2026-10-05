@@ -8,14 +8,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { AuthorizationError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
-import { getOrganizationSettings, updateOrganizationSettings } from "./service";
+import { getOrganizationSettings, listOrgMembers, updateOrganizationSettings } from "./service";
 
-const { organizations, organizationSettings, users } = schema;
+const { organizationMembers, organizations, organizationSettings, users } = schema;
 
 let db: Database;
 let orgA: string;
 let orgB: string;
 let userId: string;
+let user2Id: string;
 
 function ctx(organizationId: string, role: TenantContext["role"]): TenantContext {
   return { organizationId, userId, role, isPlatformAdmin: false };
@@ -33,11 +34,15 @@ beforeAll(async () => {
   }
 
   const suffix = crypto.randomUUID().slice(0, 8);
-  const [user] = await db
+  const userRows = await db
     .insert(users)
-    .values({ name: "IT Settings", email: `it-set-${suffix}@crm.local` })
+    .values([
+      { name: "IT Settings", email: `it-set-${suffix}@crm.local` },
+      { name: "IT OrgB Member", email: `it-set2-${suffix}@crm.local` },
+    ])
     .returning({ id: users.id });
-  userId = user!.id;
+  userId = userRows[0]!.id;
+  user2Id = userRows[1]!.id;
   const orgs = await db
     .insert(organizations)
     .values([
@@ -47,11 +52,19 @@ beforeAll(async () => {
     .returning({ id: organizations.id });
   orgA = orgs[0]!.id;
   orgB = orgs[1]!.id;
+  // userId belongs to org A; user2Id belongs to org B only.
+  await db.insert(organizationMembers).values([
+    { organizationId: orgA, userId, role: "agent" },
+    { organizationId: orgB, userId: user2Id, role: "manager" },
+  ]);
 }, 60_000);
 
 afterAll(async () => {
+  await db
+    .delete(organizationMembers)
+    .where(sql`${organizationMembers.userId} in (${userId}, ${user2Id})`);
   await db.delete(organizations).where(sql`${organizations.id} in (${orgA}, ${orgB})`);
-  await db.delete(users).where(sql`${users.id} = ${userId}`);
+  await db.delete(users).where(sql`${users.id} in (${userId}, ${user2Id})`);
   await db.$client.end();
 });
 
@@ -108,5 +121,22 @@ describe("organization_settings service", () => {
       const rows = await tx.select().from(organizationSettings);
       expect(rows.every((r) => r.organizationId === orgB)).toBe(true);
     });
+  });
+});
+
+describe("listOrgMembers", () => {
+  it("returns org members with user identity, scoped to the caller's org", async () => {
+    const members = await listOrgMembers(db, ctx(orgA, "agent"));
+    expect(members).toHaveLength(1);
+    expect(members[0]).toMatchObject({
+      userId,
+      name: "IT Settings",
+      role: "agent",
+    });
+    expect(members[0]!.email).toContain("it-set-");
+
+    // org B members exist but never appear in org A's list.
+    const membersB = await listOrgMembers(db, ctx(orgB, "manager"));
+    expect(membersB.map((m) => m.userId)).toEqual([user2Id]);
   });
 });

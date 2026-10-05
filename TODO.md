@@ -23,10 +23,15 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   default 48h por org; bloqueado se follow-up ativo; `resolved_by_id` p/
   auditoria — status `closed` materializado espera camada de jobs);
   `messaging:write` (viewer negado) ✅; Server Actions
-  `apps/web/src/server/actions/messaging.ts` ✅. Falta slice 3 (UI:
-  views/conversa/notas/teams + divisor de ticket anterior + **expor
-  `ticketReopenWindowHours` em `updateOrgSettingsInput`/`upsertSettings`**
-  — hoje a janela só muda via SQL). Ver
+  `apps/web/src/server/actions/messaging.ts` ✅. **Slice 3 entregue**:
+  inbox operável — abas Fila/Minhas/Todas/Resolvidas (`?view=`,
+  server-filtered), página `/app/inbox/[id]` com timeline unificada
+  (notas âmbar, eventos de sistema, divisor "Ticket anterior"),
+  actions bar (Assumir/Transferir/Resolver/Aguardando/Reabrir) +
+  composer Responder/Nota interna; viewer read-only; nomes via joins
+  (`reads.ts`, `listOrgMembers`). Falta slice 4: UI de teams/settings +
+  **expor `ticketReopenWindowHours` em `updateOrgSettingsInput`/
+  `upsertSettings`** — hoje a janela só muda via SQL. Ver
   `docs/product/domain-model.md` + `rules.md`.
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.

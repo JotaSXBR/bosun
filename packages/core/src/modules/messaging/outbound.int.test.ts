@@ -228,6 +228,13 @@ describe("addInternalNote", () => {
     expect(note.authorId).toBe(userId);
     expect(note.direction).toBe("outbound");
     expect(provider.sentMessages).toHaveLength(0);
+    const listed = await listConversationMessages(db, ctx(orgA, "agent"), {
+      conversationId: ticket.id,
+    });
+    expect(listed.find((m) => m.id === note.id)?.authorName).toBe("IT Out User");
+    expect(
+      listed.filter((m) => m.direction === "inbound").every((m) => m.authorName === null),
+    ).toBe(true);
 
     await resolveConversation(db, ctx(orgA, "agent"), { conversationId: ticket.id });
     await expect(
