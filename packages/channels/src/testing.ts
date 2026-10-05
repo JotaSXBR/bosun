@@ -12,6 +12,9 @@ import type {
 import type { ChannelProvider } from "./provider";
 import { verifyHmacSignature } from "./shared/hmac";
 
+/** Process-wide counter — ids stay unique across provider instances, like real external ids. */
+let nextFakeMessageId = 0;
+
 export class FakeChannelProvider implements ChannelProvider {
   readonly kind: ChannelProviderKind;
   readonly capabilities = { qrCodeConnect: true, media: true };
@@ -20,7 +23,10 @@ export class FakeChannelProvider implements ChannelProvider {
   queuedEvents: ChannelEvent[] = [];
   connected = false;
   statusOverride: ConnectionStatus | null = null;
-  nextExternalId = "fake-msg-1";
+  /** Pin a specific id; unset → unique fake-msg-N like a real provider. */
+  nextExternalId: string | undefined;
+  /** When set, sendMessage rejects with it — exercises the failed-send path. */
+  sendMessageError: Error | null = null;
   webhookSecret: string | undefined;
 
   constructor(kind: ChannelProviderKind = "waha", webhookSecret?: string) {
@@ -43,8 +49,10 @@ export class FakeChannelProvider implements ChannelProvider {
   }
 
   sendMessage(message: OutboundMessage): Promise<SendMessageResult> {
+    if (this.sendMessageError) return Promise.reject(this.sendMessageError);
     this.sentMessages.push(message);
-    return Promise.resolve({ externalId: this.nextExternalId, status: "sent" });
+    const externalId = this.nextExternalId ?? `fake-msg-${++nextFakeMessageId}`;
+    return Promise.resolve({ externalId, status: "sent" });
   }
 
   verifyWebhook(request: RawWebhookRequest): boolean {

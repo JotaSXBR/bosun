@@ -215,7 +215,7 @@ describe("ingestChannelEvent", () => {
 });
 
 describe("conversation lifecycle", () => {
-  it("replays of an already-ingested inbound never re-run the transition", async () => {
+  it("replays on a resolved chat create no phantom ticket", async () => {
     const event: ChannelEvent = {
       type: "message.received",
       externalMessageId: "false_lc@c.us_REPLAY",
@@ -225,8 +225,9 @@ describe("conversation lifecycle", () => {
     };
     await withTenant(db, orgA, (tx) => ingestChannelEvent(tx, connA, event));
 
-    // Agent resolves the conversation (assignee set) — then the provider
-    // retries the same webhook: dedup must keep it resolved.
+    // Agent resolves the ticket — then the provider retries the same
+    // webhook: dedup must keep it resolved AND must not leave an empty
+    // follow-up ticket behind.
     await withTenant(db, orgA, (tx) =>
       tx
         .update(conversations)
@@ -236,16 +237,17 @@ describe("conversation lifecycle", () => {
     await withTenant(db, orgA, (tx) => ingestChannelEvent(tx, connA, event));
 
     await withTenant(db, orgA, async (tx) => {
-      const [conv] = await tx
+      const rows = await tx
         .select()
         .from(conversations)
         .where(eq(conversations.externalId, "lc-replay@c.us"));
-      expect(conv!.status).toBe("resolved");
-      expect(conv!.assigneeId).toBe(userId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.status).toBe("resolved");
+      expect(rows[0]!.assigneeId).toBe(userId);
     });
   });
 
-  it("inbound on resolved reopens to open, keeps sector, drops assignee", async () => {
+  it("inbound on resolved creates a NEW linked ticket — fresh queue", async () => {
     let teamId!: string;
     await withTenant(db, orgA, async (tx) => {
       const [team] = await tx
@@ -263,12 +265,22 @@ describe("conversation lifecycle", () => {
       timestamp: new Date("2024-02-02T00:00:00Z"),
     };
     await withTenant(db, orgA, (tx) => ingestChannelEvent(tx, connA, inbound));
-    await withTenant(db, orgA, (tx) =>
-      tx
+    let firstTicketId!: string;
+    let firstTicketNumber!: number;
+    await withTenant(db, orgA, async (tx) => {
+      const [conv] = await tx
+        .select()
+        .from(conversations)
+        .where(eq(conversations.externalId, "lc@c.us"));
+      firstTicketId = conv!.id;
+      firstTicketNumber = conv!.ticketNumber;
+      expect(conv!.ticketSeq).toBe(1);
+      expect(conv!.status).toBe("open");
+      await tx
         .update(conversations)
         .set({ status: "resolved", assigneeId: userId, sectorId: teamId })
-        .where(eq(conversations.externalId, "lc@c.us")),
-    );
+        .where(eq(conversations.id, firstTicketId));
+    });
 
     // Customer replies on the resolved thread.
     await withTenant(db, orgA, (tx) =>
@@ -280,13 +292,24 @@ describe("conversation lifecycle", () => {
     );
 
     await withTenant(db, orgA, async (tx) => {
-      const [conv] = await tx
+      const rows = await tx
         .select()
         .from(conversations)
-        .where(eq(conversations.externalId, "lc@c.us"));
-      expect(conv!.status).toBe("open");
-      expect(conv!.assigneeId).toBeNull();
-      expect(conv!.sectorId).toBe(teamId);
+        .where(eq(conversations.externalId, "lc@c.us"))
+        .orderBy(conversations.createdAt);
+      expect(rows).toHaveLength(2);
+      // Closed ticket stays untouched history.
+      expect(rows[0]!.status).toBe("resolved");
+      expect(rows[0]!.assigneeId).toBe(userId);
+      expect(rows[0]!.sectorId).toBe(teamId);
+      // Follow-up ticket: open, fresh queue, linked to its predecessor.
+      const follow = rows[1]!;
+      expect(follow.status).toBe("open");
+      expect(follow.assigneeId).toBeNull();
+      expect(follow.sectorId).toBeNull();
+      expect(follow.precededById).toBe(firstTicketId);
+      expect(follow.ticketSeq).toBe(2);
+      expect(follow.ticketNumber).toBe(firstTicketNumber + 1);
     });
   });
 

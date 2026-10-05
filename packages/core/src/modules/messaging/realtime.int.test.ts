@@ -107,10 +107,15 @@ describe("subscribeDomainEvents + ingestChannelEvent", () => {
       );
       expect(result.messageId).not.toBeNull();
 
-      await waitForEvents(eventsA, 1);
-      const received = eventsA[0]!;
-      // Payload arrived as JSON and already survived zod parsing inside the
+      // A brand-new chat emits conversation.created THEN message.received.
+      await waitForEvents(eventsA, 2);
+      const created = eventsA.find((e) => e.type === "conversation.created");
+      const received = eventsA.find((e) => e.type === "message.received");
+      // Payloads arrived as JSON and already survived zod parsing inside the
       // subscription — re-assert the contract here.
+      expect(created).toBeDefined();
+      expect(created!.organizationId).toBe(orgA);
+      expect(created!.ticketNumber).toBeTypeOf("number");
       expect(domainEventSchema.safeParse(received).success).toBe(true);
       expect(received).toMatchObject({
         type: "message.received",
@@ -118,15 +123,15 @@ describe("subscribeDomainEvents + ingestChannelEvent", () => {
         messageId: result.messageId,
         sentAt: "2024-02-01T00:00:00.000Z",
       });
-      expect(received.conversationId).toBeTypeOf("string");
-      expect(received.contactId).toBeTypeOf("string");
+      expect(received!.conversationId).toBeTypeOf("string");
+      expect(received!.contactId).toBeTypeOf("string");
 
-      // Idempotent webhook replay: no new row → no second notification.
+      // Idempotent webhook replay: no new row → no new notifications.
       await withTenant(db, orgA, (tx) =>
         ingestChannelEvent(tx, connA, messageEvent("rt_a_1", "rt-111@c.us")),
       );
       await sleep(500);
-      expect(eventsA).toHaveLength(1);
+      expect(eventsA).toHaveLength(2);
 
       // Cross-tenant: org B's insert emits on the same channel, but org A's
       // subscriber must filter it out while org B's own subscriber gets it.
@@ -136,10 +141,10 @@ describe("subscribeDomainEvents + ingestChannelEvent", () => {
         await withTenant(db, orgB, (tx) =>
           ingestChannelEvent(tx, connB, messageEvent("rt_b_1", "rt-222@c.us")),
         );
-        await waitForEvents(eventsB, 1);
-        expect(eventsB[0]!.organizationId).toBe(orgB);
+        await waitForEvents(eventsB, 2);
+        expect(eventsB.every((e) => e.organizationId === orgB)).toBe(true);
         await sleep(500);
-        expect(eventsA).toHaveLength(1);
+        expect(eventsA).toHaveLength(2);
       } finally {
         await unsubscribeB();
       }
