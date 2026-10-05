@@ -10,6 +10,7 @@ import type {
   ChannelEvent,
   ConnectionStatus,
   ConnectResult,
+  MessageContent,
   OutboundMessage,
   RawWebhookRequest,
   SendMessageResult,
@@ -267,54 +268,66 @@ export class WahaChannelProvider implements ChannelProvider {
     if (!parsed.success) return [];
     const { event, timestamp, payload } = parsed.data;
 
-    if (event === "message") {
-      const message = wahaMessageSchema.safeParse(payload);
-      if (!message.success || message.data.fromMe) return [];
-      const data = message.data;
-      return [
-        {
-          type: "message.received",
-          externalMessageId: data.id,
-          from: {
-            channelUserId: data.from,
-            ...(data.notifyName ? { displayName: data.notifyName } : {}),
-          },
-          content: data.hasMedia
-            ? {
-                type: "media",
-                mediaKind: "document",
-                source: { type: "url", url: data.mediaUrl ?? "" },
-                ...(data.mimetype ? { mimeType: data.mimetype } : {}),
-                ...(data.filename ? { filename: data.filename } : {}),
-                ...(data.body ? { caption: data.body } : {}),
-              }
-            : { type: "text", text: data.body ?? "" },
-          timestamp: new Date((data.timestamp ?? timestamp ?? 0) * 1000),
-        },
-      ];
+    switch (event) {
+      case "message":
+        return wahaMessageToEvents(payload, timestamp);
+      case "message.ack":
+        return wahaAckToEvents(payload, timestamp);
+      case "session.status":
+        return wahaSessionStatusToEvents(payload);
+      default:
+        return [];
     }
-
-    if (event === "message.ack") {
-      const ack = wahaAckSchema.safeParse(payload);
-      if (!ack.success) return [];
-      const status = mapAck(ack.data.ack);
-      if (!status) return [];
-      return [
-        {
-          type: "message.status",
-          externalMessageId: ack.data.id,
-          status,
-          timestamp: new Date(timestamp ?? Date.now()),
-        },
-      ];
-    }
-
-    if (event === "session.status") {
-      const session = wahaSessionStatusSchema.safeParse(payload);
-      if (!session.success) return [];
-      return [{ type: "connection.status", status: mapSessionStatus(session.data.status) }];
-    }
-
-    return [];
   }
+}
+
+function wahaMessageToEvents(payload: unknown, timestamp: number | undefined): ChannelEvent[] {
+  const message = wahaMessageSchema.safeParse(payload);
+  if (!message.success || message.data.fromMe) return [];
+  const data = message.data;
+  return [
+    {
+      type: "message.received",
+      externalMessageId: data.id,
+      from: {
+        channelUserId: data.from,
+        ...(data.notifyName ? { displayName: data.notifyName } : {}),
+      },
+      content: wahaMessageContent(data),
+      timestamp: new Date((data.timestamp ?? timestamp ?? 0) * 1000),
+    },
+  ];
+}
+
+function wahaMessageContent(data: z.infer<typeof wahaMessageSchema>): MessageContent {
+  if (!data.hasMedia) return { type: "text", text: data.body ?? "" };
+  return {
+    type: "media",
+    mediaKind: "document",
+    source: { type: "url", url: data.mediaUrl ?? "" },
+    ...(data.mimetype ? { mimeType: data.mimetype } : {}),
+    ...(data.filename ? { filename: data.filename } : {}),
+    ...(data.body ? { caption: data.body } : {}),
+  };
+}
+
+function wahaAckToEvents(payload: unknown, timestamp: number | undefined): ChannelEvent[] {
+  const ack = wahaAckSchema.safeParse(payload);
+  if (!ack.success) return [];
+  const status = mapAck(ack.data.ack);
+  if (!status) return [];
+  return [
+    {
+      type: "message.status",
+      externalMessageId: ack.data.id,
+      status,
+      timestamp: new Date(timestamp ?? Date.now()),
+    },
+  ];
+}
+
+function wahaSessionStatusToEvents(payload: unknown): ChannelEvent[] {
+  const session = wahaSessionStatusSchema.safeParse(payload);
+  if (!session.success) return [];
+  return [{ type: "connection.status", status: mapSessionStatus(session.data.status) }];
 }

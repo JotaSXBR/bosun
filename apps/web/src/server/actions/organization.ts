@@ -26,6 +26,44 @@ function slugify(name: string): string {
   return slug || "org";
 }
 
+type Auth = ReturnType<typeof getAuth>;
+type RequestHeaders = Awaited<ReturnType<typeof headers>>;
+
+// checkOrganizationSlug returns { status: boolean } — true when available.
+async function findAvailableSlug(
+  auth: Auth,
+  requestHeaders: RequestHeaders,
+  baseSlug: string,
+): Promise<string | null> {
+  try {
+    const check = await auth.api.checkOrganizationSlug({
+      body: { slug: baseSlug },
+      headers: requestHeaders,
+    });
+    return check.status ? baseSlug : `${baseSlug}-${crypto.randomUUID().slice(0, 6)}`;
+  } catch (error) {
+    captureException(error, { action: "organization.create.checkSlug" });
+    return null;
+  }
+}
+
+async function createOrg(
+  auth: Auth,
+  requestHeaders: RequestHeaders,
+  name: string,
+  slug: string,
+): Promise<{ id: string } | null> {
+  try {
+    return await auth.api.createOrganization({
+      body: { name, slug },
+      headers: requestHeaders,
+    });
+  } catch (error) {
+    captureException(error, { action: "organization.create" });
+    return null;
+  }
+}
+
 export async function createOrganization(input: unknown): Promise<CreateOrganizationResult> {
   const parsed = inputSchema.safeParse(input);
   if (!parsed.success) {
@@ -37,32 +75,9 @@ export async function createOrganization(input: unknown): Promise<CreateOrganiza
   const session = await auth.api.getSession({ headers: requestHeaders });
   if (!session) return { ok: false, error: "Sessão expirada. Entre novamente." };
 
-  const baseSlug = slugify(parsed.data.name);
-  let slug = baseSlug;
-  try {
-    const check = await auth.api.checkOrganizationSlug({
-      body: { slug: baseSlug },
-      headers: requestHeaders,
-    });
-    // check returns { status: boolean } — true when the slug is available.
-    if (!check.status) {
-      slug = `${baseSlug}-${crypto.randomUUID().slice(0, 6)}`;
-    }
-  } catch (error) {
-    captureException(error, { action: "organization.create.checkSlug" });
-    return { ok: false, error: "Não foi possível criar a organização." };
-  }
-
-  let org: { id: string };
-  try {
-    org = await auth.api.createOrganization({
-      body: { name: parsed.data.name, slug },
-      headers: requestHeaders,
-    });
-  } catch (error) {
-    captureException(error, { action: "organization.create" });
-    return { ok: false, error: "Não foi possível criar a organização." };
-  }
+  const slug = await findAvailableSlug(auth, requestHeaders, slugify(parsed.data.name));
+  const org = slug ? await createOrg(auth, requestHeaders, parsed.data.name, slug) : null;
+  if (!org) return { ok: false, error: "Não foi possível criar a organização." };
 
   await auth.api.setActiveOrganization({
     body: { organizationId: org.id },

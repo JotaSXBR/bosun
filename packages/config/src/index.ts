@@ -170,41 +170,34 @@ export type ServerEnv = z.output<typeof serverEnvSchema>;
  * Whether all required settings of an integration group are present.
  * Groups the app boots without; use these before touching an integration.
  */
+const integrationPredicates: Record<IntegrationGroup, (env: ServerEnv) => boolean> = {
+  ai: (env) => Boolean(env.ai.openaiApiKey ?? env.ai.anthropicApiKey),
+  waha: (env) => Boolean(env.whatsapp.waha.baseUrl && env.whatsapp.waha.apiKey),
+  meta: (env) =>
+    Boolean(
+      env.whatsapp.meta.appSecret &&
+      env.whatsapp.meta.verifyToken &&
+      env.whatsapp.meta.accessToken &&
+      env.whatsapp.meta.phoneNumberId,
+    ),
+  storage: (env) =>
+    Boolean(
+      env.storage.endpoint &&
+      env.storage.bucket &&
+      env.storage.accessKeyId &&
+      env.storage.secretAccessKey,
+    ),
+  billing: (env) => Boolean(env.billing.asaasApiKey),
+  resend: (env) => env.email.provider === "resend" && Boolean(env.email.resendApiKey),
+  smtp: (env) => env.email.provider === "smtp" && Boolean(env.email.smtp.host),
+  redis: (env) => Boolean(env.redis.url),
+  sentry: (env) => Boolean(env.observability.sentryDsn),
+  otel: (env) => Boolean(env.observability.otelEndpoint),
+  trigger: (env) => Boolean(env.trigger.secretKey && env.trigger.projectRef),
+};
+
 export function isConfigured(env: ServerEnv, group: IntegrationGroup): boolean {
-  switch (group) {
-    case "ai":
-      return Boolean(env.ai.openaiApiKey ?? env.ai.anthropicApiKey);
-    case "waha":
-      return Boolean(env.whatsapp.waha.baseUrl && env.whatsapp.waha.apiKey);
-    case "meta":
-      return Boolean(
-        env.whatsapp.meta.appSecret &&
-        env.whatsapp.meta.verifyToken &&
-        env.whatsapp.meta.accessToken &&
-        env.whatsapp.meta.phoneNumberId,
-      );
-    case "storage":
-      return Boolean(
-        env.storage.endpoint &&
-        env.storage.bucket &&
-        env.storage.accessKeyId &&
-        env.storage.secretAccessKey,
-      );
-    case "billing":
-      return Boolean(env.billing.asaasApiKey);
-    case "resend":
-      return env.email.provider === "resend" && Boolean(env.email.resendApiKey);
-    case "smtp":
-      return env.email.provider === "smtp" && Boolean(env.email.smtp.host);
-    case "redis":
-      return Boolean(env.redis.url);
-    case "sentry":
-      return Boolean(env.observability.sentryDsn);
-    case "otel":
-      return Boolean(env.observability.otelEndpoint);
-    case "trigger":
-      return Boolean(env.trigger.secretKey && env.trigger.projectRef);
-  }
+  return integrationPredicates[group](env);
 }
 
 export type IntegrationGroup =

@@ -18,6 +18,45 @@ const USERS = [
 
 const PLATFORM_ADMIN = { email: "superadmin@crm.local", name: "Platform Admin" };
 
+type SeedDb = ReturnType<typeof createDb>;
+type SeedAuth = ReturnType<typeof createAuth>;
+
+async function ensureUser(
+  db: SeedDb,
+  auth: SeedAuth,
+  email: string,
+  name: string,
+): Promise<string> {
+  const existing = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(schema.users.email, email))
+    .limit(1);
+  if (existing[0]) return existing[0].id;
+
+  const result = await auth.api.signUpEmail({
+    body: { email, password: PASSWORD, name },
+  });
+  return result.user.id;
+}
+
+async function ensureDemoOrg(db: SeedDb): Promise<string> {
+  const existing = await db
+    .select({ id: schema.organizations.id })
+    .from(schema.organizations)
+    .where(eq(schema.organizations.slug, DEMO_ORG.slug))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (existing) return existing.id;
+
+  const [created] = await db
+    .insert(schema.organizations)
+    .values({ name: DEMO_ORG.name, slug: DEMO_ORG.slug })
+    .returning({ id: schema.organizations.id });
+  if (!created) throw new Error("failed to create demo organization");
+  return created.id;
+}
+
 async function main() {
   const env = getServerEnv();
   if (env.nodeEnv === "production") {
@@ -27,48 +66,19 @@ async function main() {
   const db = createDb(env.database.adminUrl ?? env.database.url);
   const auth = createAuth({ db, env });
 
-  const ensureUser = async (email: string, name: string): Promise<string> => {
-    const existing = await db
-      .select({ id: schema.users.id })
-      .from(schema.users)
-      .where(eq(schema.users.email, email))
-      .limit(1);
-    if (existing[0]) return existing[0].id;
-
-    const result = await auth.api.signUpEmail({
-      body: { email, password: PASSWORD, name },
-    });
-    return result.user.id;
-  };
-
   // Platform admin (users.role drives the better-auth admin plugin).
-  const platformAdminId = await ensureUser(PLATFORM_ADMIN.email, PLATFORM_ADMIN.name);
+  const platformAdminId = await ensureUser(db, auth, PLATFORM_ADMIN.email, PLATFORM_ADMIN.name);
   await db
     .update(schema.users)
     .set({ role: "platform_admin" })
     .where(eq(schema.users.id, platformAdminId));
 
-  // Demo organization.
-  let org = await db
-    .select({ id: schema.organizations.id })
-    .from(schema.organizations)
-    .where(eq(schema.organizations.slug, DEMO_ORG.slug))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!org) {
-    const [created] = await db
-      .insert(schema.organizations)
-      .values({ name: DEMO_ORG.name, slug: DEMO_ORG.slug })
-      .returning({ id: schema.organizations.id });
-    org = created;
-  }
-  if (!org) throw new Error("failed to create demo organization");
-
+  const orgId = await ensureDemoOrg(db);
   for (const user of USERS) {
-    const userId = await ensureUser(user.email, user.name);
+    const userId = await ensureUser(db, auth, user.email, user.name);
     await db
       .insert(schema.organizationMembers)
-      .values({ organizationId: org.id, userId, role: user.orgRole })
+      .values({ organizationId: orgId, userId, role: user.orgRole })
       .onConflictDoNothing();
   }
 

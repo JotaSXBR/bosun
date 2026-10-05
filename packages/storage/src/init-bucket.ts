@@ -15,7 +15,7 @@ if (!isConfigured(env, "storage")) {
 const client = new S3Client({
   region: env.storage.region ?? "us-east-1",
   ...(env.storage.endpoint ? { endpoint: env.storage.endpoint } : {}),
-  forcePathStyle: env.storage.forcePathStyle ?? true,
+  forcePathStyle: env.storage.forcePathStyle,
   credentials: {
     accessKeyId: env.storage.accessKeyId as string,
     secretAccessKey: env.storage.secretAccessKey as string,
