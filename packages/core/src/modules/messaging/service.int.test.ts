@@ -8,10 +8,12 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { TenantContext } from "../../tenant/context";
+import { insertMessage } from "./repository";
 import type { ConnectionRef } from "./service";
 import { ingestChannelEvent, listConversationMessages, listTenantConversations } from "./service";
 
-const { channelConnections, contacts, conversations, messages, organizations, users } = schema;
+const { channelConnections, contacts, conversations, messages, organizations, teams, users } =
+  schema;
 
 let db: Database;
 let orgA: string;
@@ -209,6 +211,154 @@ describe("ingestChannelEvent", () => {
       expect(conn!.status).toBe("connected");
       expect(conn!.connectedAt).not.toBeNull();
     });
+  });
+});
+
+describe("conversation lifecycle", () => {
+  it("replays of an already-ingested inbound never re-run the transition", async () => {
+    const event: ChannelEvent = {
+      type: "message.received",
+      externalMessageId: "false_lc@c.us_REPLAY",
+      from: { channelUserId: "lc-replay@c.us", displayName: "Replay" },
+      content: { type: "text", text: "hi" },
+      timestamp: new Date("2024-02-01T00:00:00Z"),
+    };
+    await withTenant(db, orgA, (tx) => ingestChannelEvent(tx, connA, event));
+
+    // Agent resolves the conversation (assignee set) — then the provider
+    // retries the same webhook: dedup must keep it resolved.
+    await withTenant(db, orgA, (tx) =>
+      tx
+        .update(conversations)
+        .set({ status: "resolved", assigneeId: userId })
+        .where(eq(conversations.externalId, "lc-replay@c.us")),
+    );
+    await withTenant(db, orgA, (tx) => ingestChannelEvent(tx, connA, event));
+
+    await withTenant(db, orgA, async (tx) => {
+      const [conv] = await tx
+        .select()
+        .from(conversations)
+        .where(eq(conversations.externalId, "lc-replay@c.us"));
+      expect(conv!.status).toBe("resolved");
+      expect(conv!.assigneeId).toBe(userId);
+    });
+  });
+
+  it("inbound on resolved reopens to open, keeps sector, drops assignee", async () => {
+    let teamId!: string;
+    await withTenant(db, orgA, async (tx) => {
+      const [team] = await tx
+        .insert(teams)
+        .values({ organizationId: orgA, name: `LC ${crypto.randomUUID().slice(0, 6)}` })
+        .returning({ id: teams.id });
+      teamId = team!.id;
+    });
+
+    const inbound: ChannelEvent = {
+      type: "message.received",
+      externalMessageId: "false_lc@c.us_A1",
+      from: { channelUserId: "lc@c.us", displayName: "Life" },
+      content: { type: "text", text: "first" },
+      timestamp: new Date("2024-02-02T00:00:00Z"),
+    };
+    await withTenant(db, orgA, (tx) => ingestChannelEvent(tx, connA, inbound));
+    await withTenant(db, orgA, (tx) =>
+      tx
+        .update(conversations)
+        .set({ status: "resolved", assigneeId: userId, sectorId: teamId })
+        .where(eq(conversations.externalId, "lc@c.us")),
+    );
+
+    // Customer replies on the resolved thread.
+    await withTenant(db, orgA, (tx) =>
+      ingestChannelEvent(tx, connA, {
+        ...inbound,
+        externalMessageId: "false_lc@c.us_A2",
+        timestamp: new Date("2024-02-03T00:00:00Z"),
+      }),
+    );
+
+    await withTenant(db, orgA, async (tx) => {
+      const [conv] = await tx
+        .select()
+        .from(conversations)
+        .where(eq(conversations.externalId, "lc@c.us"));
+      expect(conv!.status).toBe("open");
+      expect(conv!.assigneeId).toBeNull();
+      expect(conv!.sectorId).toBe(teamId);
+    });
+  });
+
+  it("inbound on waiting_customer returns to in_progress, keeping assignee", async () => {
+    const inbound: ChannelEvent = {
+      type: "message.received",
+      externalMessageId: "false_wc@c.us_B1",
+      from: { channelUserId: "wc@c.us", displayName: "Wait" },
+      content: { type: "text", text: "ping" },
+      timestamp: new Date("2024-02-04T00:00:00Z"),
+    };
+    await withTenant(db, orgA, (tx) => ingestChannelEvent(tx, connA, inbound));
+    await withTenant(db, orgA, (tx) =>
+      tx
+        .update(conversations)
+        .set({ status: "waiting_customer", assigneeId: userId })
+        .where(eq(conversations.externalId, "wc@c.us")),
+    );
+
+    await withTenant(db, orgA, (tx) =>
+      ingestChannelEvent(tx, connA, {
+        ...inbound,
+        externalMessageId: "false_wc@c.us_B2",
+        timestamp: new Date("2024-02-05T00:00:00Z"),
+      }),
+    );
+
+    await withTenant(db, orgA, async (tx) => {
+      const [conv] = await tx
+        .select()
+        .from(conversations)
+        .where(eq(conversations.externalId, "wc@c.us"));
+      expect(conv!.status).toBe("in_progress");
+      expect(conv!.assigneeId).toBe(userId);
+    });
+  });
+});
+
+describe("internal notes (messages.private)", () => {
+  it("persists the private flag and returns it on reads", async () => {
+    const inbound: ChannelEvent = {
+      type: "message.received",
+      externalMessageId: "false_pv@c.us_N1",
+      from: { channelUserId: "pv@c.us", displayName: "Note" },
+      content: { type: "text", text: "hi" },
+      timestamp: new Date("2024-02-06T00:00:00Z"),
+    };
+    await withTenant(db, orgA, (tx) => ingestChannelEvent(tx, connA, inbound));
+
+    const conversationId = await withTenant(db, orgA, async (tx) => {
+      const [conv] = await tx
+        .select({ id: conversations.id })
+        .from(conversations)
+        .where(eq(conversations.externalId, "pv@c.us"));
+      await insertMessage(tx, {
+        organizationId: orgA,
+        conversationId: conv!.id,
+        channelConnectionId: connA.id,
+        contactId: null,
+        direction: "outbound",
+        content: { type: "text", text: "nota interna" },
+        externalId: null,
+        status: "sent",
+        sentAt: new Date(),
+        private: true,
+      });
+      return conv!.id;
+    });
+
+    const rows = await listConversationMessages(db, ctx(orgA, "agent"), { conversationId });
+    const note = rows.find((m) => m.private);
+    expect(note?.content).toEqual({ type: "text", text: "nota interna" });
   });
 });
 

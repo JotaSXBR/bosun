@@ -10,7 +10,8 @@
     "./crypto": "./src/lib/crypto.ts",
     "./integrations": "./src/modules/integrations/index.ts",
     "./messaging": "./src/modules/messaging/index.ts",
-    "./organizations": "./src/modules/organizations/index.ts"
+    "./organizations": "./src/modules/organizations/index.ts",
+    "./teams": "./src/modules/teams/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

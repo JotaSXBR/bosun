@@ -1,8 +1,8 @@
-import type { Database } from "@crm/db";
+import type { Database, DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
 import { and, eq } from "drizzle-orm";
 
-const { organizationMembers, organizations } = schema;
+const { organizationMembers, organizations, organizationSettings } = schema;
 
 // Better Auth tables have no RLS (auth runs before tenant context exists),
 // so membership lookups are plain selects — authorization is the service's job.
@@ -38,4 +38,58 @@ export async function listMemberships(
     .from(organizationMembers)
     .innerJoin(organizations, eq(organizationMembers.organizationId, organizations.id))
     .where(eq(organizationMembers.userId, userId));
+}
+
+// organization_settings is tenant-owned (RLS) — these run inside withTenant.
+
+export type OrganizationSettingsRow = typeof organizationSettings.$inferSelect;
+
+export async function findSettings(
+  executor: DbExecutor,
+  organizationId: string,
+): Promise<OrganizationSettingsRow | null> {
+  const [row] = await executor
+    .select()
+    .from(organizationSettings)
+    .where(eq(organizationSettings.organizationId, organizationId))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Get-or-create: concurrent first calls collapse on the org unique index. */
+export async function getOrCreateSettings(
+  executor: DbExecutor,
+  organizationId: string,
+): Promise<OrganizationSettingsRow> {
+  const existing = await findSettings(executor, organizationId);
+  if (existing) return existing;
+  await executor
+    .insert(organizationSettings)
+    .values({ organizationId })
+    .onConflictDoNothing({ target: organizationSettings.organizationId });
+  const row = await findSettings(executor, organizationId);
+  if (!row) throw new Error("organization_settings upsert returned no row");
+  return row;
+}
+
+export async function upsertSettings(
+  executor: DbExecutor,
+  organizationId: string,
+  values: {
+    businessHours?: unknown;
+    offHoursMessage?: string | null;
+    timezone?: string;
+    locale?: string;
+  },
+): Promise<OrganizationSettingsRow> {
+  const [row] = await executor
+    .insert(organizationSettings)
+    .values({ organizationId, ...values })
+    .onConflictDoUpdate({
+      target: organizationSettings.organizationId,
+      set: { ...values, updatedAt: new Date() },
+    })
+    .returning();
+  if (!row) throw new Error("organization_settings upsert returned no row");
+  return row;
 }

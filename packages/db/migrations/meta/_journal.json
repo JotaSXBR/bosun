@@ -36,6 +36,13 @@
       "when": 1791033681489,
       "tag": "0004_yielding_veda",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791218721914,
+      "tag": "0005_awesome_hedge_knight",
+      "breakpoints": true
     }
   ]
 }

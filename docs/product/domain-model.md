@@ -5,26 +5,31 @@ questionnaire/interview, not built yet.
 
 ## Platform & tenancy (flat)
 
-| Entity                                           | Status             | Notes                                                                                                                                      |
-| ------------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `users`, `sessions`, `accounts`, `verifications` | implemented        | Better Auth. A user may belong to many orgs; `activeOrganization` in session picks the tenant.                                             |
-| `organizations` + members/invitations            | implemented        | The tenant. Future columns: `logo_url`, `theme` (jsonb), `custom_domain` (nullable unique — reserved).                                     |
-| `platform_admin` role                            | implemented        | `superadmin@crm.local` — the VPS operator. Cross-tenant via `withPlatformScope` only after admin check.                                    |
-| Org roles                                        | implemented + spec | `owner`, `admin`, `manager`, `agent` exist. **`viewer`** (read-only, no billing) to be added.                                              |
-| `organization_settings`                          | spec               | Per-org settings: `business_hours` (jsonb, customizable), `off_hours_message` (with `{proximo_atendimento}` placeholder), locale/timezone. |
+| Entity                                           | Status             | Notes                                                                                                                                                                              |
+| ------------------------------------------------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`, `sessions`, `accounts`, `verifications` | implemented        | Better Auth. A user may belong to many orgs; `activeOrganization` in session picks the tenant.                                                                                     |
+| `organizations` + members/invitations            | implemented        | The tenant. Future columns: `logo_url`, `theme` (jsonb), `custom_domain` (nullable unique — reserved).                                                                             |
+| `platform_admin` role                            | implemented        | `superadmin@crm.local` — the VPS operator. Cross-tenant via `withPlatformScope` only after admin check.                                                                            |
+| Org roles                                        | implemented        | `owner`, `admin`, `manager`, `agent`, **`viewer`** (read-only, no billing).                                                                                                        |
+| `organization_settings`                          | implemented (base) | Per-org settings: `business_hours` (jsonb, customizable), `off_hours_message` (with `{proximo_atendimento}` placeholder), locale/timezone. The off-hours auto-reply is still spec. |
 
-## Teams / sectors — spec
+## Teams / sectors — implemented
 
-`teams` (id, org, name, color) + `team_members` (team_id, user_id). A
-sector exists as a real entity — the AI triage routes conversations **to a
+`teams` (id, org, name, color) + `team_members` (org, team_id, user_id —
+`organization_id` denormalized so the standard tenant predicate applies).
+A sector exists as a real entity — the AI triage routes conversations **to a
 sector**, and statuses show "time responsável". Sectors do NOT assign
 agents automatically; a human still picks conversations manually.
+Management UI is deferred to the P2 Settings item.
 
 ## Messaging — implemented, needs extension
 
 `contacts`, `conversations`, `messages`, `channel_connections` exist.
+`conversations.sector_id`/`assignee_id` and the lifecycle below are
+implemented; `archived` was removed (folded into `resolved`). The
+assignment/transfer actions and queue views are still to come.
 
-Conversation lifecycle (spec — current `open|resolved|archived` must grow):
+Conversation lifecycle (implemented):
 
 | Status (enum)      | Meaning                                                 | Responsible |
 | ------------------ | ------------------------------------------------------- | ----------- |
@@ -38,13 +43,15 @@ sorted by oldest waiting (wait time = last inbound message); **Aguardando
 atendimento** = `open` + `sector_id` set (routed, awaiting pickup);
 **Minhas** = `assignee_id = me`; **Resolvidas**.
 
-New fields on `conversations`: `sector_id` (FK teams, nullable),
-`assignee_id` (FK users, nullable). Status transitions: manual pickup,
-transfer (sector/agent), resolve; inbound message on `resolved` reopens
-to `open`; inbound while `waiting_customer` → `in_progress`.
+`conversations.sector_id` (FK teams, nullable) and `assignee_id` (FK users,
+nullable) exist. Status transitions: manual pickup, transfer (sector/agent),
+resolve (all pending — actions/UI slices); inbound message on `resolved`
+reopens to `open` (implemented); inbound while `waiting_customer` →
+`in_progress` (implemented).
 
-`messages` gains `private` flag — internal notes invisible to the client
-(team notes, handoff context, later AI suggestions).
+`messages.private` exists — internal notes invisible to the client (team
+notes, handoff context, later AI suggestions). The note-writing action is
+still to come.
 
 ## Leads / funil — spec
 

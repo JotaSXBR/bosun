@@ -2,7 +2,7 @@
 // Idempotent: existing rows are reused. Refuses to run in production.
 import { getServerEnv } from "@crm/config";
 import { createDb, schema } from "@crm/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { createAuth } from "./auth";
 
@@ -14,6 +14,14 @@ const USERS = [
   { email: "admin@crm.local", name: "Admin Demo", orgRole: "admin" },
   { email: "manager@crm.local", name: "Manager Demo", orgRole: "manager" },
   { email: "agent@crm.local", name: "Agent Demo", orgRole: "agent" },
+  { email: "viewer@crm.local", name: "Viewer Demo", orgRole: "viewer" },
+] as const;
+
+// Demo sectors — idempotent by (org, name). Members are keyed by org role
+// (the seed creates exactly one user per role).
+const DEMO_TEAMS = [
+  { name: "Vendas", color: "#22c55e", memberRoles: ["agent", "manager"] },
+  { name: "Suporte", color: "#3b82f6", memberRoles: ["agent"] },
 ] as const;
 
 const PLATFORM_ADMIN = { email: "superadmin@crm.local", name: "Platform Admin" };
@@ -57,6 +65,33 @@ async function ensureDemoOrg(db: SeedDb): Promise<string> {
   return created.id;
 }
 
+async function ensureDemoTeams(
+  db: SeedDb,
+  orgId: string,
+  userIdByRole: ReadonlyMap<string, string>,
+): Promise<void> {
+  for (const team of DEMO_TEAMS) {
+    await db
+      .insert(schema.teams)
+      .values({ organizationId: orgId, name: team.name, color: team.color })
+      .onConflictDoNothing();
+    const [row] = await db
+      .select({ id: schema.teams.id })
+      .from(schema.teams)
+      .where(and(eq(schema.teams.organizationId, orgId), eq(schema.teams.name, team.name)))
+      .limit(1);
+    if (!row) throw new Error(`failed to seed team ${team.name}`);
+    for (const role of team.memberRoles) {
+      const userId = userIdByRole.get(role);
+      if (!userId) continue;
+      await db
+        .insert(schema.teamMembers)
+        .values({ organizationId: orgId, teamId: row.id, userId })
+        .onConflictDoNothing();
+    }
+  }
+}
+
 async function main() {
   const env = getServerEnv();
   if (env.nodeEnv === "production") {
@@ -74,13 +109,17 @@ async function main() {
     .where(eq(schema.users.id, platformAdminId));
 
   const orgId = await ensureDemoOrg(db);
+  const userIdByRole = new Map<string, string>();
   for (const user of USERS) {
     const userId = await ensureUser(db, auth, user.email, user.name);
+    userIdByRole.set(user.orgRole, userId);
     await db
       .insert(schema.organizationMembers)
       .values({ organizationId: orgId, userId, role: user.orgRole })
       .onConflictDoNothing();
   }
+
+  await ensureDemoTeams(db, orgId, userIdByRole);
 
   await db.$client.end();
 

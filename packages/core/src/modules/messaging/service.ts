@@ -8,6 +8,7 @@ import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import type { ConversationListRow, MessageRow } from "./repository";
 import {
+  applyInboundStatusTransition,
   insertMessage,
   listConversations,
   listMessages,
@@ -77,8 +78,14 @@ export async function ingestChannelEvent(
       });
       await updateConversationLastMessage(executor, conversation.id, event.timestamp);
       // Fan out only for a real insert — webhook replays return no row and
-      // must not re-notify. pg_notify fires on commit with the write tx.
+      // must not re-notify nor re-run the status transition. pg_notify fires
+      // on commit with the write tx.
       if (message) {
+        const transitioned = await applyInboundStatusTransition(
+          executor,
+          conversation.id,
+          conversation.status,
+        );
         await emitDomainEvent(executor, {
           type: "message.received",
           organizationId: conn.organizationId,
@@ -87,6 +94,14 @@ export async function ingestChannelEvent(
           contactId: contact.id,
           sentAt: event.timestamp.toISOString(),
         });
+        if (transitioned) {
+          await emitDomainEvent(executor, {
+            type: "conversation.updated",
+            organizationId: conn.organizationId,
+            conversationId: conversation.id,
+            status: transitioned.status,
+          });
+        }
       }
       return { eventType: event.type, messageId: message?.id ?? null };
     }
