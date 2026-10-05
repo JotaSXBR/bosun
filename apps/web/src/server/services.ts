@@ -5,10 +5,21 @@ import type { AuditLogRow, ListAuditEventsInput } from "@crm/core/audit";
 import { listAuditEvents } from "@crm/core/audit";
 import type { ChannelConnectionRow } from "@crm/core/integrations";
 import { listChannelConnectionsForTenant } from "@crm/core/integrations";
-import type { ConversationListRow } from "@crm/core/messaging";
-import { listTenantConversations } from "@crm/core/messaging";
-import type { UserOrganization } from "@crm/core/organizations";
-import { listUserOrganizations } from "@crm/core/organizations";
+import type {
+  ConversationDetailRow,
+  ConversationListRow,
+  ConversationView,
+  MessageWithAuthorRow,
+} from "@crm/core/messaging";
+import {
+  getConversationDetail,
+  listConversationMessages,
+  listTenantConversations,
+} from "@crm/core/messaging";
+import type { OrgMember, UserOrganization } from "@crm/core/organizations";
+import { listOrgMembers, listUserOrganizations } from "@crm/core/organizations";
+import type { TeamWithMembers } from "@crm/core/teams";
+import { listTeams } from "@crm/core/teams";
 import { getDb } from "@crm/db";
 
 /**
@@ -31,6 +42,31 @@ export async function listChannelConnections(ctx: TenantContext): Promise<Channe
   return listChannelConnectionsForTenant(getDb(), ctx);
 }
 
-export async function listConversations(ctx: TenantContext): Promise<ConversationListRow[]> {
-  return listTenantConversations(getDb(), ctx);
+export async function listConversations(
+  ctx: TenantContext,
+  view?: ConversationView,
+): Promise<ConversationListRow[]> {
+  return listTenantConversations(getDb(), ctx, { view: view ?? "inbox" });
+}
+
+export async function getConversation(
+  ctx: TenantContext,
+  id: string,
+): Promise<ConversationDetailRow> {
+  return getConversationDetail(getDb(), ctx, { conversationId: id });
+}
+
+export async function listMessages(
+  ctx: TenantContext,
+  conversationId: string,
+): Promise<MessageWithAuthorRow[]> {
+  return listConversationMessages(getDb(), ctx, { conversationId });
+}
+
+export async function listMembers(ctx: TenantContext): Promise<OrgMember[]> {
+  return listOrgMembers(getDb(), ctx);
+}
+
+export async function listSectors(ctx: TenantContext): Promise<TeamWithMembers[]> {
+  return listTeams(getDb(), ctx);
 }

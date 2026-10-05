@@ -7,19 +7,22 @@ import { eq } from "drizzle-orm";
 import { NotFoundError, WebhookVerificationError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
-import type { ConversationListRow, MessageRow } from "./repository";
+import type { ConversationDetailRow, ConversationListRow, MessageWithAuthorRow } from "./reads";
+import {
+  getConversationDetail as repoGetConversationDetail,
+  listConversations,
+  listMessages,
+} from "./reads";
 import {
   applyInboundStatusTransition,
   findOrCreateTicket,
   insertMessage,
-  listConversations,
-  listMessages,
   updateConversationLastMessage,
   updateMessageStatus,
   upsertContact,
 } from "./repository";
-import type { ListConversationsInput, ListMessagesInput } from "./schemas";
-import { listConversationsInput, listMessagesInput } from "./schemas";
+import type { ConversationIdInput, ListConversationsInput, ListMessagesInput } from "./schemas";
+import { conversationIdInput, listConversationsInput, listMessagesInput } from "./schemas";
 
 const { conversations } = schema;
 
@@ -191,8 +194,23 @@ export async function listConversationMessages(
   db: Database,
   ctx: TenantContext,
   input: ListMessagesInput,
-): Promise<MessageRow[]> {
+): Promise<MessageWithAuthorRow[]> {
   assertPermission(ctx, { messaging: ["read"] });
   const parsed = listMessagesInput.parse(input);
   return listMessages(db, ctx.organizationId, parsed.conversationId, parsed.limit);
+}
+
+/** Requires messaging:read. Throws NotFoundError on unknown/cross-tenant id. */
+export async function getConversationDetail(
+  db: Database,
+  ctx: TenantContext,
+  input: ConversationIdInput,
+): Promise<ConversationDetailRow> {
+  assertPermission(ctx, { messaging: ["read"] });
+  const parsed = conversationIdInput.parse(input);
+  const row = await withTenant(db, ctx.organizationId, (tx) =>
+    repoGetConversationDetail(tx, parsed.conversationId),
+  );
+  if (!row) throw new NotFoundError("Conversa");
+  return row;
 }

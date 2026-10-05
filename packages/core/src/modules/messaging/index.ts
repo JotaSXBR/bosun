@@ -8,7 +8,8 @@ export {
   transferConversation,
 } from "./actions";
 export { addInternalNote, sendOutboundMessage } from "./outbound";
-export type { ContactRow, ConversationListRow, ConversationRow, MessageRow } from "./repository";
+export type { ConversationDetailRow, ConversationListRow, MessageWithAuthorRow } from "./reads";
+export type { ContactRow, ConversationRow, MessageRow } from "./repository";
 export type {
   ConversationIdInput,
   ConversationView,
@@ -29,6 +30,7 @@ export {
 } from "./schemas";
 export type { ConnectionRef, IngestedEvent, WebhookIngestResult } from "./service";
 export {
+  getConversationDetail,
   ingestChannelEvent,
   ingestChannelWebhook,
   listConversationMessages,

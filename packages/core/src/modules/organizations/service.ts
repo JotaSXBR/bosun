@@ -6,7 +6,13 @@ import { isOrgRole } from "@crm/permissions";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import type { OrganizationSettingsRow } from "./repository";
-import { findMember, getOrCreateSettings, listMemberships, upsertSettings } from "./repository";
+import {
+  findMember,
+  getOrCreateSettings,
+  listMemberships,
+  listOrgMembers as repoListOrgMembers,
+  upsertSettings,
+} from "./repository";
 import type { UpdateOrgSettingsInput } from "./schemas";
 import { updateOrgSettingsInput } from "./schemas";
 
@@ -30,6 +36,14 @@ export type UserOrganization = {
   name: string;
   role: OrgRole;
 };
+
+export type OrgMember = { userId: string; name: string; email: string; role: string };
+
+/** Org members for the transfer/assignee picker — any member may read. */
+export async function listOrgMembers(db: Database, ctx: TenantContext): Promise<OrgMember[]> {
+  assertPermission(ctx, { messaging: ["read"] });
+  return repoListOrgMembers(db, ctx.organizationId);
+}
 
 export async function listUserOrganizations(
   db: Database,
