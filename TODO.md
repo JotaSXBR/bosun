@@ -72,6 +72,10 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `process.stdout/stderr` não existem lá (warning de build, não erro).
   Opções: isolar o registro de streams atrás de uma checagem de runtime ou
   variant `edge` do logger.
+- **P3 — GitHub MCP instável**: `github-mcp-server` responde reads
+  (`get_me` ok) mas falha conexão em writes (`create_pull_request` —
+  PR #1 foi criada via `gh` com autorização pontual). Diagnosticar se é
+  transporte/sessão do MCP local; regra de "GitHub só via MCP" segue.
 - **P3 — Promover warns a error** — contagem **zerada** em
   `chore/lint-warnings` (PR separado): `prefer-nullish-coalescing`,
   `no-unnecessary-condition`, `complexity` e `max-statements` resolvidos
