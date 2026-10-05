@@ -110,8 +110,9 @@ Configurado via `PATCH /applications/{uuid}`:
 - `health_check_host`: **`127.0.0.1`** (não `localhost` — BusyBox `wget`
   resolve `localhost`→`::1` e o server escuta só IPv4 `0.0.0.0`)
 - `health_check_path`: `/api/health`, `health_check_method`: `GET`
-- `health_check_start_period`: **120** (migrate + Next start no VPS
-  compartilhado passa de 60s)
+- `health_check_start_period`: **60** — o 120 original cobria o bring-up
+  lento; com envs corretas o app fica healthy em <30s (migrate é
+  idempotente, Next sobe em ~1s)
 - A imagem runner inclui `curl` (o check gerado pelo Coolify usa
   `curl -fsS ... || wget -qO- ...`)
 
@@ -119,9 +120,11 @@ WAHA recebe `REDIS_URL` apontando para o redis do mesmo ambiente (jobs/apps
 do WAHA), `WHATSAPP_DEFAULT_ENGINE=GOWS`, `WAHA_API_KEY`,
 dashboard/swagger ligados com credenciais próprias — **sem FQDN** (rede
 interna apenas; abrir via proxy do Coolify se precisar da UI).
-Healthcheck: `GET /ping` na porta 3000 (o `/health` é WAHA Plus-only) +
-env `WAHA_API_KEY_EXCLUDE_PATH=ping` para o endpoint não ficar atrás do
-auth da API.
+Healthcheck: `GET /health` na porta 3000 (desde WAHA `2026.6.1` o Plus
+virou Core — `/health` existe em toda imagem `devlikeapro/waha` e verifica
+server + sessions, melhor que `/ping`) + env
+`WAHA_API_KEY_EXCLUDE_PATH=ping,health` para os endpoints não ficarem
+atrás do auth da API.
 
 RustFS recebe `RUSTFS_ACCESS_KEY`/`SECRET_KEY`, `RUSTFS_ADDRESS=:9000`,
 `RUSTFS_VOLUMES=/data`, console desabilitado por padrão. Bucket `bosun`
