@@ -35,7 +35,7 @@
   "devDependencies": {
     "@crm/eslint-config": "workspace:*",
     "@crm/tsconfig": "workspace:*",
-    "@types/node": "^24",
+    "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "9.39.2",
