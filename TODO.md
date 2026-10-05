@@ -48,10 +48,10 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   (API retornou 403). Quando o plano subir: required checks
   `quality`/`integration`/`scan` + bloquear force-push. Ver
   `docs/development/cicd.md`.
-- **P2 — Coolify: criar apps staging/prod + secrets** (depende do usuário):
-  apps Docker Image apontando `ghcr.io/jotasxbr/bosun:{staging,prod}`, PAT
-  `read:packages` no registry do Coolify, webhooks + `COOLIFY_TOKEN` nos
-  secrets do repo. Passo a passo em `docs/development/deployment-coolify.md`.
+
+- **P3 — Upgrade Coolify** ≥4.4: traz API de registries
+  (`POST /servers/{uuid}/registries`) — docker login vira automável via
+  API/MCP. Manutenção planejada, afeta outros projetos no servidor.
 
 ## Pesquisa / upgrades futuros
 
@@ -79,6 +79,27 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 
 ## Concluído
 
+- **P1 — Ambiente Coolify provisionado + staging no ar** ✅ 2026-10-05 —
+  2 projetos (`Bosun Staging`, `Bosun Production`) com recursos **nativos
+  separados**: postgres pgvector (database resource + env `PGDATA` —
+  fix do mount-path do PG18), redis (database), rustfs e waha:gows
+  (applications com volumes + `custom_network_aliases`), app
+  docker-image (domínio, health `/api/health`, envs). `migrate.mjs`
+  provisiona a role `crm_app` sozinho. GHCR auth via `docker login` no
+  Terminal do host (one-time). **Staging live**:
+  `https://bosun-staging.fluxie.com.br/api/health` →
+  `{"status":"ok","db":"ok"}` + cert Let's Encrypt real. Root causes do
+  ciclo de rollbacks: env vars duplicadas (removidas nos 2 apps) +
+  `CHANNEL_CREDENTIALS_KEY` fora do formato hex64 (corrigida) +
+  healthcheck host `localhost`→`127.0.0.1` + `start_period` 120s +
+  `curl` na imagem. O "404 + TRAEFIK DEFAULT CERT" era sintoma de
+  rollback contínuo, não falha de proxy. Ver
+  `docs/development/deployment-coolify.md`.
+- **Decisão — background jobs** (2026-10-04): **pg-boss** escolhido sobre
+  BullMQ e self-host Trigger.dev — enqueue transacional com a escrita no
+  Postgres (sem outbox), zero infra nova. Trigger.dev sai; migração dos
+  tasks do `@crm/automation` vira fase com ADR próprio (substitui ADR 0010).
+  Enquanto isso enqueue permanece no-op (`isConfigured("trigger")`).
 - **P1 — Repo + CI/CD** ✅ 2026-10-05 — repo privado `JotaSXBR/bosun`;
   marca "Bosun" (pacote root, compose project, README); CI com job `scan`
   (Trivy fs: deps+secrets, HIGH/CRIT fixável); CD `cd.yml`: imagem → GHCR

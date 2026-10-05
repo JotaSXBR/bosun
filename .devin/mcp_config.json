@@ -3,6 +3,13 @@
     "chrome-devtools": {
       "command": "npx",
       "args": ["-y", "chrome-devtools-mcp@1.10.1"]
+    },
+    "coolify": {
+      "url": "https://panel.fluxie.com.br/mcp",
+      "transport": "http",
+      "headers": {
+        "Authorization": "Bearer ${env:COOLIFY_API_TOKEN}"
+      }
     }
   }
 }
