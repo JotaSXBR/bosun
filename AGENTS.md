@@ -169,8 +169,8 @@ live in each package's `testing` export.
 
 ## Definition of done
 
-`pnpm lint && pnpm typecheck && pnpm test` green, plus relevant integration
-tests for anything touching DB/providers.
+`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` green, plus
+relevant integration tests for anything touching DB/providers.
 
 ## Do NOT
 
@@ -182,8 +182,9 @@ tests for anything touching DB/providers.
 
 ## Tooling (integrations)
 
-- **GitHub**: only via the `github-mcp-server` MCP tools — never the `gh`
-  CLI.
+- **GitHub**: prefer the `github-mcp-server` MCP tools. For pull-request
+  operations, if the MCP call fails on the first attempt, fall back to the
+  `gh` CLI.
 - **Coolify**: only via the `coolify` MCP tools — never raw REST/curl to
   `panel.fluxie.com.br`. The MCP is read + deploy + start/stop/restart; for
   config writes it doesn't expose (envs, fqdn, healthcheck), escalate to the

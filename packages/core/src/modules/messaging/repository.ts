@@ -83,6 +83,7 @@ export async function insertMessage(
     externalId: string | null;
     status: string;
     sentAt: Date | null;
+    private?: boolean;
   },
 ): Promise<MessageRow | undefined> {
   const [row] = await executor
@@ -92,6 +93,30 @@ export async function insertMessage(
       target: [messages.channelConnectionId, messages.externalId],
       where: sql`${messages.externalId} is not null`,
     })
+    .returning();
+  return row;
+}
+
+/**
+ * Inbound message landed on a conversation: `resolved` reopens to `open`
+ * (keeps sector, drops assignee), `waiting_customer` returns to
+ * `in_progress`. No-op for other statuses — returns the updated row when a
+ * transition happened, undefined otherwise.
+ */
+export async function applyInboundStatusTransition(
+  executor: DbExecutor,
+  conversationId: string,
+  currentStatus: string,
+): Promise<ConversationRow | undefined> {
+  if (currentStatus !== "resolved" && currentStatus !== "waiting_customer") return undefined;
+  const set =
+    currentStatus === "resolved"
+      ? { status: "open", assigneeId: null, updatedAt: new Date() }
+      : { status: "in_progress", updatedAt: new Date() };
+  const [row] = await executor
+    .update(conversations)
+    .set(set)
+    .where(eq(conversations.id, conversationId))
     .returning();
   return row;
 }

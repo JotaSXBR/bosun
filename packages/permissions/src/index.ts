@@ -10,6 +10,7 @@ const statement = {
   audit: ["read"],
   integrations: ["read", "manage"],
   messaging: ["read"],
+  teams: ["read", "manage"],
   billing: ["read"],
 } as const;
 
@@ -23,6 +24,7 @@ export const roles = {
     audit: ["read"],
     integrations: ["read", "manage"],
     messaging: ["read"],
+    teams: ["read", "manage"],
     billing: ["read"],
   }),
   admin: ac.newRole({
@@ -32,6 +34,7 @@ export const roles = {
     audit: ["read"],
     integrations: ["read", "manage"],
     messaging: ["read"],
+    teams: ["read", "manage"],
     billing: ["read"],
   }),
   manager: ac.newRole({
@@ -39,10 +42,19 @@ export const roles = {
     audit: ["read"],
     integrations: ["read", "manage"],
     messaging: ["read"],
+    teams: ["read", "manage"],
   }),
   agent: ac.newRole({
     integrations: ["read"],
     messaging: ["read"],
+    teams: ["read"],
+  }),
+  // Read-only member: can look at everything, change nothing, no billing.
+  viewer: ac.newRole({
+    audit: ["read"],
+    integrations: ["read"],
+    messaging: ["read"],
+    teams: ["read"],
   }),
 } as const;
 
@@ -50,7 +62,7 @@ export type Statement = typeof statement;
 export type Resource = keyof Statement;
 export type OrgRole = keyof typeof roles;
 
-export const ORG_ROLES = ["owner", "admin", "manager", "agent"] as const;
+export const ORG_ROLES = ["owner", "admin", "manager", "agent", "viewer"] as const;
 
 export function isOrgRole(value: string): value is OrgRole {
   return (ORG_ROLES as readonly string[]).includes(value);

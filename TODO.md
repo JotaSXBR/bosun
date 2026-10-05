@@ -8,14 +8,18 @@ planejado · **P2** quando escalar · **P3** backlog de higiene.
 Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 → chat do site → IA (observer) → leads/funil → atividades → settings.
 
-- **P1 — Multi-atendimento**: `teams`/`team_members` (setores);
+- **P1 — Multi-atendimento**: `teams`/`team_members` (setores) ✅;
   `conversations` ganha `sector_id`, `assignee_id` e ciclo de status
-  `open|in_progress|waiting_customer|resolved`; views Fila/Aguardando/
-  Minhas/Resolvidas (fila = open + sem assignee, mais antiga primeiro);
-  `messages.private` (notas internas); página de conversa + envio outbound
-  via `provider.sendMessage`; reabrir conversa em inbound; papel `viewer`
-  (read-only); `organization_settings` (business_hours + mensagem fora de
-  horário 1×/dia). Ver `docs/product/domain-model.md` + `rules.md`.
+  `open|in_progress|waiting_customer|resolved` ✅ (`archived` removido);
+  views Fila/Aguardando/Minhas/Resolvidas (fila = open + sem assignee,
+  mais antiga primeiro); `messages.private` (notas internas) ✅ coluna;
+  página de conversa + envio outbound via `provider.sendMessage`; reabrir
+  conversa em inbound ✅ + `waiting_customer`→`in_progress` ✅; papel
+  `viewer` (read-only) ✅; `organization_settings` ✅ (auto-reply fora de
+  horário 1×/dia ainda pendente). **Slice 1 entregue** (schema + lifecycle +
+  viewer + settings); faltam slice 2 (ações/outbound/notas/off-hours) e
+  slice 3 (UI views/conversa/teams). Ver `docs/product/domain-model.md` +
+  `rules.md`.
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.
 - **P1 — Site chat**: provider `site_chat` + widget embarcável + endpoint
@@ -74,8 +78,9 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   variant `edge` do logger.
 - **P3 — GitHub MCP instável**: `github-mcp-server` responde reads
   (`get_me` ok) mas falha conexão em writes (`create_pull_request` —
-  PR #1 foi criada via `gh` com autorização pontual). Diagnosticar se é
-  transporte/sessão do MCP local; regra de "GitHub só via MCP" segue.
+  PRs #1 e #2 foram criadas via `gh` fallback). Diagnosticar se é
+  transporte/sessão do MCP local. Regra atual: MCP primeiro, `gh` CLI como
+  fallback em operações de pull request após a primeira falha (AGENTS.md).
 - **P3 — Promover warns a error** — contagem **zerada** em
   `chore/lint-warnings` (PR separado): `prefer-nullish-coalescing`,
   `no-unnecessary-condition`, `complexity` e `max-statements` resolvidos
@@ -86,6 +91,10 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 
 ## Concluído
 
+- **Fix — globMatch do workflow hook** ✅ 2026-10-05 — `dir/**` só casava
+  filhos diretos (replaces encadeados remontavam o `*` inserido por `.*`).
+  `.devin/hooks/workflow.mjs` agora usa placeholders `\x01`/`\x02`; `**`
+  cruza `/` como documentado e `**/*.md` volta a cobrir arquivos na raiz.
 - **P1 — Ambiente Coolify provisionado + staging no ar** ✅ 2026-10-05 —
   2 projetos (`Bosun Staging`, `Bosun Production`) com recursos **nativos
   separados**: postgres pgvector (database resource + env `PGDATA` —

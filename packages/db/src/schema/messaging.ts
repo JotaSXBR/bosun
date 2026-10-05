@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   jsonb,
@@ -12,7 +13,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { crmAppRole, tenantPredicate } from "./audit";
-import { organizations } from "./auth";
+import { organizations, users } from "./auth";
+import { teams } from "./teams";
 
 /**
  * A provider account connected by an organization (WAHA session, Meta Cloud
@@ -90,7 +92,12 @@ export const contacts = pgTable(
   ],
 ).enableRLS();
 
-/** One conversation thread per (connection, provider chat id). */
+/**
+ * One conversation thread per (connection, provider chat id). Lifecycle:
+ * open → in_progress ⇄ waiting_customer → resolved; inbound on resolved
+ * reopens to open (keeps sector, drops assignee). `sector_id` routes the
+ * conversation to a team; `assignee_id` is the agent handling it.
+ */
 export const conversations = pgTable(
   "conversations",
   {
@@ -108,6 +115,8 @@ export const conversations = pgTable(
       .references(() => contacts.id, { onDelete: "cascade" }),
     externalId: text().notNull(),
     status: text().notNull().default("open"),
+    sectorId: uuid().references(() => teams.id, { onDelete: "set null" }),
+    assigneeId: uuid().references(() => users.id, { onDelete: "set null" }),
     lastMessageAt: timestamp({ withTimezone: true }),
     metadata: jsonb().notNull().default({}),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -116,7 +125,12 @@ export const conversations = pgTable(
   (t) => [
     uniqueIndex("conversations_connection_external_idx").on(t.channelConnectionId, t.externalId),
     index("conversations_org_last_message_idx").on(t.organizationId, t.lastMessageAt.desc()),
-    check("conversations_status_check", sql`${t.status} in ('open', 'resolved', 'archived')`),
+    index("conversations_org_sector_idx").on(t.organizationId, t.sectorId),
+    index("conversations_org_assignee_idx").on(t.organizationId, t.assigneeId),
+    check(
+      "conversations_status_check",
+      sql`${t.status} in ('open', 'in_progress', 'waiting_customer', 'resolved')`,
+    ),
     pgPolicy("conversations_tenant_isolation", {
       for: "all",
       to: crmAppRole,
@@ -150,6 +164,8 @@ export const messages = pgTable(
     direction: text().notNull(),
     content: jsonb().notNull(),
     externalId: text(),
+    // Internal note — visible to the team, never sent to the customer.
+    private: boolean().notNull().default(false),
     status: text().notNull().default("received"),
     sentAt: timestamp({ withTimezone: true }),
     metadata: jsonb().notNull().default({}),

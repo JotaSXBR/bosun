@@ -65,5 +65,40 @@ describe("hasPermission", () => {
     }
     expect(hasPermission("manager", { billing: ["read"] })).toBe(false);
     expect(hasPermission("agent", { billing: ["read"] })).toBe(false);
+    expect(hasPermission("viewer", { billing: ["read"] })).toBe(false);
+  });
+
+  it("only owner/admin/manager can manage teams; everyone can read", () => {
+    for (const role of ["owner", "admin", "manager"] as const) {
+      expect(hasPermission(role, { teams: ["manage"] })).toBe(true);
+    }
+    expect(hasPermission("agent", { teams: ["manage"] })).toBe(false);
+    expect(hasPermission("viewer", { teams: ["manage"] })).toBe(false);
+    for (const role of ORG_ROLES) {
+      expect(hasPermission(role, { teams: ["read"] })).toBe(true);
+    }
+  });
+
+  it("viewer is read-only: sees everything, changes nothing, no billing", () => {
+    const reads = [
+      { audit: ["read"] },
+      { integrations: ["read"] },
+      { messaging: ["read"] },
+      { teams: ["read"] },
+    ] as const;
+    for (const check of reads) {
+      expect(hasPermission("viewer", check)).toBe(true);
+    }
+    const writes = [
+      { billing: ["read"] },
+      { organization: ["update"] },
+      { member: ["create"] },
+      { invitation: ["create"] },
+      { integrations: ["manage"] },
+      { teams: ["manage"] },
+    ] as const;
+    for (const check of writes) {
+      expect(hasPermission("viewer", check)).toBe(false);
+    }
   });
 });

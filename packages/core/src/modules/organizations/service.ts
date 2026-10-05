@@ -1,8 +1,14 @@
 import type { Database } from "@crm/db";
+import { withTenant } from "@crm/db";
 import type { OrgRole } from "@crm/permissions";
 import { isOrgRole } from "@crm/permissions";
 
-import { findMember, listMemberships } from "./repository";
+import type { TenantContext } from "../../tenant/context";
+import { assertPermission } from "../../tenant/context";
+import type { OrganizationSettingsRow } from "./repository";
+import { findMember, getOrCreateSettings, listMemberships, upsertSettings } from "./repository";
+import type { UpdateOrgSettingsInput } from "./schemas";
+import { updateOrgSettingsInput } from "./schemas";
 
 export type Membership = { role: OrgRole };
 
@@ -37,4 +43,27 @@ export async function listUserOrganizations(
       name: row.organizationName,
       role: row.role as OrgRole,
     }));
+}
+
+/**
+ * Per-org settings, created lazily on first read. Any member may read
+ * (messaging:read is the org-wide floor); writes need organization:update.
+ */
+export async function getOrganizationSettings(
+  db: Database,
+  ctx: TenantContext,
+): Promise<OrganizationSettingsRow> {
+  assertPermission(ctx, { messaging: ["read"] });
+  return withTenant(db, ctx.organizationId, (tx) => getOrCreateSettings(tx, ctx.organizationId));
+}
+
+/** Requires organization:update (owner/admin). */
+export async function updateOrganizationSettings(
+  db: Database,
+  ctx: TenantContext,
+  input: UpdateOrgSettingsInput,
+): Promise<OrganizationSettingsRow> {
+  assertPermission(ctx, { organization: ["update"] });
+  const parsed = updateOrgSettingsInput.parse(input);
+  return withTenant(db, ctx.organizationId, (tx) => upsertSettings(tx, ctx.organizationId, parsed));
 }

@@ -90,7 +90,7 @@ switch (event) {
       emit({
         decision: "block",
         reason:
-          "Files were edited this session. Before finishing: run the minimal gate (pnpm typecheck && pnpm lint + relevant tests), update TODO.md/docs touched by the work, and report what was verified.",
+          "Files were edited this session. Before finishing: run the minimal gate (pnpm format:check && pnpm typecheck && pnpm lint + relevant tests), update TODO.md/docs touched by the work, and report what was verified.",
       });
     } else {
       if (edited) unlinkSync(marker);
@@ -182,11 +182,15 @@ function alwaysAllowed(rel) {
 
 // Minimal glob → regex: ** crosses /, * and ? stay within a segment.
 function globMatch(glob, path) {
+  // Placeholders keep the single-"*"/"?" replaces from re-processing the
+  // substitution text inserted for "**/" and "**".
   const re = glob
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*\*\//g, "(.+/)?")
-    .replace(/\*\*/g, ".*")
+    .replace(/\*\*\//g, "\x01")
+    .replace(/\*\*/g, "\x02")
     .replace(/\*/g, "[^/]*")
-    .replace(/\?/g, "[^/]");
+    .replace(/\?/g, "[^/]")
+    .replace(/\x01/g, "(.+/)?")
+    .replace(/\x02/g, ".*");
   return new RegExp(`^${re}$`).test(path);
 }
