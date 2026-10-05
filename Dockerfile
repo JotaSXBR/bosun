@@ -51,6 +51,11 @@ RUN rm -rf /usr/local/lib/node_modules/npm \
            /usr/local/bin/npm /usr/local/bin/npx \
            /usr/local/bin/corepack /opt/corepack
 
+# Coolify's generated healthcheck hits http://localhost:PORT — busybox wget
+# resolves localhost to ::1 while the server binds IPv4-only 0.0.0.0, so it
+# refuses forever. curl falls back across address families correctly.
+RUN apk add --no-cache curl
+
 RUN addgroup -S bosun && adduser -S bosun -G bosun
 
 COPY --from=build /repo/apps/web/.next/standalone ./
