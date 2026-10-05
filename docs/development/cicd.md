@@ -45,6 +45,10 @@ Trivy runs via the official `aquasec/trivy:0.65.0` **container image** (not
 deterministically on GitHub runners; the container path has zero install
 surface and pins the scanner version by tag.
 
+Dependency hygiene is proactive via **Dependabot** (`.github/dependabot.yml`):
+weekly PRs for npm (pnpm workspace), github-actions and docker base-image
+updates; dev-deps minor/patch grouped into a single PR.
+
 ## CD stages
 
 | Stage   | Trigger                | What happens                                                     |
@@ -108,6 +112,20 @@ git push origin v0.1.0     # → image :prod + :0.1.0 → prod deploy
 Actions → **CD** → Run workflow → `rollback_ref` = `v1.2.2` or `sha-abc1234`
 → retags `:prod` to that manifest (no rebuild) and fires the prod webhook.
 To check available refs: package page `ghcr.io/jotasxbr/bosun` → tags.
+
+## Branching model — trunk-based, no staging branch
+
+Decided 2026-10-05: **no `staging`/`develop` branch** (rejected Git-Flow).
+
+- `main` is the single long-lived branch; features ship via short-lived
+  branches + squash-merged PRs (`delete_branch_on_merge` is on).
+- Environment separation is done by **deploy targets, not branches**:
+  push to `main` deploys staging; tag `v*.*.*` deploys production. A
+  `staging` branch would duplicate what the `:staging` image tag already
+  does and force a second merge hop for zero extra safety.
+- Repo merge settings: squash-only (merge commit and rebase disabled),
+  `allow_update_branch` on. `allow_auto_merge` is off — GitHub requires
+  required status checks for it, which need Pro.
 
 ## Branch protection — plan limitation
 
