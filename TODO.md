@@ -133,6 +133,11 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   Meta em `/app/integrations` ainda exige `appSecret`/`verifyToken` no
   client — relaxar p/ "opcional — usa plataforma" quando o grupo `meta`
   estiver configurado (backend já aceita vazio e faz o merge).
+  **CI pendente**: o e2e em CI roda `pnpm dev` sem `.env` →
+  `encryptJson` falha sem `CHANNEL_CREDENTIALS_KEY` → wizard save
+  quebra. Fix: declarar uma key de teste fixa (64 hex, não-secreta) no
+  `env:` do `ci.yml` (mesmo padrão do `BETTER_AUTH_SECRET`) — bloqueado
+  por escopo do brief na época; aprovar e aplicar.
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.
 - **P1 — Site chat**: provider `site_chat` + widget embarcável + endpoint
