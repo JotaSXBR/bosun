@@ -58,10 +58,24 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `docs/development/waha-setup.md`. **Nova conexão simplificada** (brief 3):
   form WAHA = só nome; creds vêm das envs da plataforma (`WAHA_BASE_URL`/
   `WAHA_API_KEY`), HMAC gerado por conexão, sessão = slug-do-nome + hex,
-  criar já abre o QR (create+connect na mesma action). Falta: validação
-  com aparelho real no staging e payload shapes reais do GOWS
-  (`message.edited`/`reaction`/`presence.update` parseados com zod loose —
-  confirmar no primeiro webhook real).
+  criar já abre o QR (create+connect na mesma action). Pareamento real
+  ✅ no staging (QR, WORKING). **Em investigação**: inbound real (outro
+  telefone → número pareado) não apareceu no inbox — webhooks chegam e
+  passam HMAC, mas alguns payloads logam `no recognized events`
+  (suspeito: shape GOWS divergente do `wahaMessageSchema`, ou evento
+  fora do set). `pg-boss` não subia no container — corrigido com
+  self-healing (`starting` reseta em falha + timeout 15s + lazy-start
+  no enqueue, commit `6298f1a`); o reconcile sweep 30min passa a
+  backfillar o que o webhook dropar. Falta: confirmar ingestão
+  end-to-end e validar shapes reais do GOWS
+  (`message.edited`/`reaction`/`presence.update`).
+- **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
+  referência — não-portar às cegas): `channel_event` append-only de
+  payload bruto só se fizer com RLS tenant (auditoria/debug/replay);
+  intake mode por canal (`open`|`pending`, default `open`) quando
+  agentes de IA entrarem — inbound `pending` = em automação, agente
+  entrega `open` na fila; implementar junto da UI de inbox (sem ela,
+  `pending` prende tickets invisíveis).
 - **Deploy — envs WAHA (Coolify)**: ✅ aplicado no staging (IGNORE_*,
   `WAHA_APPS_ON=brazilian-phone-numbers`, `WAHA_PRESENCE_AUTO_ONLINE=False`,
   `WHATSAPP_FILES_LIFETIME=7d`, session restart envs, logs JSON).
