@@ -65,6 +65,37 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   API key hash sha512, session restart envs). E Resend no staging:
   `EMAIL_PROVIDER=resend` + `RESEND_API_KEY` + `EMAIL_FROM` (sign-up está
   preso na verificação de email).
+- **P2 — Config de produto no app (env→DB criptografada)**: decisão de
+  design (2026-10-06). Split de envs: infra-secrets **geradas pelo
+  Coolify** (`DATABASE_*`, `REDIS_*`, `STORAGE_*`, `WAHA_*`,
+  `BETTER_AUTH_SECRET`, `CHANNEL_CREDENTIALS_KEY` — zero digitação) vs
+  config de produto (`EMAIL_*`/Resend, chaves AI, `META_*`, `ASAAS_*`)
+  que migra pra DB criptografada + settings/onboarding UI. `APP_URL`
+  fica fora dos dois grupos: é **infra derivada** — o app precisa dela
+  no boot (callbacks Better Auth, webhook WAHA), e o valor é sempre
+  `https://` + o domínio do campo Domains do Coolify (próprio ou
+  provisório). No compose self-contained sai de `SERVICE_URL_*`; no
+  setup nativo é env única copiada do próprio Domains no install.
+  **Pegadinha verificada**: domínio provisório sslip.io nasce `http://`
+  (TLS só com `https://` no Domains ou wildcard https no server; LE
+  emite p/ sslip mas é desaconselhado/rate-limited) — e o Better Auth
+  marca cookie `Secure` em produção → login quebra sobre http.
+  Resolver em `auth.ts`: `useSecureCookies: appUrl.startsWith("https:")`
+  (deriva do APP_URL, sem env nova).
+  `CHANNEL_CREDENTIALS_KEY` vira a root key das secrets em banco;
+  `getServerEnv` vira cadeia `DB → env → isConfigured-noop`. Casa com o
+  onboarding estilo Chatwoot e destrava sign-up sem depender de env
+  Resend. **Deferidos** (conversa de 2026-10-06, reabrir quando maduro):
+  compose canônico/IaC p/ VPS nova (backup nativo agendado do Coolify
+  pesou a favor de manter resources nativos); auto-update em VPS nova =
+  redeploy manual na UI. **Update in-app p/ self-hosted** (mesma
+  conversa): settings de plataforma com check de versão (GHCR/GitHub
+  releases vs `APP_VERSION` injetado no build) + botão que chama o
+  deploy webhook do Coolify do próprio app (`POST /api/v1/deploy?uuid=`)
+  — mesmo endpoint do cd.yml. Requer `COOLIFY_API_URL`/`APP_UUID`/
+  `DEPLOY_TOKEN` (escopo deploy-only) injetados; rollback via
+  healthcheck já é automático. Duas classes de instalação: mantenedor
+  usa tag→webhook (hoje); self-hosted usa o botão.
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.
 - **P1 — Site chat**: provider `site_chat` + widget embarcável + endpoint
