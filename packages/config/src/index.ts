@@ -20,7 +20,7 @@ export function loadRootEnv(): void {
   try {
     process.loadEnvFile(envPath);
   } catch (error) {
-    throw new Error(`Failed to load ${envPath}: ${(error as Error).message}`);
+    throw new Error(`Failed to load ${envPath}`, { cause: error });
   }
 }
 
