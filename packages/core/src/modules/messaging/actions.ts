@@ -2,8 +2,11 @@
 // to viewer. Resolved tickets are immutable to regular actions
 // (TICKET_RESOLVED); the only exception is reopenTicket, which undoes a
 // resolution inside the org's reopen window when no follow-up is active.
+import type { ChannelProvider } from "@crm/channels";
+import { providerForConnection } from "@crm/core/integrations";
 import type { Database, DbExecutor } from "@crm/db";
 import { emitDomainEvent, withTenant } from "@crm/db";
+import { captureException } from "@crm/observability";
 
 import { DomainError, NotFoundError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
@@ -80,15 +83,20 @@ export async function patchTicket(
  * Requires messaging:write. Claims a FREE ticket: assignee = caller,
  * in_progress. Tickets already assigned to another agent reject — ownership
  * changes hands only via an explicit (audited) transferConversation.
+ *
+ * sendSeen fires only here — opening/viewing a conversation never marks it
+ * read; assuming the ticket does. Best-effort: a provider hiccup must not
+ * fail the pickup.
  */
 export async function pickupConversation(
   db: Database,
   ctx: TenantContext,
   input: ConversationIdInput,
+  deps?: { provider?: ChannelProvider },
 ): Promise<ConversationRow> {
   assertPermission(ctx, { messaging: ["write"] });
   const { conversationId } = conversationIdInput.parse(input);
-  return withTenant(db, ctx.organizationId, async (tx) => {
+  const ticket = await withTenant(db, ctx.organizationId, async (tx) => {
     const conv = await loadActiveTicket(tx, conversationId);
     assertTicketOwner(conv, ctx);
     return patchTicket(tx, ctx.organizationId, conversationId, {
@@ -96,6 +104,15 @@ export async function pickupConversation(
       assigneeId: ctx.userId,
     });
   });
+  try {
+    const provider =
+      deps?.provider ??
+      (await providerForConnection(db, ctx.organizationId, ticket.channelConnectionId));
+    await provider.sendSeen?.(ticket.externalId);
+  } catch (error) {
+    captureException(error, { op: "pickup.sendSeen", conversationId: ticket.id });
+  }
+  return ticket;
 }
 
 /**

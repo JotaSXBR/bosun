@@ -253,6 +253,9 @@ importers:
       '@crm/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
+      '@crm/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       '@crm/ui':
         specifier: workspace:*
         version: link:../../packages/ui

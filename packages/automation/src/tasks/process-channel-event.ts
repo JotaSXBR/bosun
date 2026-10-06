@@ -5,7 +5,15 @@ import { z } from "zod";
 export const processChannelEventPayload = z.object({
   organizationId: z.uuid(),
   channelConnectionId: z.uuid(),
-  eventType: z.enum(["message.received", "message.status", "connection.status"]),
+  eventType: z.enum([
+    "message.received",
+    "message.status",
+    "message.reaction",
+    "message.edited",
+    "message.revoked",
+    "contact.presence",
+    "connection.status",
+  ]),
   conversationId: z.uuid().optional(),
   messageId: z.uuid().optional(),
 });

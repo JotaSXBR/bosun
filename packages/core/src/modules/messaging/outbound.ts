@@ -11,8 +11,8 @@ import { assertPermission } from "../../tenant/context";
 import { assertTicketOwner, loadActiveTicket, patchTicket } from "./actions";
 import type { MessageRow } from "./repository";
 import { insertMessage, updateConversationLastMessage } from "./repository";
-import type { InternalNoteInput, SendOutboundInput } from "./schemas";
-import { internalNoteInput, sendOutboundInput } from "./schemas";
+import type { InternalNoteInput, SendChannelInput, SendOutboundInput } from "./schemas";
+import { internalNoteInput, sendChannelInput, sendOutboundInput } from "./schemas";
 
 /**
  * Requires messaging:write. Sends an agent reply through the channel provider.
@@ -34,8 +34,29 @@ export async function sendOutboundMessage(
   input: SendOutboundInput,
   deps?: { provider?: ChannelProvider },
 ): Promise<MessageRow> {
-  assertPermission(ctx, { messaging: ["write"] });
   const parsed = sendOutboundInput.parse(input);
+  return sendChannelMessage(
+    db,
+    ctx,
+    { conversationId: parsed.conversationId, content: { type: "text", text: parsed.text } },
+    deps,
+  );
+}
+
+/**
+ * Requires messaging:write. Sends a channel message (text or media already
+ * uploaded to storage — `content.url` is the signed GET the provider
+ * fetches) through the provider, then persists it. `replyToId` quotes a
+ * message on the remote side.
+ */
+export async function sendChannelMessage(
+  db: Database,
+  ctx: TenantContext,
+  input: SendChannelInput,
+  deps?: { provider?: ChannelProvider },
+): Promise<MessageRow> {
+  assertPermission(ctx, { messaging: ["write"] });
+  const parsed = sendChannelInput.parse(input);
   const conversation = await withTenant(db, ctx.organizationId, (tx) =>
     loadActiveTicket(tx, parsed.conversationId),
   );
@@ -44,12 +65,26 @@ export async function sendOutboundMessage(
     deps?.provider ??
     (await providerForConnection(db, ctx.organizationId, conversation.channelConnectionId));
 
+  const content =
+    parsed.content.type === "text"
+      ? parsed.content
+      : {
+          type: "media" as const,
+          mediaKind: parsed.content.mediaKind,
+          source: { type: "url" as const, url: parsed.content.url },
+          ...(parsed.content.mimeType ? { mimeType: parsed.content.mimeType } : {}),
+          ...(parsed.content.caption ? { caption: parsed.content.caption } : {}),
+          ...(parsed.content.filename ? { filename: parsed.content.filename } : {}),
+          ...(parsed.content.voiceNote ? { voiceNote: true } : {}),
+          ...(parsed.content.storageKey ? { storageKey: parsed.content.storageKey } : {}),
+        };
   let externalId: string;
   let status: string;
   try {
     const sent = await provider.sendMessage({
       to: conversation.externalId,
-      content: { type: "text", text: parsed.text },
+      content,
+      ...(parsed.replyToId ? { replyToId: parsed.replyToId } : {}),
     });
     externalId = sent.externalId;
     status = sent.status;
@@ -61,7 +96,7 @@ export async function sendOutboundMessage(
         channelConnectionId: conversation.channelConnectionId,
         contactId: conversation.contactId,
         direction: "outbound",
-        content: { type: "text", text: parsed.text },
+        content,
         externalId: null,
         status: "failed",
         sentAt: new Date(),
@@ -85,7 +120,7 @@ export async function sendOutboundMessage(
       channelConnectionId: conversation.channelConnectionId,
       contactId: conversation.contactId,
       direction: "outbound",
-      content: { type: "text", text: parsed.text },
+      content,
       externalId,
       status,
       sentAt: now,

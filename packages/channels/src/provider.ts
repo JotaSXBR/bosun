@@ -54,4 +54,21 @@ export interface ChannelProvider {
   logout?(): Promise<void>;
   /** Restart a session in place (keeps pairing). */
   restart?(): Promise<void>;
+  /** Mark the chat as read — the remote sees blue ticks (WAHA sendSeen). */
+  sendSeen?(chatId: string): Promise<void>;
+  /** Chat presence — typing/recording expire ~10s remote-side; paused stops early. */
+  sendPresence?(chatId: string, presence: "typing" | "recording" | "paused"): Promise<void>;
+  /** Subscribe to the contact's presence updates (WAHA presence.update). */
+  subscribePresence?(chatId: string): Promise<void>;
+  /** React to a message; empty emoji removes the actor's reaction. */
+  sendReaction?(messageExternalId: string, emoji: string): Promise<void>;
+  /** Edit an own outbound message (WhatsApp ~15min window). */
+  editMessage?(chatId: string, messageExternalId: string, text: string): Promise<void>;
+  /** Revoke a message "for everyone". */
+  deleteMessage?(chatId: string, messageExternalId: string): Promise<void>;
+  /**
+   * Download inbound media bytes through provider auth — the mediaUrl on
+   * inbound payloads points to the provider host (not browser-reachable).
+   */
+  fetchMedia?(url: string): Promise<{ body: Uint8Array; contentType: string | null }>;
 }

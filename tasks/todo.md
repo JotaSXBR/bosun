@@ -1,42 +1,29 @@
-# Todo — WAHA go-live (Brief 1)
+# Task Checklist — WAHA chat features (Brief 2)
 
-## Fase A — Adapter WAHA
+> Ordem: T1+T2 → checkpoint → T3+T4 → checkpoint → T5→T6→T7 → T8.
+> Status: [ ] pendente · [~] em progresso · [x] concluída
 
-- [x] **T1** `waha.ts`: session lifecycle — create com `config.webhooks`
-      (7 eventos + hmac + retries exp 5s×8), `PUT` idempotente, `logout`,
-      `restart`, `requestPairingCode`, `getSessionInfo`, `getServerInfo`,
-      `listChats`/`listMessages` + unit tests (9 lifecycle + 14 existentes)
-- [x] **T2** `provider.ts`/`domain.ts`/`registry.ts`/`testing.ts`: tipos +
-      métodos opcionais (`requestPairingCode`, `getSessionInfo`,
-      `getServerInfo`, `listChats`, `listMessages`, `logout`), `webhookUrl`
-      na config, fake provider
+## Fase A — adapter + schema
 
-## Fase B — Service + UI
+- [x] **T1** channels: 4 eventos novos parseados + `sendSeen`/`sendPresence`/`subscribePresence`/`sendReaction`/`editMessage`/`deleteMessage`/`fetchMedia`/`replyToId`/`sendVoice` + fake + unit tests
+- [x] **T2** db: migration `revoked_at`/`edited_at`/`message_edits`/`message_reactions` (RLS+grant+checklists) + repository helpers
 
-- [x] **T3** `integrations/service.ts`: connect propagando QR/status;
-      pairing code; lifecycle stop/restart/logout; health via
-      `getConnectionHealth` (live, sem metadata persistida); `webhookUrl`
-      na factory (`APP_URL` + token); session no schema com fallback
-      `conn_<hex>`; `resolveConnectionProvider` + `listConnectionsForReconcile`
-- [x] **T4** UI `/app/integrations` + actions: `PairingPanel` (QR poll 15s +
-      código por telefone), campo session validado, botões
-      Conectar/Reconectar/Parar/Desparear/Reiniciar/Excluir, `ConnectionHealth`
-      (número, pushName, versão WAHA, warnings anti-ban); reconcile enfileirado
-      ao conectar
+## Fase B — core ingest + service
 
-## Checkpoint A+B
+- [x] **T3** ingest: `message.reaction`/`edited`/`revoked`/`presence.update` handlers + `contact.presence` notify-only + `message.updated` events + int tests
+- [x] **T4** outbound: `sendChannelMessage` (media+reply_to), `reactToMessage`, `editMessage` (15min), `deleteMessage`, `sendPresence`, `sendSeen` no `pickupConversation` + int tests
 
-- [x] `pnpm typecheck` + `pnpm lint` verdes; unit channels+core verdes
+## Fase C — web
 
-## Fase C — Reconciler
+- [x] **T5** actions: voice/doc upload→send, reaction/edit/delete/presence/subscribe + `GET /api/media/[id]` proxy + `resolveMessageMedia` int tests + `media-upload` unit tests
+- [x] **T6** UI mensagens: ticks, reações, editada+histórico, apagado por papel, `PresenceIndicator`, quote, media bubbles
+- [x] **T7** composer: emoji grid, anexo, áudio recorder+preview, presence wiring
 
-- [x] **T5** `automation`: fila `channel-messages-reconcile`, handler
-      service-scope com ingest sem fan-out (sem `process-channel-event` →
-      sem auto-reply off-hours em backfill), enqueue no connect, schedule
-      */30min + int test (idempotente, RLS ok, payload adulterado rejeitado)
+## Fase D — docs + gate
 
-## Fase D — Docs + gate
+- [x] **T8** `waha-setup.md`/`TODO.md`/docs → gate `format:check`+`typecheck`+`lint`+unit+int
 
-- [x] **T6** docs: `waha-setup.md` marcado implementado + checklist Coolify
-      no `TODO.md`; `jobs-pg-boss.md` com a nova fila; gate final verde
-      (format/typecheck/lint/unit/int)
+## Artefatos
+
+- [x] Decisões novas refletidas em `waha-setup.md`/TODO
+- [x] Checklist de validação real (aparelho) anotada p/ quando staging destravar — em `TODO.md` (payloads reais GOWS + presence AUTO_ONLINE)

@@ -66,6 +66,12 @@ export class FakeChannelProvider implements ChannelProvider {
   serverInfo: ServerInfo = { version: "0.0.0-fake", engine: "GOWS" };
   chats: ExternalChat[] = [];
   messagesByChat: Record<string, InboundChannelMessage[]> = {};
+  seenChats: string[] = [];
+  presences: { chatId: string; presence: string }[] = [];
+  subscribedChats: string[] = [];
+  reactions: { messageExternalId: string; emoji: string }[] = [];
+  edits: { chatId: string; messageExternalId: string; text: string }[] = [];
+  deletions: { chatId: string; messageExternalId: string }[] = [];
 
   getSessionInfo(): Promise<SessionInfo> {
     return Promise.resolve(this.sessionInfo);
@@ -82,6 +88,46 @@ export class FakeChannelProvider implements ChannelProvider {
   listMessages(chatId: string): Promise<InboundChannelMessage[]> {
     return Promise.resolve(this.messagesByChat[chatId] ?? []);
   }
+
+  sendSeen(chatId: string): Promise<void> {
+    this.seenChats.push(chatId);
+    return Promise.resolve();
+  }
+
+  sendPresence(chatId: string, presence: "typing" | "recording" | "paused"): Promise<void> {
+    this.presences.push({ chatId, presence });
+    return Promise.resolve();
+  }
+
+  subscribePresence(chatId: string): Promise<void> {
+    this.subscribedChats.push(chatId);
+    return Promise.resolve();
+  }
+
+  sendReaction(messageExternalId: string, emoji: string): Promise<void> {
+    this.reactions.push({ messageExternalId, emoji });
+    return Promise.resolve();
+  }
+
+  editMessage(chatId: string, messageExternalId: string, text: string): Promise<void> {
+    this.edits.push({ chatId, messageExternalId, text });
+    return Promise.resolve();
+  }
+
+  deleteMessage(chatId: string, messageExternalId: string): Promise<void> {
+    this.deletions.push({ chatId, messageExternalId });
+    return Promise.resolve();
+  }
+
+  fetchMedia(url: string): Promise<{ body: Uint8Array; contentType: string | null }> {
+    this.fetchedMediaUrls.push(url);
+    return Promise.resolve({
+      body: new Uint8Array([1, 2, 3]),
+      contentType: "application/octet-stream",
+    });
+  }
+
+  fetchedMediaUrls: string[] = [];
 
   getConnectionStatus(): Promise<ConnectionStatus> {
     return Promise.resolve(this.statusOverride ?? (this.connected ? "connected" : "disconnected"));

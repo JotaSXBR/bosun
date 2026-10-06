@@ -13,7 +13,7 @@ const wahaConfig = {
 };
 
 describe("WahaChannelProvider — session lifecycle", () => {
-  it("ignores brief-2 events until they are parsed", () => {
+  it("ignores malformed payloads of the chat events", () => {
     const provider = new WahaChannelProvider(wahaConfig);
     for (const event of [
       "message.reaction",

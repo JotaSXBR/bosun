@@ -4,7 +4,7 @@
 export type ChannelProviderKind = "waha" | "meta_cloud";
 
 export type MessageContent =
-  | { type: "text"; text: string }
+  | { type: "text"; text: string; quotedExternalId?: string }
   | {
       type: "media";
       mediaKind: "image" | "video" | "audio" | "document";
@@ -12,6 +12,14 @@ export type MessageContent =
       mimeType?: string;
       caption?: string;
       filename?: string;
+      /** Voice note → provider sends it as a PTT bubble (WAHA sendVoice). */
+      voiceNote?: boolean;
+      quotedExternalId?: string;
+      /**
+       * Object-storage key of an outbound upload — persisted so the media
+       * proxy can re-serve it after the signed source.url expires.
+       */
+      storageKey?: string;
     };
 
 export type Participant = {
@@ -23,6 +31,8 @@ export type OutboundMessage = {
   /** Recipient id in channel terms (WhatsApp chatId / phone number). */
   to: string;
   content: MessageContent;
+  /** External id of the message this replies to (quoted bubble). */
+  replyToId?: string;
 };
 
 export type SendMessageResult = {
@@ -71,6 +81,9 @@ export type InboundChannelMessage = {
   timestamp: Date;
 };
 
+/** Chat presence values mapped onto the WhatsApp UX (GOWS lastKnownPresence). */
+export type PresenceKind = "online" | "offline" | "typing" | "recording" | "paused";
+
 export type ChannelEvent =
   | ({ type: "message.received" } & InboundChannelMessage)
   | {
@@ -78,6 +91,32 @@ export type ChannelEvent =
       externalMessageId: string;
       status: "sent" | "delivered" | "read" | "failed";
       timestamp: Date;
+    }
+  | {
+      type: "message.reaction";
+      /** External id of the reacted-to message (WAHA full id). */
+      messageExternalId: string;
+      /** Emoji — empty string means the actor removed their reaction. */
+      emoji: string;
+      actorChannelUserId: string | null;
+      fromMe: boolean;
+    }
+  | {
+      type: "message.edited";
+      /**
+       * Candidate external ids — WAHA's `editedMessageId` lacks the
+       * true_/false_ prefix and chatId, so all plausible ids are emitted
+       * and the consumer resolves which row exists.
+       */
+      messageExternalIds: string[];
+      newText: string;
+    }
+  | { type: "message.revoked"; messageExternalId: string }
+  | {
+      type: "contact.presence";
+      chatId: string;
+      participant: string | null;
+      presence: PresenceKind;
     }
   | { type: "connection.status"; status: ConnectionStatus };
 

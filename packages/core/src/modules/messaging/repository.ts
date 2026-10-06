@@ -2,11 +2,25 @@ import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 
-const { contacts, conversations, messages, organizationMembers, teams, ticketCounters } = schema;
+const { contacts, conversations, organizationMembers, teams, ticketCounters } = schema;
 
 export type ContactRow = typeof contacts.$inferSelect;
 export type ConversationRow = typeof conversations.$inferSelect;
-export type MessageRow = typeof messages.$inferSelect;
+
+// Message-scoped helpers live in repository-messages.ts — re-exported here
+// so existing `./repository` imports keep working.
+export type { MessageEditRow, MessageReactionRow, MessageRow } from "./repository-messages";
+export {
+  applyMessageEdit,
+  findMessageByExternalIds,
+  getMessage,
+  insertMessage,
+  listMessageEdits,
+  listReactionsForMessages,
+  markMessageRevoked,
+  updateMessageStatus,
+  upsertMessageReaction,
+} from "./repository-messages";
 
 /**
  * Finds or creates the contact for (organizationId, channelUserId). When the
@@ -181,39 +195,6 @@ export async function createFollowupTicket(
 }
 
 /**
- * Inserts an inbound message. The partial unique index on
- * (channel_connection_id, external_id) makes webhook replays idempotent —
- * duplicates are silently skipped and return undefined.
- */
-export async function insertMessage(
-  executor: DbExecutor,
-  values: {
-    organizationId: string;
-    conversationId: string;
-    channelConnectionId: string;
-    contactId: string | null;
-    direction: string;
-    content: unknown;
-    externalId: string | null;
-    status: string;
-    sentAt: Date | null;
-    private?: boolean;
-    authorId?: string | null;
-    metadata?: Record<string, unknown>;
-  },
-): Promise<MessageRow | undefined> {
-  const [row] = await executor
-    .insert(messages)
-    .values(values)
-    .onConflictDoNothing({
-      target: [messages.channelConnectionId, messages.externalId],
-      where: sql`${messages.externalId} is not null`,
-    })
-    .returning();
-  return row;
-}
-
-/**
  * Inbound message landed on an ACTIVE ticket: `waiting_customer` returns to
  * `in_progress`. Resolved tickets never reach here — a resolved chat yields a
  * new ticket in findOrCreateTicket. No-op for other statuses — returns the
@@ -307,24 +288,4 @@ export async function updateConversationLastMessage(
     .update(conversations)
     .set({ lastMessageAt, updatedAt: new Date() })
     .where(eq(conversations.id, conversationId));
-}
-
-/** Applies a provider status (sent/delivered/read/failed) to a stored message. */
-export async function updateMessageStatus(
-  executor: DbExecutor,
-  channelConnectionId: string,
-  externalId: string,
-  status: string,
-): Promise<MessageRow | undefined> {
-  const [row] = await executor
-    .update(messages)
-    .set({ status, updatedAt: new Date() })
-    .where(
-      and(
-        eq(messages.channelConnectionId, channelConnectionId),
-        eq(messages.externalId, externalId),
-      ),
-    )
-    .returning();
-  return row;
 }

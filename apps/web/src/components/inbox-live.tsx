@@ -3,14 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { subscribeToDomainEvents } from "@/lib/sse";
+
 const REFRESH_DEBOUNCE_MS = 500;
 const INDICATOR_MS = 8_000;
 
 /**
- * Keeps /app pages live: opens the org-scoped SSE stream and refreshes the
- * current route (debounced) when a domain event arrives. EventSource
- * auto-reconnects (server sends `retry: 3000`). Renders a subtle "nova
- * mensagem" indicator for a few seconds after each event.
+ * Keeps /app pages live: subscribes to the org-scoped SSE stream and
+ * refreshes the current route (debounced) when a persistent domain event
+ * arrives. `contact.presence` is transient — it never triggers a refresh
+ * (the conversation header renders it directly from the event payload).
  */
 export function InboxLive() {
   const router = useRouter();
@@ -19,19 +21,14 @@ export function InboxLive() {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const source = new EventSource("/api/conversations/stream");
-    source.onmessage = () => {
+    return subscribeToDomainEvents((event) => {
+      if (event.type === "contact.presence") return;
       setHasNew(true);
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
       refreshTimer.current = setTimeout(() => router.refresh(), REFRESH_DEBOUNCE_MS);
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = setTimeout(() => setHasNew(false), INDICATOR_MS);
-    };
-    return () => {
-      source.close();
-      if (refreshTimer.current) clearTimeout(refreshTimer.current);
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-    };
+    });
   }, [router]);
 
   if (!hasNew) return null;

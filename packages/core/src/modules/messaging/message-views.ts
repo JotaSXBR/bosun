@@ -1,0 +1,148 @@
+// Message-level reads with permission gates beyond messaging:read —
+// revoked originals and edit history are privileged (owner/admin/manager),
+// media lookup feeds the authenticated /api/media proxy route.
+import type { MessageContent } from "@crm/channels";
+import type { Database } from "@crm/db";
+import { withTenant } from "@crm/db";
+import { z } from "zod";
+
+import { AuthorizationError, DomainError, NotFoundError } from "../../errors";
+import type { TenantContext } from "../../tenant/context";
+import { assertPermission } from "../../tenant/context";
+import type { MessageEditRow } from "./repository-messages";
+import { getMessage, listMessageEdits as repoListMessageEdits } from "./repository-messages";
+import type { MessageActionInput } from "./schemas";
+import { messageActionInput } from "./schemas";
+import { canInspectMessageHistory } from "./service";
+
+const messageIdInput = z.object({ messageId: z.uuid() });
+
+function assertMessageInspector(ctx: TenantContext): void {
+  if (!canInspectMessageHistory(ctx)) {
+    throw new AuthorizationError("Only owner/admin/manager can inspect message history");
+  }
+}
+
+async function loadConversationMessage(
+  db: Database,
+  ctx: TenantContext,
+  input: MessageActionInput,
+) {
+  const parsed = messageActionInput.parse(input);
+  const message = await withTenant(db, ctx.organizationId, (tx) =>
+    getMessage(tx, parsed.messageId),
+  );
+  if (message?.conversationId !== parsed.conversationId) {
+    throw new NotFoundError("Message", parsed.messageId);
+  }
+  return message;
+}
+
+/**
+ * Privileged: the stored (unredacted) content of a message — the "ver
+ * original" behind the revoked placeholder. Regular members get redacted
+ * content from listConversationMessages.
+ */
+export async function getMessageContent(
+  db: Database,
+  ctx: TenantContext,
+  input: MessageActionInput,
+): Promise<{ content: unknown; editedAt: Date | null; revokedAt: Date | null }> {
+  assertPermission(ctx, { messaging: ["read"] });
+  assertMessageInspector(ctx);
+  const message = await loadConversationMessage(db, ctx, input);
+  return { content: message.content, editedAt: message.editedAt, revokedAt: message.revokedAt };
+}
+
+/** Privileged: previous versions of an edited message, newest first. */
+export async function getMessageEdits(
+  db: Database,
+  ctx: TenantContext,
+  input: MessageActionInput,
+): Promise<MessageEditRow[]> {
+  assertPermission(ctx, { messaging: ["read"] });
+  assertMessageInspector(ctx);
+  const parsed = messageActionInput.parse(input);
+  await loadConversationMessage(db, ctx, input);
+  return withTenant(db, ctx.organizationId, (tx) => repoListMessageEdits(tx, parsed.messageId));
+}
+
+/**
+ * Requires messaging:read. Resolves a stored media message for the proxy
+ * route: the content (url/storageKey/mime) plus the connection needed to
+ * build the provider client for provider-hosted media.
+ */
+export async function getMessageMedia(
+  db: Database,
+  ctx: TenantContext,
+  input: { messageId: string },
+): Promise<{ content: MessageContent; channelConnectionId: string }> {
+  assertPermission(ctx, { messaging: ["read"] });
+  const parsed = messageIdInput.parse(input);
+  const message = await withTenant(db, ctx.organizationId, (tx) =>
+    getMessage(tx, parsed.messageId),
+  );
+  if (!message) throw new NotFoundError("Message", parsed.messageId);
+  // Revoked media follows the same role gate as the text "ver original".
+  if (message.revokedAt && !canInspectMessageHistory(ctx)) {
+    throw new AuthorizationError("Message media is restricted");
+  }
+  const content = message.content as MessageContent;
+  if (content.type !== "media") {
+    throw new DomainError("MESSAGE_NOT_MEDIA", "Message has no media content");
+  }
+  return { content, channelConnectionId: message.channelConnectionId };
+}
+
+export type ResolvedMediaBody = {
+  body: Uint8Array;
+  contentType?: string | undefined;
+  filename?: string | undefined;
+};
+
+/** Injected IO so the resolver stays provider/storage agnostic. */
+export type MediaResolverDeps = {
+  downloadObject?: (key: string) => Promise<ResolvedMediaBody>;
+  fetchProviderMedia?: (
+    channelConnectionId: string,
+    url: string,
+  ) => Promise<ResolvedMediaBody | null>;
+};
+
+/**
+ * Downloads the bytes behind a media message: outbound uploads come from
+ * object storage (tenant key), inbound media through the channel provider.
+ * Returns null when there is no reachable source.
+ */
+export async function resolveMessageMedia(
+  db: Database,
+  ctx: TenantContext,
+  input: { messageId: string },
+  deps: MediaResolverDeps,
+): Promise<ResolvedMediaBody | null> {
+  const { content, channelConnectionId } = await getMessageMedia(db, ctx, input);
+  if (content.type !== "media") return null;
+  if (content.storageKey) {
+    // Only tenant-owned keys are servable — the field is client-writable
+    // input on send, so re-check the prefix before any download.
+    if (!content.storageKey.startsWith(`org/${ctx.organizationId}/`) || !deps.downloadObject) {
+      return null;
+    }
+    const object = await deps.downloadObject(content.storageKey);
+    return {
+      body: object.body,
+      contentType: object.contentType ?? content.mimeType,
+      filename: content.filename,
+    };
+  }
+  if (content.source.type !== "url" || !content.source.url || !deps.fetchProviderMedia) {
+    return null;
+  }
+  const media = await deps.fetchProviderMedia(channelConnectionId, content.source.url);
+  if (!media) return null;
+  return {
+    body: media.body,
+    contentType: media.contentType ?? content.mimeType,
+    filename: content.filename,
+  };
+}

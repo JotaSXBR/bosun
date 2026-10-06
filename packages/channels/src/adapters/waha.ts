@@ -1,9 +1,6 @@
-// WAHA (WhatsApp HTTP API, devlikeapro/waha) adapter.
-// Verified against https://waha.devlike.pro/docs (sessions, send-messages,
-// events). Auth: `X-Api-Key` header. Webhooks: `X-Webhook-Hmac` = sha512 hex
-// of the raw body (header `X-Webhook-Hmac-Algorithm: sha512`); HMAC is
-// configured per webhook with `hmac.key` — we treat it as mandatory, so
-// verifyWebhook returns false when no key is configured.
+// WAHA (WhatsApp HTTP API, devlikeapro/waha) adapter — lifecycle + webhooks
+// here; outbound chat actions in waha-actions.ts, payloads in
+// waha-payloads.ts. Auth: X-Api-Key; webhook HMAC (sha512) is mandatory.
 import { z } from "zod";
 
 import type {
@@ -20,6 +17,17 @@ import type {
 } from "../domain";
 import type { ChannelProvider } from "../provider";
 import { verifyHmacSignature } from "../shared/hmac";
+import type { WahaRequest } from "./waha-actions";
+import {
+  wahaDeleteMessage,
+  wahaEditMessage,
+  wahaFetchMedia,
+  wahaSendMessage,
+  wahaSendPresence,
+  wahaSendReaction,
+  wahaSendSeen,
+  wahaSubscribePresence,
+} from "./waha-actions";
 import type { FetchLike, WahaConfig } from "./waha-payloads";
 import {
   mapSessionStatus,
@@ -27,10 +35,14 @@ import {
   WAHA_WEBHOOK_RETRIES,
   wahaAckToEvents,
   wahaChatSchema,
+  wahaEditedToEvents,
   wahaMeSchema,
   wahaMessageSchema,
   wahaMessageToEvents,
   wahaPairingCodeSchema,
+  wahaPresenceToEvents,
+  wahaReactionToEvents,
+  wahaRevokedToEvents,
   wahaServerVersionSchema,
   wahaSessionSchema,
   wahaSessionStatusToEvents,
@@ -61,9 +73,7 @@ export class WahaChannelProvider implements ChannelProvider {
   }
 
   private async getSession(): Promise<z.infer<typeof wahaSessionSchema> | null> {
-    const res = await this.fetchImpl(`${this.baseUrl}/api/sessions/${this.config.session}`, {
-      headers: this.headers(),
-    });
+    const res = await this.request(`/api/sessions/${this.config.session}`);
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`WAHA get session failed: HTTP ${res.status}`);
     return wahaSessionSchema.parse(await res.json());
@@ -90,9 +100,9 @@ export class WahaChannelProvider implements ChannelProvider {
 
   /** Idempotent config write — PUT is a FULL replace, send the whole config. */
   private async writeSessionConfig(config: { webhooks: Record<string, unknown>[] }): Promise<void> {
-    const res = await this.fetchImpl(`${this.baseUrl}/api/sessions/${this.config.session}`, {
+    const res = await this.request(`/api/sessions/${this.config.session}`, {
       method: "PUT",
-      headers: this.headers({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: this.config.session, config }),
     });
     if (!res.ok) {
@@ -104,9 +114,9 @@ export class WahaChannelProvider implements ChannelProvider {
     const existing = await this.getSession();
     const config = this.webhookSessionConfig();
     if (!existing) {
-      const created = await this.fetchImpl(`${this.baseUrl}/api/sessions`, {
+      const created = await this.request(`/api/sessions`, {
         method: "POST",
-        headers: this.headers({ "Content-Type": "application/json" }),
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: this.config.session,
           start: true,
@@ -117,15 +127,13 @@ export class WahaChannelProvider implements ChannelProvider {
         throw new Error(`WAHA create session failed: HTTP ${created.status}`);
       }
     } else {
-      // Re-register the webhook on existing sessions — PUT is idempotent
-      // with our desired state (and covers sessions created before
-      // webhookUrl existed).
+      // Re-register the webhook (idempotent) — covers sessions created
+      // before webhookUrl existed too.
       if (config) await this.writeSessionConfig(config);
       if (existing.status === "STOPPED" || existing.status === "FAILED") {
-        const started = await this.fetchImpl(
-          `${this.baseUrl}/api/sessions/${this.config.session}/start`,
-          { method: "POST", headers: this.headers() },
-        );
+        const started = await this.request(`/api/sessions/${this.config.session}/start`, {
+          method: "POST",
+        });
         if (!started.ok) {
           throw new Error(`WAHA start session failed: HTTP ${started.status}`);
         }
@@ -142,8 +150,8 @@ export class WahaChannelProvider implements ChannelProvider {
   }
 
   private async getQrCode(): Promise<ConnectResult["qrCode"]> {
-    const res = await this.fetchImpl(`${this.baseUrl}/api/${this.config.session}/auth/qr`, {
-      headers: this.headers({ Accept: "application/json" }),
+    const res = await this.request(`/api/${this.config.session}/auth/qr`, {
+      headers: { Accept: "application/json" },
     });
     if (!res.ok) return undefined;
     const contentType = res.headers.get("content-type") ?? "";
@@ -162,9 +170,8 @@ export class WahaChannelProvider implements ChannelProvider {
   }
 
   async disconnect(): Promise<void> {
-    const res = await this.fetchImpl(`${this.baseUrl}/api/sessions/${this.config.session}/stop`, {
+    const res = await this.request(`/api/sessions/${this.config.session}/stop`, {
       method: "POST",
-      headers: this.headers(),
     });
     if (!res.ok && res.status !== 404) {
       throw new Error(`WAHA stop session failed: HTTP ${res.status}`);
@@ -172,13 +179,9 @@ export class WahaChannelProvider implements ChannelProvider {
   }
 
   async restart(): Promise<void> {
-    const res = await this.fetchImpl(
-      `${this.baseUrl}/api/sessions/${this.config.session}/restart`,
-      {
-        method: "POST",
-        headers: this.headers(),
-      },
-    );
+    const res = await this.request(`/api/sessions/${this.config.session}/restart`, {
+      method: "POST",
+    });
     if (!res.ok && res.status !== 404) {
       throw new Error(`WAHA restart session failed: HTTP ${res.status}`);
     }
@@ -186,9 +189,8 @@ export class WahaChannelProvider implements ChannelProvider {
 
   /** Unpairs the device — next connect() will need QR/pairing code again. */
   async logout(): Promise<void> {
-    const res = await this.fetchImpl(`${this.baseUrl}/api/sessions/${this.config.session}/logout`, {
+    const res = await this.request(`/api/sessions/${this.config.session}/logout`, {
       method: "POST",
-      headers: this.headers(),
     });
     if (!res.ok && res.status !== 404) {
       throw new Error(`WAHA logout session failed: HTTP ${res.status}`);
@@ -197,14 +199,11 @@ export class WahaChannelProvider implements ChannelProvider {
 
   /** WhatsApp "connect with phone number" — the code the user types in the app. */
   async requestPairingCode(phoneNumber: string): Promise<{ code: string }> {
-    const res = await this.fetchImpl(
-      `${this.baseUrl}/api/${this.config.session}/auth/request-code`,
-      {
-        method: "POST",
-        headers: this.headers({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ phoneNumber }),
-      },
-    );
+    const res = await this.request(`/api/${this.config.session}/auth/request-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber }),
+    });
     if (!res.ok) {
       throw new Error(`WAHA request pairing code failed: HTTP ${res.status}`);
     }
@@ -215,9 +214,7 @@ export class WahaChannelProvider implements ChannelProvider {
     const session = await this.getSession();
     const status = mapSessionStatus(session?.status ?? "STOPPED");
     const info: SessionInfo = { status, warnings: [] };
-    const res = await this.fetchImpl(`${this.baseUrl}/api/sessions/${this.config.session}/me`, {
-      headers: this.headers(),
-    });
+    const res = await this.request(`/api/sessions/${this.config.session}/me`);
     if (!res.ok) return info;
     const me = wahaMeSchema.parse(await res.json());
     if (me.id) info.phone = me.id.split("@")[0];
@@ -231,9 +228,7 @@ export class WahaChannelProvider implements ChannelProvider {
   }
 
   async getServerInfo(): Promise<ServerInfo> {
-    const res = await this.fetchImpl(`${this.baseUrl}/api/server/version`, {
-      headers: this.headers(),
-    });
+    const res = await this.request(`/api/server/version`);
     if (!res.ok) {
       throw new Error(`WAHA server version failed: HTTP ${res.status}`);
     }
@@ -247,9 +242,8 @@ export class WahaChannelProvider implements ChannelProvider {
       limit: String(opts?.limit ?? 100),
       offset: String(opts?.offset ?? 0),
     });
-    const res = await this.fetchImpl(
-      `${this.baseUrl}/api/${this.config.session}/chats/overview?${params.toString()}`,
-      { headers: this.headers() },
+    const res = await this.request(
+      `/api/${this.config.session}/chats/overview?${params.toString()}`,
     );
     if (!res.ok) {
       throw new Error(`WAHA list chats failed: HTTP ${res.status}`);
@@ -282,9 +276,7 @@ export class WahaChannelProvider implements ChannelProvider {
       offset: String(opts?.offset ?? 0),
       session: this.config.session,
     });
-    const res = await this.fetchImpl(`${this.baseUrl}/api/messages?${params.toString()}`, {
-      headers: this.headers(),
-    });
+    const res = await this.request(`/api/messages?${params.toString()}`);
     if (!res.ok) {
       throw new Error(`WAHA list messages failed: HTTP ${res.status}`);
     }
@@ -303,45 +295,47 @@ export class WahaChannelProvider implements ChannelProvider {
     return mapSessionStatus(session?.status ?? "STOPPED");
   }
 
-  async sendMessage(message: OutboundMessage): Promise<SendMessageResult> {
-    const { content } = message;
-    let path: string;
-    let body: Record<string, unknown>;
-    if (content.type === "text") {
-      path = "/api/sendText";
-      body = { session: this.config.session, chatId: message.to, text: content.text };
-    } else {
-      if (content.source.type !== "url") {
-        throw new Error("WAHA adapter only supports media by URL");
-      }
-      const endpoint =
-        content.mediaKind === "image"
-          ? "/api/sendImage"
-          : content.mediaKind === "video"
-            ? "/api/sendVideo"
-            : "/api/sendFile"; // audio + documents go through sendFile
-      path = endpoint;
-      body = {
-        session: this.config.session,
-        chatId: message.to,
-        file: {
-          mimetype: content.mimeType,
-          filename: content.filename,
-          url: content.source.url,
-        },
-        caption: content.caption,
-      };
-    }
-    const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      method: "POST",
-      headers: this.headers({ "Content-Type": "application/json" }),
-      body: JSON.stringify(body),
+  /** fetch bound to baseUrl + X-Api-Key; absolute media URLs pass through. */
+  private readonly request: WahaRequest = (path, init) =>
+    this.fetchImpl(path.startsWith("http") ? path : `${this.baseUrl}${path}`, {
+      ...init,
+      headers: this.headers(init?.headers),
     });
-    if (!res.ok) {
-      throw new Error(`WAHA sendMessage failed: HTTP ${res.status} ${await res.text()}`);
+
+  sendMessage(message: OutboundMessage): Promise<SendMessageResult> {
+    return wahaSendMessage(this.request, this.config.session, message);
+  }
+
+  sendSeen(chatId: string): Promise<void> {
+    return wahaSendSeen(this.request, this.config.session, chatId);
+  }
+
+  sendPresence(chatId: string, presence: "typing" | "recording" | "paused"): Promise<void> {
+    return wahaSendPresence(this.request, this.config.session, chatId, presence);
+  }
+
+  subscribePresence(chatId: string): Promise<void> {
+    return wahaSubscribePresence(this.request, this.config.session, chatId);
+  }
+
+  sendReaction(messageExternalId: string, emoji: string): Promise<void> {
+    return wahaSendReaction(this.request, this.config.session, messageExternalId, emoji);
+  }
+
+  editMessage(chatId: string, messageExternalId: string, text: string): Promise<void> {
+    return wahaEditMessage(this.request, this.config.session, { chatId, messageExternalId }, text);
+  }
+
+  deleteMessage(chatId: string, messageExternalId: string): Promise<void> {
+    return wahaDeleteMessage(this.request, this.config.session, { chatId, messageExternalId });
+  }
+
+  async fetchMedia(url: string): Promise<{ body: Uint8Array; contentType: string | null }> {
+    // media.url is provider-generated, but never send the api key off-host.
+    if (!url.startsWith(this.baseUrl)) {
+      throw new Error("WAHA fetchMedia refused: url outside the WAHA host");
     }
-    const parsed = z.looseObject({ id: z.string().optional() }).parse(await res.json());
-    return { externalId: parsed.id ?? "", status: "sent" };
+    return wahaFetchMedia(this.request, url);
   }
 
   verifyWebhook(request: RawWebhookRequest): boolean {
@@ -376,6 +370,14 @@ export class WahaChannelProvider implements ChannelProvider {
         return wahaMessageToEvents(payload, timestamp);
       case "message.ack":
         return wahaAckToEvents(payload, timestamp);
+      case "message.reaction":
+        return wahaReactionToEvents(payload);
+      case "message.edited":
+        return wahaEditedToEvents(payload);
+      case "message.revoked":
+        return wahaRevokedToEvents(payload);
+      case "presence.update":
+        return wahaPresenceToEvents(payload);
       case "session.status":
         return wahaSessionStatusToEvents(payload);
       default:

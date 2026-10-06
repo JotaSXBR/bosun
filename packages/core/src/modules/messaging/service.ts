@@ -15,11 +15,16 @@ import {
 } from "./reads";
 import {
   applyInboundStatusTransition,
+  applyMessageEdit,
+  findActiveTicket,
+  findMessageByExternalIds,
   findOrCreateTicket,
   insertMessage,
+  markMessageRevoked,
   updateConversationLastMessage,
   updateMessageStatus,
   upsertContact,
+  upsertMessageReaction,
 } from "./repository";
 import type { ConversationIdInput, ListConversationsInput, ListMessagesInput } from "./schemas";
 import { conversationIdInput, listConversationsInput, listMessagesInput } from "./schemas";
@@ -153,6 +158,140 @@ async function ingestMessageReceived(
   return { eventType: event.type, messageId: message.id };
 }
 
+/** 'me' = reacted on the phone itself; otherwise the contact's jid. */
+async function ingestMessageReaction(
+  executor: DbExecutor,
+  conn: ConnectionRef,
+  event: Extract<ChannelEvent, { type: "message.reaction" }>,
+): Promise<IngestedEvent> {
+  const message = await findMessageByExternalIds(executor, conn.id, [event.messageExternalId]);
+  if (!message) return { eventType: event.type, messageId: null };
+  const reactorKey = event.fromMe
+    ? "me"
+    : (event.actorChannelUserId ?? message.contactId ?? "unknown");
+  await upsertMessageReaction(executor, {
+    organizationId: conn.organizationId,
+    messageId: message.id,
+    reactorKey,
+    emoji: event.emoji,
+    actorChannelUserId: event.actorChannelUserId,
+    fromMe: event.fromMe,
+  });
+  await emitDomainEvent(executor, {
+    type: "message.updated",
+    organizationId: conn.organizationId,
+    conversationId: message.conversationId,
+    messageId: message.id,
+  });
+  return { eventType: event.type, messageId: message.id };
+}
+
+async function ingestMessageEdited(
+  executor: DbExecutor,
+  conn: ConnectionRef,
+  event: Extract<ChannelEvent, { type: "message.edited" }>,
+): Promise<IngestedEvent> {
+  const message = await findMessageByExternalIds(executor, conn.id, event.messageExternalIds);
+  if (!message) return { eventType: event.type, messageId: null };
+  // Skip history when the stored text already matches — the echo of our
+  // own edit (and webhook replays) dedupe here. Media edits carry the new
+  // caption; the shape is preserved (mediaKind/source stay intact).
+  const stored = message.content as { type?: string; text?: string; caption?: string };
+  const storedText = stored.type === "media" ? stored.caption : stored.text;
+  if (storedText === event.newText) {
+    return { eventType: event.type, messageId: message.id };
+  }
+  await applyMessageEdit(executor, {
+    organizationId: conn.organizationId,
+    messageId: message.id,
+    previousContent: message.content,
+    newContent:
+      stored.type === "media"
+        ? { ...(message.content as Record<string, unknown>), caption: event.newText }
+        : { type: "text", text: event.newText },
+  });
+  await emitDomainEvent(executor, {
+    type: "message.updated",
+    organizationId: conn.organizationId,
+    conversationId: message.conversationId,
+    messageId: message.id,
+  });
+  return { eventType: event.type, messageId: message.id };
+}
+
+async function ingestMessageRevoked(
+  executor: DbExecutor,
+  conn: ConnectionRef,
+  event: Extract<ChannelEvent, { type: "message.revoked" }>,
+): Promise<IngestedEvent> {
+  const message = await markMessageRevoked(executor, conn.id, event.messageExternalId);
+  if (!message) return { eventType: event.type, messageId: null };
+  await emitDomainEvent(executor, {
+    type: "message.updated",
+    organizationId: conn.organizationId,
+    conversationId: message.conversationId,
+    messageId: message.id,
+  });
+  return { eventType: event.type, messageId: message.id };
+}
+
+/**
+ * Transient presence — resolve the active ticket and emit a notify-only
+ * event; the client renders a short-lived "digitando…" without a refresh.
+ */
+async function ingestContactPresence(
+  executor: DbExecutor,
+  conn: ConnectionRef,
+  event: Extract<ChannelEvent, { type: "contact.presence" }>,
+): Promise<IngestedEvent> {
+  const conversation = await findActiveTicket(executor, conn.id, event.chatId);
+  if (!conversation) return { eventType: event.type, messageId: null };
+  await emitDomainEvent(executor, {
+    type: "contact.presence",
+    organizationId: conn.organizationId,
+    conversationId: conversation.id,
+    presence: event.presence,
+    participant: event.participant,
+  });
+  return { eventType: event.type, messageId: null };
+}
+
+async function ingestMessageStatus(
+  executor: DbExecutor,
+  conn: ConnectionRef,
+  event: Extract<ChannelEvent, { type: "message.status" }>,
+  deps?: IngestDeps,
+): Promise<IngestedEvent> {
+  const message = await updateMessageStatus(
+    executor,
+    conn.id,
+    event.externalMessageId,
+    event.status,
+  );
+  await deps?.enqueue?.(executor, {
+    organizationId: conn.organizationId,
+    channelConnectionId: conn.id,
+    eventType: event.type,
+    ...(message ? { messageId: message.id } : {}),
+  });
+  return { eventType: event.type, messageId: message?.id ?? null };
+}
+
+async function ingestConnectionStatus(
+  executor: DbExecutor,
+  conn: ConnectionRef,
+  event: Extract<ChannelEvent, { type: "connection.status" }>,
+  deps?: IngestDeps,
+): Promise<IngestedEvent> {
+  await applyConnectionStatus(executor, conn.id, event.status);
+  await deps?.enqueue?.(executor, {
+    organizationId: conn.organizationId,
+    channelConnectionId: conn.id,
+    eventType: event.type,
+  });
+  return { eventType: event.type, messageId: null };
+}
+
 export async function ingestChannelEvent(
   executor: DbExecutor,
   conn: ConnectionRef,
@@ -162,30 +301,21 @@ export async function ingestChannelEvent(
   switch (event.type) {
     case "message.received":
       return ingestMessageReceived(executor, conn, event, deps);
-    case "message.status": {
-      const message = await updateMessageStatus(
-        executor,
-        conn.id,
-        event.externalMessageId,
-        event.status,
-      );
-      await deps?.enqueue?.(executor, {
-        organizationId: conn.organizationId,
-        channelConnectionId: conn.id,
-        eventType: event.type,
-        ...(message ? { messageId: message.id } : {}),
-      });
-      return { eventType: event.type, messageId: message?.id ?? null };
-    }
-    case "connection.status": {
-      await applyConnectionStatus(executor, conn.id, event.status);
-      await deps?.enqueue?.(executor, {
-        organizationId: conn.organizationId,
-        channelConnectionId: conn.id,
-        eventType: event.type,
-      });
-      return { eventType: event.type, messageId: null };
-    }
+    case "message.status":
+      return ingestMessageStatus(executor, conn, event, deps);
+    case "connection.status":
+      return ingestConnectionStatus(executor, conn, event, deps);
+    // Reactions/edits/revokes update an existing message — never enqueued
+    // (they are not inbound messages; nothing to auto-reply to). Presence is
+    // transient — notify-only, no enqueue.
+    case "message.reaction":
+      return ingestMessageReaction(executor, conn, event);
+    case "message.edited":
+      return ingestMessageEdited(executor, conn, event);
+    case "message.revoked":
+      return ingestMessageRevoked(executor, conn, event);
+    case "contact.presence":
+      return ingestContactPresence(executor, conn, event);
   }
 }
 
@@ -237,6 +367,13 @@ export async function listTenantConversations(
   });
 }
 
+/** Roles allowed to inspect revoked originals and edit history. */
+export const MESSAGE_INSPECT_ROLES = new Set(["owner", "admin", "manager"]);
+
+export function canInspectMessageHistory(ctx: TenantContext): boolean {
+  return ctx.isPlatformAdmin || MESSAGE_INSPECT_ROLES.has(ctx.role);
+}
+
 /** Requires messaging:read (every org member). */
 export async function listConversationMessages(
   db: Database,
@@ -245,7 +382,14 @@ export async function listConversationMessages(
 ): Promise<MessageWithAuthorRow[]> {
   assertPermission(ctx, { messaging: ["read"] });
   const parsed = listMessagesInput.parse(input);
-  return listMessages(db, ctx.organizationId, parsed.conversationId, parsed.limit);
+  const rows = await listMessages(db, ctx.organizationId, parsed.conversationId, parsed.limit);
+  if (canInspectMessageHistory(ctx)) return rows;
+  // Revoked content is kept for audit but redacted for non-privileged roles.
+  return rows.map((row) => ({
+    ...row,
+    content: row.revokedAt ? { type: "text" as const, text: "" } : row.content,
+    quoted: row.quoted?.revoked ? { ...row.quoted, preview: null } : row.quoted,
+  }));
 }
 
 /** Requires messaging:read. Throws NotFoundError on unknown/cross-tenant id. */

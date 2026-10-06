@@ -196,6 +196,11 @@ export const messages = pgTable(
     authorId: uuid().references(() => users.id, { onDelete: "set null" }),
     status: text().notNull().default("received"),
     sentAt: timestamp({ withTimezone: true }),
+    // Remote "deleted for everyone" — content is preserved (audit); the UI
+    // renders a placeholder and only admin/manager can expand the original.
+    revokedAt: timestamp({ withTimezone: true }),
+    // Cheap "editada" badge — full history lives in message_edits.
+    editedAt: timestamp({ withTimezone: true }),
     metadata: jsonb().notNull().default({}),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -216,6 +221,77 @@ export const messages = pgTable(
       sql`${t.status} in ('received', 'queued', 'sent', 'delivered', 'read', 'failed')`,
     ),
     pgPolicy("messages_tenant_isolation", {
+      for: "all",
+      to: crmAppRole,
+      using: tenantPredicate,
+      withCheck: tenantPredicate,
+    }),
+  ],
+).enableRLS();
+
+/**
+ * Append-only edit history — one row per edit with the content BEFORE it.
+ * `edited_by_user_id` is set for agent edits done in Bosun; null means the
+ * edit happened on WhatsApp (contact editing inbound, or the operator editing
+ * from the phone) — the message's direction already says who authored it.
+ */
+export const messageEdits = pgTable(
+  "message_edits",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    messageId: uuid()
+      .notNull()
+      .references(() => messages.id, { onDelete: "cascade" }),
+    previousContent: jsonb().notNull(),
+    editedByUserId: uuid().references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("message_edits_message_idx").on(t.messageId),
+    pgPolicy("message_edits_tenant_isolation", {
+      for: "all",
+      to: crmAppRole,
+      using: tenantPredicate,
+      withCheck: tenantPredicate,
+    }),
+  ],
+).enableRLS();
+
+/**
+ * One reaction per actor per message (WhatsApp semantics — a new reaction
+ * replaces the old). `reactor_key` identifies the actor without a join:
+ * 'me' for reactions we sent from the channel device, the agent's user id
+ * for Bosun-originated reactions, the contact's channelUserId for remote
+ * ones. The unique index makes webhook replays idempotent.
+ */
+export const messageReactions = pgTable(
+  "message_reactions",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    messageId: uuid()
+      .notNull()
+      .references(() => messages.id, { onDelete: "cascade" }),
+    reactorKey: text().notNull(),
+    emoji: text().notNull(),
+    actorUserId: uuid().references(() => users.id, { onDelete: "set null" }),
+    actorChannelUserId: text(),
+    fromMe: boolean().notNull().default(false),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("message_reactions_message_reactor_idx").on(t.messageId, t.reactorKey),
+    index("message_reactions_message_idx").on(t.messageId),
+    pgPolicy("message_reactions_tenant_isolation", {
       for: "all",
       to: crmAppRole,
       using: tenantPredicate,

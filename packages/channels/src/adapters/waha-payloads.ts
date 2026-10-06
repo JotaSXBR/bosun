@@ -7,6 +7,7 @@ import type {
   ConnectionStatus,
   InboundChannelMessage,
   MessageContent,
+  PresenceKind,
 } from "../domain";
 
 export type WahaConfig = {
@@ -78,7 +79,49 @@ export const wahaMessageSchema = z.looseObject({
   mediaUrl: z.string().optional(),
   mimetype: z.string().optional(),
   filename: z.string().optional(),
+  // Engines disagree on the media shape — accept both flat and nested.
+  media: z
+    .looseObject({
+      url: z.string().optional(),
+      mimetype: z.string().optional(),
+      filename: z.string().nullable().optional(),
+    })
+    .optional(),
+  replyTo: z.looseObject({ id: z.string().optional() }).optional(),
   notifyName: z.string().optional(),
+});
+
+export const wahaReactionSchema = z.looseObject({
+  fromMe: z.boolean().optional(),
+  from: z.string().optional(),
+  participant: z.string().optional(),
+  // messageId is the FULL external id ("true_123@c.us_AAA"); text "" = removed.
+  reaction: z.looseObject({ text: z.string().optional(), messageId: z.string() }),
+});
+
+export const wahaEditedSchema = z.looseObject({
+  // id is the edit *action* id: "false_{chatId}_{actionId}[_participant]"
+  id: z.string(),
+  // bare message id — no chatId, no true_/false_ prefix.
+  editedMessageId: z.string(),
+  body: z.string().optional(),
+});
+
+export const wahaRevokedSchema = z.looseObject({
+  before: z.looseObject({ id: z.string().optional() }).optional(),
+  after: z.looseObject({ id: z.string().optional() }).optional(),
+});
+
+export const wahaPresenceSchema = z.looseObject({
+  id: z.string(),
+  presences: z
+    .array(
+      z.looseObject({
+        participant: z.string().optional(),
+        lastKnownPresence: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export const wahaAckSchema = z.looseObject({
@@ -173,15 +216,33 @@ export function wahaMessageToEvents(
 }
 
 function wahaMessageContent(data: z.infer<typeof wahaMessageSchema>): MessageContent {
-  if (!data.hasMedia) return { type: "text", text: data.body ?? "" };
+  const quoted = data.replyTo?.id ? { quotedExternalId: data.replyTo.id } : {};
+  if (!data.hasMedia) return { type: "text", text: data.body ?? "", ...quoted };
+  return wahaMediaContent(data, quoted);
+}
+
+function wahaMediaContent(
+  data: z.infer<typeof wahaMessageSchema>,
+  quoted: { quotedExternalId?: string },
+): MessageContent {
+  const mimeType = data.mimetype ?? data.media?.mimetype;
+  const filename = data.filename ?? data.media?.filename ?? undefined;
   return {
     type: "media",
-    mediaKind: "document",
-    source: { type: "url", url: data.mediaUrl ?? "" },
-    ...(data.mimetype ? { mimeType: data.mimetype } : {}),
-    ...(data.filename ? { filename: data.filename } : {}),
+    mediaKind: wahaMediaKind(mimeType),
+    source: { type: "url", url: data.mediaUrl ?? data.media?.url ?? "" },
+    ...(mimeType ? { mimeType } : {}),
+    ...(filename ? { filename } : {}),
     ...(data.body ? { caption: data.body } : {}),
+    ...quoted,
   };
+}
+
+function wahaMediaKind(mimeType: string | undefined): "image" | "video" | "audio" | "document" {
+  if (mimeType?.startsWith("image/")) return "image";
+  if (mimeType?.startsWith("video/")) return "video";
+  if (mimeType?.startsWith("audio/")) return "audio";
+  return "document";
 }
 
 export function wahaAckToEvents(payload: unknown, timestamp: number | undefined): ChannelEvent[] {
@@ -203,4 +264,59 @@ export function wahaSessionStatusToEvents(payload: unknown): ChannelEvent[] {
   const session = wahaSessionStatusSchema.safeParse(payload);
   if (!session.success) return [];
   return [{ type: "connection.status", status: mapSessionStatus(session.data.status) }];
+}
+
+export function wahaReactionToEvents(payload: unknown): ChannelEvent[] {
+  const reaction = wahaReactionSchema.safeParse(payload);
+  if (!reaction.success) return [];
+  return [
+    {
+      type: "message.reaction",
+      messageExternalId: reaction.data.reaction.messageId,
+      emoji: reaction.data.reaction.text ?? "",
+      actorChannelUserId: reaction.data.participant ?? reaction.data.from ?? null,
+      fromMe: reaction.data.fromMe ?? false,
+    },
+  ];
+}
+
+export function wahaEditedToEvents(payload: unknown): ChannelEvent[] {
+  const edited = wahaEditedSchema.safeParse(payload);
+  if (!edited.success) return [];
+  // The chat id is the middle segment of the action id.
+  const chatId = edited.data.id.split("_")[1];
+  if (!chatId) return [];
+  const messageId = edited.data.editedMessageId;
+  return [
+    {
+      type: "message.edited",
+      messageExternalIds: [`true_${chatId}_${messageId}`, `false_${chatId}_${messageId}`],
+      newText: edited.data.body ?? "",
+    },
+  ];
+}
+
+export function wahaRevokedToEvents(payload: unknown): ChannelEvent[] {
+  const revoked = wahaRevokedSchema.safeParse(payload);
+  const id = revoked.success ? revoked.data.before?.id : undefined;
+  if (!id) return [];
+  return [{ type: "message.revoked", messageExternalId: id }];
+}
+
+const PRESENCE_KINDS = new Set<string>(["online", "offline", "typing", "recording", "paused"]);
+
+export function wahaPresenceToEvents(payload: unknown): ChannelEvent[] {
+  const parsed = wahaPresenceSchema.safeParse(payload);
+  if (!parsed.success) return [];
+  const events: ChannelEvent[] = [];
+  for (const presence of parsed.data.presences ?? []) {
+    if (!presence.lastKnownPresence || !PRESENCE_KINDS.has(presence.lastKnownPresence)) continue;
+    events.push({
+      type: "contact.presence",
+      chatId: parsed.data.id,
+      participant: presence.participant ?? null,
+      presence: presence.lastKnownPresence as PresenceKind,
+    });
+  }
+  return events;
 }

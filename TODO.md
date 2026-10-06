@@ -46,15 +46,19 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
     `metadata.system="off_hours"`, `{proximo_atendimento}` interpolado,
     dedup via `messages_off_hours_day_idx`). Ver
     `docs/product/domain-model.md` + `rules.md`.
-- **P1 — WAHA chat features (brief 2)**: go-live implementado (sessão por
-  conexão, webhook auto-registrado com 7 eventos, QR+pairing code na UI,
-  reconectar sem QR, reconciliador `channel-messages-reconcile`). Falta a
-  camada de chat: ticks cinza/azul (`message.ack`), reações, edição+
-  histórico (`message_edits`), apagado híbrido por papel (`revoked_at`),
-  typing/recording presence (refresh ~4s, `paused` após ~8–10s), áudio com
-  preview (`sendVoice`), documentos (`sendFile`), `sendSeen` só ao assumir
-  o ticket, anti-ban wrapper no outbound. Pesquisa/decisões em
-  `docs/development/waha-setup.md`.
+- **P1 — WAHA chat features (brief 2)**: implementado — ticks cinza/azul
+  (`message.ack`), reações (`message_reactions` + chips/picker), edição
+  com histórico (`message_edits`, janela 15min), apagado híbrido por papel
+  (`revoked_at` + "ver original" p/ owner/admin/manager), presence
+  typing/recording (`paused` no idle) + `presence.update` via SSE,
+  áudio PTT com preview antes de enviar (`sendVoice`, `convert:true`),
+  documentos/mídia (`sendFile` via upload → RustFS → URL assinada),
+  `sendSeen` só ao assumir o ticket, resposta citada (`reply_to`),
+  proxy autenticado `GET /api/media/[id]` p/ mídia inbound. Pesquisa em
+  `docs/development/waha-setup.md`. Falta: validação com aparelho real
+  (staging bloqueado — ver envs Coolify abaixo) e payload shapes reais
+  do GOWS (`message.edited`/`reaction`/`presence.update` parseados com
+  zod loose — confirmar no primeiro webhook real).
 - **Deploy — envs WAHA (Coolify)**: aplicar checklist de
   `docs/development/waha-setup.md` (IGNORE_GROUPS, S3/RustFS 7d,
   `WAHA_APPS_ON=brazilian-phone-numbers`, `WAHA_PRESENCE_AUTO_ONLINE=False`,

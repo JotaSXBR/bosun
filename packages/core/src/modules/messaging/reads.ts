@@ -1,11 +1,11 @@
 import type { Database, DbExecutor } from "@crm/db";
 import { schema, withTenant } from "@crm/db";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { ConversationRow, MessageRow } from "./repository";
 
-const { contacts, conversations, messages, teams, users } = schema;
+const { contacts, conversations, messageReactions, messages, teams, users } = schema;
 
 /** A conversation row plus the contact identity and a one-line preview. */
 export type ConversationListRow = ConversationRow & {
@@ -16,8 +16,28 @@ export type ConversationListRow = ConversationRow & {
   lastMessagePreview: string | null;
 };
 
-/** Message row plus the author's display name (null for inbound/system). */
-export type MessageWithAuthorRow = MessageRow & { authorName: string | null };
+/** One stored reaction — reactorKey is the channel id or the user uuid. */
+export type MessageReactionView = {
+  emoji: string;
+  reactorKey: string;
+  fromMe: boolean;
+  actorUserId: string | null;
+};
+
+/** Resolved quote target (content.quotedExternalId → stored message). */
+export type QuotedMessageView = {
+  preview: string | null;
+  direction: string;
+  authorName: string | null;
+  revoked: boolean;
+};
+
+/** Message row plus author name, reactions and the resolved quote target. */
+export type MessageWithAuthorRow = MessageRow & {
+  authorName: string | null;
+  reactions: MessageReactionView[];
+  quoted: QuotedMessageView | null;
+};
 
 /** Conversation plus contact identity, names and the preceding ticket's numbers. */
 export type ConversationDetailRow = ConversationRow & {
@@ -80,6 +100,17 @@ export async function listConversations(
   return rows.map(({ conversation, ...rest }) => ({ ...conversation, ...rest }));
 }
 
+const MESSAGE_PREVIEW_SQL = sql<
+  string | null
+>`coalesce(${messages.content} ->> 'text', ${messages.content} ->> 'caption', '[' || (${messages.content} ->> 'type') || ']')`;
+
+/** externalId this message quotes — set on text and media contents. */
+function quotedExternalIdOf(content: unknown): string | null {
+  if (typeof content !== "object" || content === null) return null;
+  const quoted = (content as Record<string, unknown>).quotedExternalId;
+  return typeof quoted === "string" && quoted.length > 0 ? quoted : null;
+}
+
 export async function listMessages(
   db: Database,
   organizationId: string,
@@ -99,7 +130,73 @@ export async function listMessages(
       )
       .orderBy(messages.sentAt)
       .limit(limit);
-    return rows.map(({ message, ...rest }) => ({ ...message, ...rest }));
+    const list = rows.map(({ message, ...rest }) => ({ ...message, ...rest }));
+    const ids = list.map((m) => m.id);
+    const quotedIds = [
+      ...new Set(list.map((m) => quotedExternalIdOf(m.content)).filter((v) => v !== null)),
+    ];
+
+    const [reactionRows, quotedRows] = await Promise.all([
+      ids.length === 0
+        ? Promise.resolve([])
+        : tx
+            .select()
+            .from(messageReactions)
+            .where(inArray(messageReactions.messageId, ids))
+            .orderBy(asc(messageReactions.createdAt)),
+      quotedIds.length === 0
+        ? Promise.resolve([])
+        : tx
+            .select({
+              externalId: messages.externalId,
+              preview: MESSAGE_PREVIEW_SQL,
+              direction: messages.direction,
+              authorName: users.name,
+              revokedAt: messages.revokedAt,
+            })
+            .from(messages)
+            .leftJoin(users, eq(users.id, messages.authorId))
+            .where(
+              and(
+                eq(messages.conversationId, conversationId),
+                inArray(messages.externalId, quotedIds),
+              ),
+            ),
+    ]);
+
+    const reactionsByMessage = new Map<string, MessageReactionView[]>();
+    for (const r of reactionRows) {
+      const bucket = reactionsByMessage.get(r.messageId) ?? [];
+      bucket.push({
+        emoji: r.emoji,
+        reactorKey: r.reactorKey,
+        fromMe: r.fromMe,
+        actorUserId: r.actorUserId,
+      });
+      reactionsByMessage.set(r.messageId, bucket);
+    }
+    const quotedByExternalId = new Map(
+      quotedRows
+        .filter((r) => r.externalId !== null)
+        .map((r) => [
+          r.externalId as string,
+          {
+            preview: r.preview,
+            direction: r.direction,
+            authorName: r.authorName,
+            revoked: r.revokedAt !== null,
+          },
+        ]),
+    );
+
+    return list.map((m) => {
+      const quotedId = quotedExternalIdOf(m.content);
+      return {
+        ...m,
+        reactions: reactionsByMessage.get(m.id) ?? [],
+        quoted: quotedId ? (quotedByExternalId.get(quotedId) ?? null) : null,
+      };
+    });
   });
 }
 

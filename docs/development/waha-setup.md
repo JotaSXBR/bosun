@@ -463,6 +463,17 @@ WhatsApp entrega o backlog como history-sync no reconnect — daí:
 
 ## Features de chat (WhatsApp padrão) ↔ WAHA GOWS
 
+> **Implementado (Brief 2)** — adapter `waha-actions.ts`, ingest em
+> `messaging/service.ts`, outbound em `messaging/message-actions.ts` +
+> `outbound.ts`, read model em `reads.ts`/`message-views.ts`, UI em
+> `apps/web/src/components/{message-item,message-extras,reaction-chips,
+composer,voice-recorder,presence-indicator,inbox-live}.tsx`, proxy de
+> mídia em `apps/web/src/app/api/media/[id]/route.ts`. Diferenças da
+> tabela abaixo: `sendSeen` dispara **ao assumir o ticket** (não ao
+> abrir — decisão do usuário); mídia outbound sempre via storage +
+> URL assinada (nunca base64); `storageKey` persistido na mensagem para
+> re-servir após a URL expirar.
+
 Tudo abaixo é suportado pelo **GOWS** (verificado na tabela de features).
 Fora de escopo por decisão: polls, buttons, lists ("sem listas, sem
 questionários"), star (não tem no GOWS), forward (não tem no GOWS).

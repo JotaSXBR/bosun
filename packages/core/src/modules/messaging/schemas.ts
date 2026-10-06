@@ -30,7 +30,7 @@ export const transferConversationInput = z.union([
 ]);
 export type TransferConversationInput = z.input<typeof transferConversationInput>;
 
-/** Agent reply to the customer — text only for v1 (media comes with uploads). */
+/** Agent reply to the customer — plain text; media/replies use sendChannelInput. */
 export const sendOutboundInput = z.object({
   conversationId: z.uuid(),
   text: z.string().trim().min(1).max(4096),
@@ -43,3 +43,55 @@ export const internalNoteInput = z.object({
   text: z.string().trim().min(1).max(4096),
 });
 export type InternalNoteInput = z.input<typeof internalNoteInput>;
+
+/**
+ * Channel message content — text or a media file already uploaded to
+ * storage (url is the signed GET the provider fetches).
+ */
+export const sendChannelInput = z.object({
+  conversationId: z.uuid(),
+  content: z.discriminatedUnion("type", [
+    z.object({
+      type: z.literal("text"),
+      text: z.string().trim().min(1).max(4096),
+      quotedExternalId: z.string().max(200).optional(),
+    }),
+    z.object({
+      type: z.literal("media"),
+      mediaKind: z.enum(["image", "video", "audio", "document"]),
+      url: z.url().max(2048),
+      mimeType: z.string().max(100).optional(),
+      caption: z.string().trim().max(1024).optional(),
+      filename: z.string().max(255).optional(),
+      voiceNote: z.boolean().optional(),
+      /** Object key of the uploaded blob — persisted for the media proxy. */
+      storageKey: z.string().max(300).optional(),
+    }),
+  ]),
+  replyToId: z.string().max(200).optional(),
+});
+export type SendChannelInput = z.input<typeof sendChannelInput>;
+
+/** Targets one stored message of the conversation. */
+export const messageActionInput = z.object({
+  conversationId: z.uuid(),
+  messageId: z.uuid(),
+});
+export type MessageActionInput = z.input<typeof messageActionInput>;
+
+/** Empty emoji removes the caller's reaction. */
+export const reactMessageInput = messageActionInput.extend({
+  emoji: z.string().min(0).max(16),
+});
+export type ReactMessageInput = z.input<typeof reactMessageInput>;
+
+export const editMessageInput = messageActionInput.extend({
+  text: z.string().trim().min(1).max(4096),
+});
+export type EditMessageInput = z.input<typeof editMessageInput>;
+
+export const presenceInput = z.object({
+  conversationId: z.uuid(),
+  presence: z.enum(["typing", "recording", "paused"]),
+});
+export type PresenceInput = z.input<typeof presenceInput>;
