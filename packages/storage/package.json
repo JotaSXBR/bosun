@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\"",
-    "init-bucket": "node --experimental-transform-types src/init-bucket.ts",
+    "init-bucket": "node src/init-bucket.ts",
     "test:coverage": "vitest run --passWithNoTests --coverage --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\""
   },
   "dependencies": {
