@@ -27,13 +27,34 @@ let starting: Promise<PgBoss> | undefined;
  * `crm_app`, so `migrate`/`createSchema` stay off and `boss.start()` only
  * verifies the schema version.
  */
+const START_TIMEOUT_MS = 15_000;
+
 export async function startJobs(env: ServerEnv = getServerEnv()): Promise<PgBoss> {
   if (boss) return boss;
-  starting ??= start(env);
+  // A rejected/stalled attempt must not poison every future call — clear
+  // `starting` so the next enqueue retries. The timeout covers a hung
+  // start() (e.g. advisory-lock wait), which otherwise kills the jobs
+  // layer forever with no signal.
+  starting ??= Promise.race([
+    start(env),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`pg-boss start timed out after ${START_TIMEOUT_MS}ms`)),
+        START_TIMEOUT_MS,
+      ).unref(),
+    ),
+  ]).catch((error: unknown) => {
+    starting = undefined;
+    logger.error("pg-boss start failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  });
   return starting;
 }
 
 async function start(env: ServerEnv): Promise<PgBoss> {
+  logger.info("pg-boss starting");
   const instance = new PgBoss({
     connectionString: env.database.url,
     schema: "pgboss",

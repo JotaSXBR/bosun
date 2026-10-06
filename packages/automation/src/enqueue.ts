@@ -3,7 +3,7 @@ import { sql } from "@crm/db";
 import { createLogger } from "@crm/observability";
 import { fromDrizzle } from "pg-boss";
 
-import { getBoss, QUEUES } from "./boss";
+import { getBoss, QUEUES, startJobs } from "./boss";
 import type { ChannelReconcilePayload } from "./tasks/channel-messages-reconcile";
 import type { OrganizationOnboardingPayload } from "./tasks/organization-onboarding";
 import type { ProcessChannelEventPayload } from "./tasks/process-channel-event";
@@ -18,8 +18,12 @@ const logger = createLogger({ bindings: { component: "jobs" } });
 async function send(name: string, payload: object, tx?: DbExecutor): Promise<{ skipped: boolean }> {
   const boss = getBoss();
   if (!boss) {
-    // Jobs layer not started (unit tests, edge runtime): callers must not
-    // fail on a missing queue.
+    // Jobs layer not started — kick a lazy start so the process self-heals
+    // (covers register() never running or a failed boot attempt; the
+    // `starting` singleton in boss.ts dedupes concurrent kicks). This
+    // enqueue is still skipped — webhook retries and the reconcile sweep
+    // cover the gap. Callers must not fail on a missing queue.
+    startJobs().catch(() => {});
     logger.warn("jobs not started; skipping enqueue", { queue: name });
     return { skipped: true };
   }
