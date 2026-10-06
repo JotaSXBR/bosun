@@ -4,7 +4,7 @@ Copyright © 2026 JotaSXBR — Apache-2.0 (see `LICENSE`).
 
 Multi-tenant customer operations platform (SaaS CRM) — pnpm + Turborepo
 monorepo. Modular monolith: Next.js 16 app + shared `@crm/*` packages +
-Trigger.dev jobs. Repo: `github.com/JotaSXBR/bosun` (Apache-2.0). See
+pg-boss jobs in-process. Repo: `github.com/JotaSXBR/bosun` (Apache-2.0). See
 `docs/architecture/stack.md` for pinned versions and `docs/architecture/` for
 design docs.
 
@@ -37,8 +37,6 @@ demo org `Demo`: `owner@crm.local`, `admin@crm.local`, `manager@crm.local`, `age
 | `pnpm db:generate` / `db:migrate` / `db:seed` / `db:studio` | drizzle-kit / seed                                         |
 | `pnpm storage:init`                                         | create the local S3 bucket (RustFS)                        |
 | `pnpm infra:up` / `infra:down` / `infra:logs`               | docker compose lifecycle (project `bosun`)                 |
-| `pnpm infra:trigger:up` / `infra:trigger:down`              | optional self-hosted Trigger.dev                           |
-| `pnpm jobs:dev`                                             | Trigger.dev dev runner                                     |
 
 ## Layout
 
@@ -47,7 +45,7 @@ demo org `Demo`: `owner@crm.local`, `admin@crm.local`, `manager@crm.local`, `age
 - `packages/{observability,channels,billing,storage,email,ai,automation}` —
   provider abstractions (adapters isolated behind factories)
 - `tooling/{typescript,eslint,prettier}` — shared configs
-- `docker/` — local infra + `trigger/selfhost.sh`
+- `docker/` — local infra
 
 ## Docs
 

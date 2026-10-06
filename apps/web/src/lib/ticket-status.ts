@@ -6,4 +6,5 @@ export const TICKET_STATUS: Record<
   in_progress: { label: "Em atendimento", variant: "success" },
   waiting_customer: { label: "Aguardando cliente", variant: "outline" },
   resolved: { label: "Resolvido", variant: "secondary" },
+  closed: { label: "Fechado", variant: "secondary" },
 };

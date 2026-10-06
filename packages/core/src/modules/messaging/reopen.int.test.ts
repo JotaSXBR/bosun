@@ -42,7 +42,7 @@ async function newTicket(channelUserId: string, messageId: string, timestamp: Da
       .where(
         and(
           eq(conversations.externalId, channelUserId),
-          sql`${conversations.status} != 'resolved'`,
+          sql`${conversations.status} not in ('resolved', 'closed')`,
         ),
       );
     return conv!;

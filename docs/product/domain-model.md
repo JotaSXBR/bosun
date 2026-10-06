@@ -36,11 +36,12 @@ an explicit `resumeTicket`) on a resolved chat creates a NEW ticket linked
 via `preceded_by_id`; it starts `open`, unassigned, with no sector. Agents
 may `reopenTicket` inside the org's reopen window
 (`organization_settings.ticket_reopen_window_hours`, default 48h) — past it
-the ticket is effectively closed (a materialized `closed` status waits for
-the jobs layer). Reopen requires no active ticket for the chat (a follow-up
+the `close-resolved-tickets` sweep materializes `closed` (pg-boss, every
+15min; `closed` is final, reopen rejects, `resumeTicket` still spawns a
+follow-up). Reopen requires no active ticket for the chat (a follow-up
 wins) and keeps ticket_number/ticket_seq. The partial unique index
-`(channel_connection_id, external_id) WHERE status != 'resolved'` enforces
-one active ticket per chat.
+`(channel_connection_id, external_id) WHERE status NOT IN ('resolved','closed')`
+enforces one active ticket per chat.
 
 Numbering (both implemented):
 
@@ -51,17 +52,19 @@ Numbering (both implemented):
 
 Conversation lifecycle (implemented):
 
-| Status (enum)      | Meaning                                                                         | Responsible |
-| ------------------ | ------------------------------------------------------------------------------- | ----------- |
-| `open`             | In the queue (Fila) or routed to a sector, no agent yet                         | —           |
-| `in_progress`      | An agent is handling it                                                         | agent       |
-| `waiting_customer` | Agent replied, waiting on the customer                                          | agent       |
-| `resolved`         | Done — terminal for the customer; reopenable by agents inside the reopen window | —           |
+| Status (enum)      | Meaning                                                                           | Responsible |
+| ------------------ | --------------------------------------------------------------------------------- | ----------- |
+| `open`             | In the queue (Fila) or routed to a sector, no agent yet                           | —           |
+| `in_progress`      | An agent is handling it                                                           | agent       |
+| `waiting_customer` | Agent replied, waiting on the customer                                            | agent       |
+| `resolved`         | Done — terminal for the customer; reopenable by agents inside the reopen window   | —           |
+| `closed`           | Past the reopen window (sweep materialized); final — follow-ups start new tickets | —           |
 
 Derived views (`listConversations` `view` param, implemented): **Fila**
 (`queue`) = `open` + `assignee_id IS NULL`, oldest `last_message_at` first;
-**Minhas** (`mine`) = `assignee_id = me` and not resolved; **Resolvidas**
-(`resolved`) = resolved, newest `resolved_at` first; `inbox` = all.
+**Minhas** (`mine`) = `assignee_id = me` and not resolved/closed;
+**Resolvidas** (`resolved`) = resolved + closed, newest `resolved_at` first;
+`inbox` = all.
 
 Actions (implemented in `@crm/core/messaging`, all `messaging:write` —
 viewer denied): `pickupConversation` (free tickets only — assignee=me,
@@ -74,8 +77,16 @@ sent/failed, → `waiting_customer`, auto-assigns the caller, stamps
 `first_response_at`), `addInternalNote` (`private` message, never sent),
 `resumeTicket` (follow-up `in_progress` assigned to caller), `reopenTicket`
 (undo resolve — window + no-active-follow-up guards). Actions on resolved
-tickets throw `TICKET_RESOLVED`; actions on a ticket assigned to another
-agent throw `TICKET_ASSIGNED` (transfer first).
+or closed tickets throw `TICKET_RESOLVED`; actions on a ticket assigned to
+another agent throw `TICKET_ASSIGNED` (transfer first).
+
+The off-hours auto-reply (`process-channel-event` job →
+`maybeSendOffHoursReply`) sends one system message per conversation per
+org-local day when inbound lands outside `business_hours` — `author_id`
+null, `metadata.system = "off_hours"`, `{proximo_atendimento}` interpolated
+from the next opening; it never touches ticket state (no assign, no
+`waiting_customer`). Dedup is the `messages_off_hours_day_idx` partial
+unique index on `(conversation_id, metadata->>'autoReplyDay')`.
 
 `messages.private` (internal notes) and `messages.author_id` (which agent
 replied/annotated) exist; `conversations.resolved_by_id` records who closed

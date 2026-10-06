@@ -1,6 +1,8 @@
 # 0010: Background jobs — Trigger.dev, no worker tier
 
-Status: accepted
+Status: superseded by [ADR 0016](0016-background-jobs-pg-boss.md) —
+Trigger.dev never shipped (enqueue stayed a no-op); pg-boss now runs jobs
+in-process on the same Postgres. The "no `apps/worker`" constraint stands.
 
 ## Context
 

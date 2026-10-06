@@ -50,82 +50,118 @@ export type WebhookIngestResult = {
 };
 
 /**
+ * Job enqueue callback injected by the app layer (`@crm/automation` lives
+ * above core — dependency direction forbids importing it here). Called with
+ * the ingest transaction so the job row commits atomically with the write.
+ */
+export type ChannelEventEnqueue = (
+  executor: DbExecutor,
+  payload: {
+    organizationId: string;
+    channelConnectionId: string;
+    eventType: ChannelEvent["type"];
+    conversationId?: string;
+    messageId?: string;
+  },
+) => Promise<unknown>;
+
+export type IngestDeps = { enqueue?: ChannelEventEnqueue };
+
+/**
  * Pure domain ingest — no HTTP. Runs inside the caller's withTenant
  * transaction. `conn` identity always comes from the stored connection row,
  * never from the event payload.
  */
+async function ingestMessageReceived(
+  executor: DbExecutor,
+  conn: ConnectionRef,
+  event: Extract<ChannelEvent, { type: "message.received" }>,
+  deps?: IngestDeps,
+): Promise<IngestedEvent> {
+  const contact = await upsertContact(executor, conn.organizationId, {
+    channelUserId: event.from.channelUserId,
+    displayName: event.from.displayName,
+  });
+  const { conversation, created } = await findOrCreateTicket(executor, {
+    organizationId: conn.organizationId,
+    channelConnectionId: conn.id,
+    contactId: contact.id,
+    externalId: event.from.channelUserId,
+  });
+  const message = await insertMessage(executor, {
+    organizationId: conn.organizationId,
+    conversationId: conversation.id,
+    channelConnectionId: conn.id,
+    contactId: contact.id,
+    direction: "inbound",
+    content: event.content,
+    externalId: event.externalMessageId,
+    status: "received",
+    sentAt: event.timestamp,
+  });
+  await updateConversationLastMessage(executor, conversation.id, event.timestamp);
+  // Fan out only for a real insert — webhook replays return no row and must
+  // not re-notify nor re-run the status transition. pg_notify fires on
+  // commit with the write tx; the job row lands in the same tx.
+  if (!message) {
+    if (created) {
+      // Replayed webhook on a resolved chat: the follow-up ticket was
+      // created before the deduped insert — drop the empty ticket so a
+      // replay can't manufacture a phantom ticket.
+      await executor.delete(conversations).where(eq(conversations.id, conversation.id));
+    }
+    return { eventType: event.type, messageId: null };
+  }
+  const transitioned = await applyInboundStatusTransition(
+    executor,
+    conversation.id,
+    conversation.status,
+  );
+  if (created) {
+    await emitDomainEvent(executor, {
+      type: "conversation.created",
+      organizationId: conn.organizationId,
+      conversationId: conversation.id,
+      contactId: contact.id,
+      ticketNumber: conversation.ticketNumber,
+      precededById: conversation.precededById,
+    });
+  }
+  await emitDomainEvent(executor, {
+    type: "message.received",
+    organizationId: conn.organizationId,
+    conversationId: conversation.id,
+    messageId: message.id,
+    contactId: contact.id,
+    sentAt: event.timestamp.toISOString(),
+  });
+  if (transitioned) {
+    await emitDomainEvent(executor, {
+      type: "conversation.updated",
+      organizationId: conn.organizationId,
+      conversationId: conversation.id,
+      status: transitioned.status,
+    });
+  }
+  await deps?.enqueue?.(executor, {
+    organizationId: conn.organizationId,
+    channelConnectionId: conn.id,
+    eventType: event.type,
+    conversationId: conversation.id,
+    messageId: message.id,
+  });
+  return { eventType: event.type, messageId: message.id };
+}
+
 export async function ingestChannelEvent(
   executor: DbExecutor,
   conn: ConnectionRef,
   event: ChannelEvent,
+  deps?: IngestDeps,
 ): Promise<IngestedEvent> {
   switch (event.type) {
-    case "message.received": {
-      const contact = await upsertContact(executor, conn.organizationId, {
-        channelUserId: event.from.channelUserId,
-        displayName: event.from.displayName,
-      });
-      const { conversation, created } = await findOrCreateTicket(executor, {
-        organizationId: conn.organizationId,
-        channelConnectionId: conn.id,
-        contactId: contact.id,
-        externalId: event.from.channelUserId,
-      });
-      const message = await insertMessage(executor, {
-        organizationId: conn.organizationId,
-        conversationId: conversation.id,
-        channelConnectionId: conn.id,
-        contactId: contact.id,
-        direction: "inbound",
-        content: event.content,
-        externalId: event.externalMessageId,
-        status: "received",
-        sentAt: event.timestamp,
-      });
-      await updateConversationLastMessage(executor, conversation.id, event.timestamp);
-      // Fan out only for a real insert — webhook replays return no row and
-      // must not re-notify nor re-run the status transition. pg_notify fires
-      // on commit with the write tx.
-      if (message) {
-        const transitioned = await applyInboundStatusTransition(
-          executor,
-          conversation.id,
-          conversation.status,
-        );
-        if (created) {
-          await emitDomainEvent(executor, {
-            type: "conversation.created",
-            organizationId: conn.organizationId,
-            conversationId: conversation.id,
-            contactId: contact.id,
-            ticketNumber: conversation.ticketNumber,
-            precededById: conversation.precededById,
-          });
-        }
-        await emitDomainEvent(executor, {
-          type: "message.received",
-          organizationId: conn.organizationId,
-          conversationId: conversation.id,
-          messageId: message.id,
-          contactId: contact.id,
-          sentAt: event.timestamp.toISOString(),
-        });
-        if (transitioned) {
-          await emitDomainEvent(executor, {
-            type: "conversation.updated",
-            organizationId: conn.organizationId,
-            conversationId: conversation.id,
-            status: transitioned.status,
-          });
-        }
-      } else if (created) {
-        // Replayed webhook on a resolved chat: the follow-up ticket was
-        // created before the deduped insert — drop the empty ticket so a
-        // replay can't manufacture a phantom ticket.
-        await executor.delete(conversations).where(eq(conversations.id, conversation.id));
-      }
-      return { eventType: event.type, messageId: message?.id ?? null };
-    }
+    case "message.received":
+      return ingestMessageReceived(executor, conn, event, deps);
     case "message.status": {
       const message = await updateMessageStatus(
         executor,
@@ -133,10 +169,21 @@ export async function ingestChannelEvent(
         event.externalMessageId,
         event.status,
       );
+      await deps?.enqueue?.(executor, {
+        organizationId: conn.organizationId,
+        channelConnectionId: conn.id,
+        eventType: event.type,
+        ...(message ? { messageId: message.id } : {}),
+      });
       return { eventType: event.type, messageId: message?.id ?? null };
     }
     case "connection.status": {
       await applyConnectionStatus(executor, conn.id, event.status);
+      await deps?.enqueue?.(executor, {
+        organizationId: conn.organizationId,
+        channelConnectionId: conn.id,
+        eventType: event.type,
+      });
       return { eventType: event.type, messageId: null };
     }
   }
@@ -152,6 +199,7 @@ export async function ingestChannelWebhook(
   db: Database,
   webhookToken: string,
   request: RawWebhookRequest,
+  deps?: IngestDeps,
 ): Promise<WebhookIngestResult> {
   const resolved = await resolveWebhookConnection(db, webhookToken);
   if (!resolved) throw new NotFoundError("Channel connection");
@@ -163,7 +211,7 @@ export async function ingestChannelWebhook(
   for (const event of provider.parseWebhook(request)) {
     processed.push(
       await withTenant(db, connection.organizationId, (tx) =>
-        ingestChannelEvent(tx, connection, event),
+        ingestChannelEvent(tx, connection, event, deps),
       ),
     );
   }

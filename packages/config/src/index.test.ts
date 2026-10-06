@@ -75,6 +75,5 @@ describe("getServerEnv", () => {
     expect(isConfigured(env, "storage")).toBe(true);
     expect(isConfigured(env, "meta")).toBe(false);
     expect(isConfigured(env, "billing")).toBe(false);
-    expect(isConfigured(env, "trigger")).toBe(false);
   });
 });

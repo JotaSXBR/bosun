@@ -31,18 +31,18 @@ export async function POST(
   });
 
   try {
-    const result = await ingestChannelWebhook(getDb(), token, { rawBody, headers, query });
+    const result = await ingestChannelWebhook(
+      getDb(),
+      token,
+      { rawBody, headers, query },
+      {
+        // Job rows commit atomically with each event's ingest transaction.
+        enqueue: (executor, payload) => enqueueChannelEventProcessed(payload, executor),
+      },
+    );
     if (result.processed.length === 0) {
       logger.warn("channel webhook carried no recognized events", {
         channelConnectionId: result.channelConnectionId,
-      });
-    }
-    for (const event of result.processed) {
-      await enqueueChannelEventProcessed({
-        organizationId: result.organizationId,
-        channelConnectionId: result.channelConnectionId,
-        eventType: event.eventType,
-        ...(event.messageId ? { messageId: event.messageId } : {}),
       });
     }
     return Response.json({ ok: true, processed: result.processed.length });

@@ -30,6 +30,16 @@ export async function register() {
       },
     });
   }
+
+  // pg-boss runs in-process — no worker tier. A failed start logs and leaves
+  // enqueues as logged no-ops rather than taking the web process down.
+  try {
+    const { startJobs } = await import("@crm/automation");
+    await startJobs();
+  } catch (error) {
+    const { captureException } = await import("@crm/observability");
+    captureException(error, { component: "jobs", phase: "start" });
+  }
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {

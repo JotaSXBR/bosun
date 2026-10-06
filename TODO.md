@@ -34,16 +34,25 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `updateOrgSettingsInput`/`upsertSettings`) + `offHoursMessage`/timezone/
   locale, edição só owner/admin — + `/app/settings/teams` (CRUD de equipes
   - membros via `listOrgMembers`, `TEAM_NAME_TAKEN`; `teams:manage`).
-    Pendentes do item: auto-reply fora de horário 1×/dia e `closed`
-    materializado (camada de jobs). Ver `docs/product/domain-model.md` +
-    `rules.md`.
+    **Slice 5 entregue — multi-atendimento fechado**: jobs em **pg-boss**
+    in-process (ADR 0016 — Trigger.dev removido; schema `pgboss` por
+    migration + grants a `crm_app`; `boss.start()` no `register()`;
+    enqueue transacional no ingest via `fromDrizzle(tx)`); `closed`
+    materializado pelo sweep `close-resolved-tickets` (`*/15 * * * *`,
+    janela por org) com guards/views/UI atualizados (badge "Fechado" +
+    botão "Novo atendimento" = follow-up de closed); auto-reply fora de
+    horário 1×/conversa/dia org-local no job `process-channel-event` —
+    `maybeSendOffHoursReply` com send de sistema (`authorId` null,
+    `metadata.system="off_hours"`, `{proximo_atendimento}` interpolado,
+    dedup via `messages_off_hours_day_idx`). Ver
+    `docs/product/domain-model.md` + `rules.md`.
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.
 - **P1 — Site chat**: provider `site_chat` + widget embarcável + endpoint
   público rate-limited (sessões anônimas).
 - **P1 — IA observer (v1)**: `org_llm_credentials` (BYOK + prioridade/
   fallback; OpenAI/Anthropic/Gemini), `ai_usage_events`, `agents`,
-  `agent_suggestions`, `knowledge_entries`, task observer no Trigger
+  `agent_suggestions`, `knowledge_entries`, job observer no pg-boss
   (resolve-hook + botão manual), inbox de sugestões com aprovar/rejeitar +
   notificação via SSE. Ver `docs/product/ai-agents.md`.
 - **P1 — Leads/funil**: `funnels`, `funnel_stages`, `deals`, `labels`,
@@ -139,11 +148,11 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   auth), RustFS `GET /health/live:9000`; fqdn público acidental do
   rustfs-staging removido — **todos os 6 apps (3 por ambiente) em
   `running:healthy`**. Ver `docs/development/deployment-coolify.md`.
-- **Decisão — background jobs** (2026-10-04): **pg-boss** escolhido sobre
-  BullMQ e self-host Trigger.dev — enqueue transacional com a escrita no
-  Postgres (sem outbox), zero infra nova. Trigger.dev sai; migração dos
-  tasks do `@crm/automation` vira fase com ADR próprio (substitui ADR 0010).
-  Enquanto isso enqueue permanece no-op (`isConfigured("trigger")`).
+- **Decisão — background jobs** (2026-10-04, implementada slice 5):
+  **pg-boss** escolhido sobre BullMQ e self-host Trigger.dev — enqueue
+  transacional com a escrita no Postgres (sem outbox), zero infra nova.
+  Trigger.dev removido por completo; ADR 0016 substitui ADR 0010.
+  Ver `docs/development/jobs-pg-boss.md`.
 - **P1 — Repo + CI/CD** ✅ 2026-10-05 — repo privado `JotaSXBR/bosun`;
   marca "Bosun" (pacote root, compose project, README); CI com job `scan`
   (Trivy fs: deps+secrets, HIGH/CRIT fixável); CD `cd.yml`: imagem → GHCR

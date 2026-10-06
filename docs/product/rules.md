@@ -25,8 +25,9 @@ Agreed in the questionnaire/interview (2026-10-03). Items marked
 - **Reopen (undo)**: any agent may reopen a resolved ticket within
   `ticket_reopen_window_hours` (default 48h, per-org) — the "closed by
   accident" escape. Impossible once a follow-up is active; past the window
-  the ticket is effectively closed (a real `closed` status waits for the
-  jobs layer). Reopening keeps the assignee and clears resolution stamps.
+  the `close-resolved-tickets` sweep (pg-boss, every 15min) materializes
+  `closed` — reopen rejects, follow-up (`resumeTicket`/"Novo atendimento")
+  stays available. Reopening keeps the assignee and clears resolution stamps.
 - **Ticket numbering**: global per org (`#47`) + per-contact sequence
   (`12-3` = contact 12's 3rd ticket) + date.
 - **Reply assigns**: sending an outbound reply moves the ticket to

@@ -39,8 +39,8 @@ export function assertTicketOwner(conv: ConversationRow, ctx: TenantContext): vo
 
 /**
  * Loads a ticket for a write action inside the caller's withTenant tx.
- * Resolved tickets are immutable history — regular actions reject them
- * (reopenTicket is the only caller that loads resolved rows directly).
+ * Resolved/closed tickets are immutable history — regular actions reject
+ * them (reopenTicket is the only caller that loads resolved rows directly).
  */
 export async function loadActiveTicket(
   executor: DbExecutor,
@@ -48,7 +48,7 @@ export async function loadActiveTicket(
 ): Promise<ConversationRow> {
   const conv = await getConversation(executor, conversationId);
   if (!conv) throw new NotFoundError("Conversation", conversationId);
-  if (conv.status === "resolved") {
+  if (conv.status === "resolved" || conv.status === "closed") {
     throw new DomainError(
       "TICKET_RESOLVED",
       "Resolved tickets are immutable — the next contact opens a follow-up ticket",
@@ -274,9 +274,10 @@ export async function setConversationInProgress(
 }
 
 /**
- * Requires messaging:write. Creates a follow-up ticket from a resolved one —
- * linked via preceded_by_id, assigned to the caller and already in_progress
- * (the agent resumed it to keep working). Rejects non-resolved sources.
+ * Requires messaging:write. Creates a follow-up ticket from a resolved or
+ * closed one — linked via preceded_by_id, assigned to the caller and already
+ * in_progress (the agent resumed it to keep working). This is the only way
+ * to re-engage a `closed` ticket — reopen is windowed off resolved rows.
  */
 export async function resumeTicket(
   db: Database,
@@ -288,10 +289,10 @@ export async function resumeTicket(
   return withTenant(db, ctx.organizationId, async (tx) => {
     const source = await getConversation(tx, conversationId);
     if (!source) throw new NotFoundError("Conversation", conversationId);
-    if (source.status !== "resolved") {
+    if (source.status !== "resolved" && source.status !== "closed") {
       throw new DomainError(
         "TICKET_NOT_RESOLVED",
-        "Follow-up only applies to resolved tickets — the ticket is still active",
+        "Follow-up only applies to resolved/closed tickets — the ticket is still active",
       );
     }
     const active = await findActiveTicket(tx, source.channelConnectionId, source.externalId);

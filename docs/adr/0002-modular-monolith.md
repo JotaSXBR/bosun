@@ -11,8 +11,8 @@ boundaries and one deployable.
 
 One Next.js app hosts UI + API + auth; domain modules live in
 `packages/core/src/modules/*` behind index exports; provider integrations are
-separate packages with adapter isolation. Background work runs on
-Trigger.dev, not a bespoke worker tier.
+separate packages with adapter isolation. Background work runs on pg-boss
+in-process (ADR 0016), not a bespoke worker tier.
 
 ## Consequences
 

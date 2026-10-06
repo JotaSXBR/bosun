@@ -101,12 +101,14 @@ export const contacts = pgTable(
  * One ticket per attendance episode on a (connection, provider chat id).
  * `resolved` is terminal for the CUSTOMER — a new inbound creates a NEW row
  * linked by `preceded_by_id` (Zendesk-style follow-up), so at most one
- * non-resolved row exists per chat (partial unique). Agents may still
- * reopen a resolved ticket inside the org's reopen window
- * (`organization_settings.ticket_reopen_window_hours`) — past the window it
- * is effectively closed. `ticket_number` is the org-wide sequence;
- * `ticket_seq` is the contact's Nth attendance. `resolved_at`/`resolved_by`/
- * `first_response_at` feed per-episode metrics.
+ * active row exists per chat (partial unique). Agents may reopen a resolved
+ * ticket inside the org's reopen window
+ * (`organization_settings.ticket_reopen_window_hours`); the scheduled sweep
+ * materializes `closed` once the window expires — `closed` is final for the
+ * ticket itself (follow-ups still start from it).
+ * `ticket_number` is the org-wide sequence; `ticket_seq` is the contact's
+ * Nth attendance. `resolved_at`/`resolved_by`/`first_response_at` feed
+ * per-episode metrics.
  */
 export const conversations = pgTable(
   "conversations",
@@ -142,18 +144,18 @@ export const conversations = pgTable(
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    // One ACTIVE ticket per chat — resolved rows are excluded so follow-ups
-    // coexist with the closed history.
+    // One ACTIVE ticket per chat — resolved/closed rows are excluded so
+    // follow-ups coexist with the closed history.
     uniqueIndex("conversations_connection_external_idx")
       .on(t.channelConnectionId, t.externalId)
-      .where(sql`${t.status} != 'resolved'`),
+      .where(sql`${t.status} not in ('resolved', 'closed')`),
     index("conversations_org_last_message_idx").on(t.organizationId, t.lastMessageAt.desc()),
     index("conversations_org_status_idx").on(t.organizationId, t.status),
     index("conversations_org_sector_idx").on(t.organizationId, t.sectorId),
     index("conversations_org_assignee_idx").on(t.organizationId, t.assigneeId),
     check(
       "conversations_status_check",
-      sql`${t.status} in ('open', 'in_progress', 'waiting_customer', 'resolved')`,
+      sql`${t.status} in ('open', 'in_progress', 'waiting_customer', 'resolved', 'closed')`,
     ),
     pgPolicy("conversations_tenant_isolation", {
       for: "all",
@@ -202,6 +204,11 @@ export const messages = pgTable(
     uniqueIndex("messages_connection_external_idx")
       .on(t.channelConnectionId, t.externalId)
       .where(sql`${t.externalId} is not null`),
+    // One off-hours auto-reply per conversation per org-local day — the
+    // marker row reserves the slot atomically before the provider call.
+    uniqueIndex("messages_off_hours_day_idx")
+      .on(t.conversationId, sql`(metadata ->> 'autoReplyDay')`)
+      .where(sql`${t.metadata} ->> 'system' = 'off_hours'`),
     index("messages_conversation_sent_idx").on(t.conversationId, t.sentAt),
     check("messages_direction_check", sql`${t.direction} in ('inbound', 'outbound')`),
     check(

@@ -5,7 +5,7 @@ Guidance for AI agents and contributors working on this repo.
 ## What this is
 
 **Bosun** — multi-tenant customer operations platform (SaaS CRM). A
-**modular monolith**: one Next.js app + Trigger.dev background jobs +
+**modular monolith**: one Next.js app + pg-boss background jobs in-process +
 shared `@crm/*` packages. pnpm/Turborepo monorepo.
 Repo: `github.com/JotaSXBR/bosun` (public, Apache-2.0).
 
@@ -42,7 +42,7 @@ UI (React) → Server Action / Route Handler → @crm/core service → repositor
 - `packages/observability` — JSON logger + `captureException` facade.
 - `packages/channels|billing|storage|email|ai` — provider abstractions;
   provider-specific code lives only in `src/adapters/*`.
-- `packages/automation` — Trigger.dev tasks + enqueue helpers.
+- `packages/automation` — pg-boss tasks + enqueue helpers (in-process, ADR 0016).
 - `packages/ui` — shadcn components.
 - `tooling/*` — shared tsconfig/eslint/prettier.
 - `research/` — external reference material (e.g. vibe-coding-toolkit),
@@ -70,7 +70,7 @@ scope-affecting decisions (see `docs/development/workflow.md`).
 `pnpm install` · `pnpm dev` · `pnpm build` · `pnpm lint` · `pnpm typecheck` ·
 `pnpm test` (unit) · `pnpm test:integration` (needs infra) · `pnpm test:e2e`
 (playwright) · `pnpm infra:up|down` · `pnpm db:generate|migrate|seed|studio` ·
-`pnpm storage:init` · `pnpm jobs:dev` (Trigger.dev dev)
+`pnpm storage:init`. Jobs (pg-boss) start with `pnpm dev` — nothing separate.
 
 `pnpm install` also installs the **lefthook** pre-commit hook (prettier on
 staged files) — skipped automatically under `CI=true`.
@@ -143,11 +143,13 @@ staged files) — skipped automatically under `CI=true`.
   produced by `tenantObjectKey`.
 - **New EmailProvider**: `packages/email/src/providers/<name>.ts` +
   one branch in `createEmailProvider` + `EMAIL_PROVIDER` enum in `@crm/config`.
-- **New Trigger task**: `packages/automation/src/tasks/<name>.ts` via
-  `schemaTask`; rebuild TenantContext from the DB, never trust payload beyond
-  identity; enqueue helper goes in `src/enqueue.ts` and must no-op when
-  Trigger.dev is not configured. Run locally with `pnpm jobs:dev`
-  (see `docs/development/jobs-trigger-dev.md`).
+- **New job/task**: `packages/automation/src/tasks/<name>.ts` — a zod
+  payload schema + plain async handler; rebuild TenantContext from the DB,
+  never trust payload beyond identity; enqueue helper in `src/enqueue.ts`,
+  pass `tx` when inside a transaction (`boss.send` via `fromDrizzle` is
+  atomic with the write); enqueue must no-op (`{ skipped: true }`) when the
+  boss isn't started. Register queue+work(+schedule) in `boss.ts`. Jobs run
+  in-process — no worker tier (see `docs/development/jobs-pg-boss.md`).
 
 ## Running locally
 
