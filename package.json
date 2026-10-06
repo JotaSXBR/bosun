@@ -24,9 +24,6 @@
     "infra:down": "docker compose -f docker/compose.yml down",
     "infra:logs": "docker compose -f docker/compose.yml logs -f",
     "storage:init": "pnpm --filter @crm/storage init-bucket",
-    "infra:trigger:up": "bash docker/trigger/selfhost.sh up",
-    "infra:trigger:down": "bash docker/trigger/selfhost.sh down",
-    "jobs:dev": "pnpm --filter @crm/automation trigger:dev",
     "test:coverage": "turbo run test:coverage",
     "prepare": "node -e \"process.env.CI||process.exit(1)\" || lefthook install"
   },

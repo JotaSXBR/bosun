@@ -37,7 +37,7 @@ export async function upsertContact(
   return row;
 }
 
-/** The single non-resolved ticket for a chat, if one exists. */
+/** The single active (non-terminal) ticket for a chat, if one exists. */
 export async function findActiveTicket(
   executor: DbExecutor,
   channelConnectionId: string,
@@ -50,14 +50,14 @@ export async function findActiveTicket(
       and(
         eq(conversations.channelConnectionId, channelConnectionId),
         eq(conversations.externalId, externalId),
-        sql`${conversations.status} != 'resolved'`,
+        sql`${conversations.status} not in ('resolved', 'closed')`,
       ),
     )
     .limit(1);
   return row;
 }
 
-/** Latest resolved ticket for a chat — the predecessor a follow-up links to. */
+/** Latest terminal (resolved/closed) ticket for a chat — the predecessor a follow-up links to. */
 async function latestResolvedTicket(
   executor: DbExecutor,
   channelConnectionId: string,
@@ -70,7 +70,7 @@ async function latestResolvedTicket(
       and(
         eq(conversations.channelConnectionId, channelConnectionId),
         eq(conversations.externalId, externalId),
-        eq(conversations.status, "resolved"),
+        sql`${conversations.status} in ('resolved', 'closed')`,
       ),
     )
     .orderBy(desc(conversations.createdAt))

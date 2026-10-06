@@ -1,54 +1,48 @@
-import type { ServerEnv } from "@crm/config";
-import { getServerEnv, isConfigured } from "@crm/config";
+import type { DbExecutor } from "@crm/db";
+import { sql } from "@crm/db";
 import { createLogger } from "@crm/observability";
-import { tasks } from "@trigger.dev/sdk";
+import { fromDrizzle } from "pg-boss";
 
-import type {
-  OrganizationOnboardingPayload,
-  organizationOnboardingTask,
-} from "./tasks/organization-onboarding";
-import type {
-  ProcessChannelEventPayload,
-  processChannelEventTask,
-} from "./tasks/process-channel-event";
+import { getBoss, QUEUES } from "./boss";
+import type { OrganizationOnboardingPayload } from "./tasks/organization-onboarding";
+import type { ProcessChannelEventPayload } from "./tasks/process-channel-event";
 
-const logger = createLogger({ bindings: { component: "automation" } });
+const logger = createLogger({ bindings: { component: "jobs" } });
 
 /**
- * Enqueues the onboarding job when Trigger.dev is configured; otherwise logs
- * and reports `{ skipped: true }` so callers never fail because background
- * jobs aren't wired up (local dev without Trigger).
+ * Enqueues a job inside the caller's transaction when `tx` is passed —
+ * the job row commits or rolls back with the domain write, no outbox
+ * needed. Without `tx` the send is post-commit best-effort.
  */
-export async function enqueueOrganizationOnboarding(
-  payload: OrganizationOnboardingPayload,
-  env: ServerEnv = getServerEnv(),
-): Promise<{ skipped: boolean }> {
-  if (!isConfigured(env, "trigger")) {
-    logger.info("Trigger.dev not configured; skipping organization-onboarding", {
-      organizationId: payload.organizationId,
-    });
+async function send(name: string, payload: object, tx?: DbExecutor): Promise<{ skipped: boolean }> {
+  const boss = getBoss();
+  if (!boss) {
+    // Jobs layer not started (unit tests, edge runtime): callers must not
+    // fail on a missing queue.
+    logger.warn("jobs not started; skipping enqueue", { queue: name });
     return { skipped: true };
   }
-  await tasks.trigger<typeof organizationOnboardingTask>("organization-onboarding", payload);
+  await boss.send(name, payload, tx ? { db: fromDrizzle(tx, sql) } : undefined);
   return { skipped: false };
 }
 
 /**
- * Enqueues process-channel-event after a webhook event was persisted; no-ops
- * with `{ skipped: true }` when Trigger.dev isn't configured so ingestion
- * never fails because of the background layer.
+ * Enqueues process-channel-event after a webhook event was persisted. Pass
+ * the ingest transaction so the job row is atomic with the message write.
  */
 export async function enqueueChannelEventProcessed(
   payload: ProcessChannelEventPayload,
-  env: ServerEnv = getServerEnv(),
+  tx?: DbExecutor,
 ): Promise<{ skipped: boolean }> {
-  if (!isConfigured(env, "trigger")) {
-    logger.info("Trigger.dev not configured; skipping process-channel-event", {
-      organizationId: payload.organizationId,
-      eventType: payload.eventType,
-    });
-    return { skipped: true };
-  }
-  await tasks.trigger<typeof processChannelEventTask>("process-channel-event", payload);
-  return { skipped: false };
+  return send(QUEUES.processChannelEvent, payload, tx);
+}
+
+/**
+ * Enqueues the onboarding job after organization creation (Better Auth owns
+ * that transaction, so this send is post-commit best-effort by necessity).
+ */
+export async function enqueueOrganizationOnboarding(
+  payload: OrganizationOnboardingPayload,
+): Promise<{ skipped: boolean }> {
+  return send(QUEUES.organizationOnboarding, payload);
 }

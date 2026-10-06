@@ -90,10 +90,6 @@ const envSchema = z.object({
   OTEL_EXPORTER_OTLP_ENDPOINT: optionalString,
   OTEL_SERVICE_NAME: optionalString,
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
-
-  TRIGGER_SECRET_KEY: optionalString,
-  TRIGGER_API_URL: optionalString,
-  TRIGGER_PROJECT_REF: optionalString,
 });
 
 const serverEnvSchema = envSchema.transform((env) => ({
@@ -157,11 +153,6 @@ const serverEnvSchema = envSchema.transform((env) => ({
     otelEndpoint: env.OTEL_EXPORTER_OTLP_ENDPOINT,
     otelServiceName: env.OTEL_SERVICE_NAME,
   },
-  trigger: {
-    secretKey: env.TRIGGER_SECRET_KEY,
-    apiUrl: env.TRIGGER_API_URL,
-    projectRef: env.TRIGGER_PROJECT_REF,
-  },
 }));
 
 export type ServerEnv = z.output<typeof serverEnvSchema>;
@@ -193,7 +184,6 @@ const integrationPredicates: Record<IntegrationGroup, (env: ServerEnv) => boolea
   redis: (env) => Boolean(env.redis.url),
   sentry: (env) => Boolean(env.observability.sentryDsn),
   otel: (env) => Boolean(env.observability.otelEndpoint),
-  trigger: (env) => Boolean(env.trigger.secretKey && env.trigger.projectRef),
 };
 
 export function isConfigured(env: ServerEnv, group: IntegrationGroup): boolean {
@@ -201,17 +191,7 @@ export function isConfigured(env: ServerEnv, group: IntegrationGroup): boolean {
 }
 
 export type IntegrationGroup =
-  | "ai"
-  | "waha"
-  | "meta"
-  | "storage"
-  | "billing"
-  | "resend"
-  | "smtp"
-  | "redis"
-  | "sentry"
-  | "otel"
-  | "trigger";
+  "ai" | "waha" | "meta" | "storage" | "billing" | "resend" | "smtp" | "redis" | "sentry" | "otel";
 
 let cached: ServerEnv | undefined;
 

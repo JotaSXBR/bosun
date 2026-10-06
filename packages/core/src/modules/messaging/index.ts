@@ -7,6 +7,15 @@ export {
   setConversationWaiting,
   transferConversation,
 } from "./actions";
+export { closeExpiredResolvedTickets } from "./lifecycle";
+export type { OffHoursResult } from "./offhours";
+export {
+  isOutsideBusinessHours,
+  localDayKey,
+  maybeSendOffHoursReply,
+  nextOpeningAt,
+  renderOffHoursMessage,
+} from "./offhours";
 export { addInternalNote, sendOutboundMessage } from "./outbound";
 export type { ConversationDetailRow, ConversationListRow, MessageWithAuthorRow } from "./reads";
 export type { ContactRow, ConversationRow, MessageRow } from "./repository";

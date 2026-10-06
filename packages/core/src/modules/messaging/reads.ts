@@ -42,9 +42,12 @@ export async function listConversations(
     opts.view === "queue"
       ? and(eq(conversations.status, "open"), isNull(conversations.assigneeId))
       : opts.view === "mine"
-        ? and(eq(conversations.assigneeId, opts.userId), sql`${conversations.status} != 'resolved'`)
+        ? and(
+            eq(conversations.assigneeId, opts.userId),
+            sql`${conversations.status} not in ('resolved', 'closed')`,
+          )
         : opts.view === "resolved"
-          ? eq(conversations.status, "resolved")
+          ? sql`${conversations.status} in ('resolved', 'closed')`
           : undefined;
   const order =
     opts.view === "queue"

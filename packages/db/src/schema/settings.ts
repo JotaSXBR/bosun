@@ -32,9 +32,8 @@ export const organizationSettings = pgTable(
     offHoursMessage: text(),
     timezone: text().notNull().default("America/Sao_Paulo"),
     locale: text().notNull().default("pt-BR"),
-    // A resolved ticket stays reopenable for this many hours — after that it
-    // is effectively closed (reopen rejected) until a jobs layer materializes
-    // a real `closed` status.
+    // A resolved ticket stays reopenable for this many hours — after that
+    // the close-resolved-tickets sweep materializes `closed`.
     ticketReopenWindowHours: integer().notNull().default(48),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

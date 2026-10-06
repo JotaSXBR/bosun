@@ -3,8 +3,8 @@
 # make `infra:up/down` adopt/stop that project's containers).
 name: bosun
 
-# Local development infrastructure only. Trigger.dev is intentionally NOT here
-# (too heavy for local dev — see docs/architecture/stack.md).
+# Local development infrastructure only. Background jobs run in-process via
+# pg-boss (see docs/development/jobs-pg-boss.md) — no worker service needed.
 
 services:
   postgres:

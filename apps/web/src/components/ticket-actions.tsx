@@ -21,6 +21,7 @@ import {
   pickupConversationAction,
   reopenTicketAction,
   resolveConversationAction,
+  resumeTicketAction,
   setConversationInProgressAction,
   setConversationWaitingAction,
   transferConversationAction,
@@ -35,6 +36,7 @@ export function TicketActions({
   sectors,
   canWork,
   isResolved,
+  isClosed,
   isViewer,
 }: {
   conversation: ConversationDetailRow;
@@ -43,6 +45,7 @@ export function TicketActions({
   sectors: TeamWithMembers[];
   canWork: boolean;
   isResolved: boolean;
+  isClosed: boolean;
   isViewer: boolean;
 }) {
   const router = useRouter();
@@ -88,6 +91,16 @@ export function TicketActions({
           onClick={() => run(reopenTicketAction({ conversationId }))}
         >
           Reabrir ticket
+        </Button>
+      )}
+
+      {isClosed && (
+        <Button
+          variant="outline"
+          disabled={pending}
+          onClick={() => run(resumeTicketAction({ conversationId }))}
+        >
+          Novo atendimento
         </Button>
       )}
 

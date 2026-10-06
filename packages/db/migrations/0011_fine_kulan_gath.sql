@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "messages_off_hours_day_idx" ON "messages" USING btree ("conversation_id",(metadata ->> 'autoReplyDay')) WHERE "messages"."metadata" ->> 'system' = 'off_hours';

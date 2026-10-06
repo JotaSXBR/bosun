@@ -8,3 +8,4 @@ export {
   subscribeDomainEvents,
 } from "./realtime";
 export { withPlatformScope, withServiceAccess, withTenant } from "./tenant";
+export { sql } from "drizzle-orm";

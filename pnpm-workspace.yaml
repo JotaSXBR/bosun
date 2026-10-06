@@ -27,11 +27,6 @@ minimumReleaseAgeExclude:
   - "@sentry/vercel-edge@11.4.0"
   - "@aws-sdk/client-s3@3.1146.0"
   - "@aws-sdk/s3-request-presigner@3.1146.0"
-  - "@trigger.dev/build@4.7.2"
-  - "@trigger.dev/core@4.7.2"
-  - "@trigger.dev/schema-to-json@4.7.2"
-  - "@trigger.dev/sdk@4.7.2"
-  - trigger.dev@4.7.2
 allowBuilds:
   esbuild: true
   unrs-resolver: true

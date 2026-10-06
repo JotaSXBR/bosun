@@ -2,8 +2,9 @@
 
 **Modular monolith.** One deployable Next.js app (`apps/web`) contains all
 HTTP/UI logic; domain behavior lives in `@crm/*` packages. Background work
-runs on **Trigger.dev** (Cloud or self-hosted), invoked through
-`@crm/automation` — there is no worker process to deploy separately.
+runs on **pg-boss** in-process (jobs on the same Postgres, started by
+`register()` in `instrumentation.ts`), invoked through `@crm/automation` —
+there is no worker process to deploy separately.
 
 ## Package graph
 
@@ -43,7 +44,7 @@ surface for packages.
   `packages/core/src/modules`.
 - Database: schema/migrations in `packages/db`, local Postgres via
   `docker/compose.yml`.
-- Jobs: `packages/automation/src/tasks` (Trigger.dev).
+- Jobs: `packages/automation/src/tasks` (pg-boss in-process, ADR 0016).
 
 See also: `multi-tenancy.md`, `providers.md`, `observability.md`,
 `security.md`, `realtime.md`, `stack.md`.

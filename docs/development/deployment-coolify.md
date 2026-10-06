@@ -93,8 +93,8 @@ Setadas via `POST /applications/{uuid}/envs`:
 - WAHA: `WAHA_BASE_URL` → `http://bosun-<env>-waha:3000`, `WAHA_API_KEY`,
   `WAHA_WEBHOOK_HMAC_KEY`
 - `EMAIL_PROVIDER=console` até termos provedor real
-- Não setados (no-op seguro por `isConfigured`): `TRIGGER_*`, `SENTRY_*`,
-  `OTEL_*`, `META_*`, `ASAAS_*`, `OPENAI/ANTHROPIC_API_KEY`
+- Não setados (no-op seguro por `isConfigured`): `SENTRY_*`, `OTEL_*`,
+  `META_*`, `ASAAS_*`, `OPENAI/ANTHROPIC_API_KEY`
 
 > **`CHANNEL_CREDENTIALS_KEY` precisa ser 64 hex chars** (32 bytes) —
 > `getServerEnv()` valida via Zod e **lança exceção** se qualquer env for
@@ -182,9 +182,8 @@ servidor; cobre staging + prod.
 - **WAHA**: sessões persistem em `/app/.sessions` (volume próprio); Redis é
   para jobs/apps, não session storage.
 - **Rollback**: `workflow_dispatch` retagga `:prod` no GHCR (ver `cicd.md`).
-- **Sem worker** — enqueue é no-op sem `TRIGGER_*`; decisão pendente:
-  pg-boss escolhido sobre BullMQ (enqueue transacional com a escrita no PG),
-  migração vira fase de roadmap com ADR próprio.
+- **Sem worker** — jobs rodam in-process via pg-boss no mesmo Postgres
+  (ADR 0016); enqueue é transacional com a escrita de domínio.
 - **Upgrade do Coolify** (futuro): versões ≥4.4 trazem API/UI de registries
   (`/servers/{uuid}/registries`) — aí o `docker login` vira automável.
 - **Sintoma → causa real** (aprendido no bring-up): `https://<domínio>`

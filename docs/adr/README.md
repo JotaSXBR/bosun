@@ -17,6 +17,7 @@
 | 0013 | [Engineering tooling reference](0013-engineering-tooling-reference.md) |
 | 0014 | [Product model](0014-product-model.md)                                 |
 | 0015 | [CI/CD: Actions → GHCR → Coolify](0015-ci-cd-deploy.md)                |
+| 0016 | [Background jobs — pg-boss](0016-background-jobs-pg-boss.md)           |
 
 ## Template
 

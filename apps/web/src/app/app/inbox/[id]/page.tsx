@@ -147,7 +147,8 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   ]);
 
   const isViewer = ctx.role === "viewer";
-  const canWork = !isViewer && conversation.status !== "resolved";
+  const canWork =
+    !isViewer && conversation.status !== "resolved" && conversation.status !== "closed";
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
@@ -186,6 +187,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             sectors={sectors}
             canWork={canWork}
             isResolved={conversation.status === "resolved"}
+            isClosed={conversation.status === "closed"}
             isViewer={isViewer}
           />
 
