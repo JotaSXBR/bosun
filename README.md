@@ -1,5 +1,7 @@
 # Bosun
 
+Copyright © 2026 JotaSXBR — Apache-2.0 (see `LICENSE`).
+
 Multi-tenant customer operations platform (SaaS CRM) — pnpm + Turborepo
 monorepo. Modular monolith: Next.js 16 app + shared `@crm/*` packages +
 Trigger.dev jobs. Repo: `github.com/JotaSXBR/bosun` (Apache-2.0). See
