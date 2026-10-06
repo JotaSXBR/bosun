@@ -1,19 +1,12 @@
-import type { Database, DbExecutor } from "@crm/db";
-import { schema, withTenant } from "@crm/db";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import type { DbExecutor } from "@crm/db";
+import { schema } from "@crm/db";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 const { contacts, conversations, messages, organizationMembers, teams, ticketCounters } = schema;
 
 export type ContactRow = typeof contacts.$inferSelect;
 export type ConversationRow = typeof conversations.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
-
-/** A conversation row plus the contact identity and a one-line preview. */
-export type ConversationListRow = ConversationRow & {
-  contactDisplayName: string | null;
-  contactChannelUserId: string;
-  lastMessagePreview: string | null;
-};
 
 /**
  * Finds or creates the contact for (organizationId, channelUserId). When the
@@ -334,69 +327,4 @@ export async function updateMessageStatus(
     )
     .returning();
   return row;
-}
-
-/**
- * Inbox views. `queue` = open tickets with no assignee, oldest waiting first;
- * `mine` = the agent's active tickets; `resolved` = closed-ticket history.
- */
-export async function listConversations(
-  db: Database,
-  organizationId: string,
-  opts: { view: "inbox" | "queue" | "mine" | "resolved"; limit: number; userId: string },
-): Promise<ConversationListRow[]> {
-  const filter =
-    opts.view === "queue"
-      ? and(eq(conversations.status, "open"), isNull(conversations.assigneeId))
-      : opts.view === "mine"
-        ? and(eq(conversations.assigneeId, opts.userId), sql`${conversations.status} != 'resolved'`)
-        : opts.view === "resolved"
-          ? eq(conversations.status, "resolved")
-          : undefined;
-  const order =
-    opts.view === "queue"
-      ? asc(conversations.lastMessageAt)
-      : opts.view === "resolved"
-        ? desc(conversations.resolvedAt)
-        : desc(conversations.lastMessageAt);
-  const rows = await withTenant(db, organizationId, (tx) =>
-    tx
-      .select({
-        conversation: conversations,
-        contactDisplayName: contacts.displayName,
-        contactChannelUserId: contacts.channelUserId,
-        // Correlated scalar subquery — cheap under
-        // messages_conversation_sent_idx for inbox-sized pages.
-        lastMessagePreview: sql<
-          string | null
-        >`(select coalesce(m.content ->> 'text', m.content ->> 'caption', '[' || (m.content ->> 'type') || ']') from ${messages} m where m.conversation_id = ${conversations.id} order by m.sent_at desc nulls last, m.created_at desc limit 1)`,
-      })
-      .from(conversations)
-      .innerJoin(contacts, eq(contacts.id, conversations.contactId))
-      .where(filter)
-      .orderBy(order)
-      .limit(opts.limit),
-  );
-  return rows.map(({ conversation, ...rest }) => ({ ...conversation, ...rest }));
-}
-
-export async function listMessages(
-  db: Database,
-  organizationId: string,
-  conversationId: string,
-  limit: number,
-): Promise<MessageRow[]> {
-  return withTenant(db, organizationId, async (tx) =>
-    tx
-      .select()
-      .from(messages)
-      .where(
-        and(
-          eq(messages.conversationId, conversationId),
-          eq(messages.organizationId, organizationId),
-        ),
-      )
-      .orderBy(messages.sentAt)
-      .limit(limit),
-  );
 }

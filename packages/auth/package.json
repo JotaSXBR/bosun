@@ -30,7 +30,7 @@
     "@crm/tsconfig": "workspace:*",
     "@types/node": "^24",
     "eslint": "9.39.2",
-    "tsx": "4.21.0",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "vitest": "5.0.3",
     "@vitest/coverage-v8": "5.0.3"

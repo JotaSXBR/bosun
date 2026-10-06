@@ -2,7 +2,7 @@ import type { Database, DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
 import { and, eq } from "drizzle-orm";
 
-const { organizationMembers, organizations, organizationSettings } = schema;
+const { organizationMembers, organizations, organizationSettings, users } = schema;
 
 // Better Auth tables have no RLS (auth runs before tenant context exists),
 // so membership lookups are plain selects — authorization is the service's job.
@@ -38,6 +38,23 @@ export async function listMemberships(
     .from(organizationMembers)
     .innerJoin(organizations, eq(organizationMembers.organizationId, organizations.id))
     .where(eq(organizationMembers.userId, userId));
+}
+
+/** All org members with user identity — the transfer/assignee picker source. */
+export async function listOrgMembers(
+  db: Database,
+  organizationId: string,
+): Promise<{ userId: string; name: string; email: string; role: string }[]> {
+  return db
+    .select({
+      userId: organizationMembers.userId,
+      name: users.name,
+      email: users.email,
+      role: organizationMembers.role,
+    })
+    .from(organizationMembers)
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
+    .where(eq(organizationMembers.organizationId, organizationId));
 }
 
 // organization_settings is tenant-owned (RLS) — these run inside withTenant.

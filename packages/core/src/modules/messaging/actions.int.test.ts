@@ -73,7 +73,8 @@ beforeAll(async () => {
     await db.execute(sql`select 1`);
   } catch (error) {
     throw new Error(
-      `Integration tests require a migrated database. Run \`pnpm infra:up && pnpm db:migrate\` first.\nCause: ${(error as Error).message}`,
+      "Integration tests require a migrated database. Run `pnpm infra:up && pnpm db:migrate` first.",
+      { cause: error },
     );
   }
 
@@ -177,10 +178,11 @@ describe("ticket actions", () => {
     expect((trail[0]!.metadata as { system?: string }).system).toBe("transfer");
     expect((trail[0]!.metadata as { toAssigneeId?: string }).toAssigneeId).toBe(agent2);
 
+    const teamName = `Act ${crypto.randomUUID().slice(0, 6)}`;
     const teamId = await withTenant(db, orgA, async (tx) => {
       const [team] = await tx
         .insert(teams)
-        .values({ organizationId: orgA, name: `Act ${crypto.randomUUID().slice(0, 6)}` })
+        .values({ organizationId: orgA, name: teamName })
         .returning({ id: teams.id });
       return team!.id;
     });
@@ -191,6 +193,8 @@ describe("ticket actions", () => {
     expect(toTeam.sectorId).toBe(teamId);
     expect(toTeam.assigneeId).toBeNull();
     expect(toTeam.status).toBe("open");
+    const queueRows = await listTenantConversations(db, ctx(orgA, "manager"), { view: "queue" });
+    expect(queueRows.find((c) => c.id === ticket.id)?.sectorName).toBe(teamName);
   });
 
   it("transfer rejects a non-member target and an unknown team", async () => {
@@ -290,6 +294,7 @@ describe("inbox views", () => {
     const mine = await listTenantConversations(db, ctx(orgA, "agent"), { view: "mine" });
     expect(mine.every((c) => c.assigneeId === userId && c.status !== "resolved")).toBe(true);
     expect(mine.map((c) => c.id)).toContain(claimed.id);
+    expect(mine.find((c) => c.id === claimed.id)?.assigneeName).toBe("IT User");
 
     const resolved = await listTenantConversations(db, ctx(orgA, "agent"), { view: "resolved" });
     expect(resolved.every((c) => c.status === "resolved")).toBe(true);
