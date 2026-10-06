@@ -59,16 +59,18 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   form WAHA = só nome; creds vêm das envs da plataforma (`WAHA_BASE_URL`/
   `WAHA_API_KEY`), HMAC gerado por conexão, sessão = slug-do-nome + hex,
   criar já abre o QR (create+connect na mesma action). Pareamento real
-  ✅ no staging (QR, WORKING). **Em investigação**: inbound real (outro
-  telefone → número pareado) não apareceu no inbox — webhooks chegam e
-  passam HMAC, mas alguns payloads logam `no recognized events`
-  (suspeito: shape GOWS divergente do `wahaMessageSchema`, ou evento
-  fora do set). `pg-boss` não subia no container — corrigido com
-  self-healing (`starting` reseta em falha + timeout 15s + lazy-start
-  no enqueue, commit `6298f1a`); o reconcile sweep 30min passa a
-  backfillar o que o webhook dropar. Falta: confirmar ingestão
-  end-to-end e validar shapes reais do GOWS
-  (`message.edited`/`reaction`/`presence.update`).
+  ✅ no staging (QR, WORKING). **Parser GOWS corrigido** (commit
+  `dc43179`): a causa do `processed:0` era `media:null`/`replyTo:null`
+  explícitos no payload do GOWS — `z.optional()` rejeita null, então
+  todo `message` falhava o `wahaMessageSchema`. Schemas viraram
+  `.nullish()`; revoked compõe id via `after`+`revokedMessageId`; quote
+  compõe `{fromMe}_{chat}_{stanza}`; displayName cai no
+  `_data.Info.PushName`; `fetchMedia` resolve paths relativos; chats
+  `@lid` são identidade válida de ponta a ponta. `pg-boss` também foi
+  corrigido (self-healing: `starting` reseta em falha + timeout 15s +
+  lazy-start no enqueue, `6298f1a`). Falta: confirmar ingestão
+  end-to-end no staging (o reconcile 30min deve backfillar as msgs
+  perdidas) e observar `presence.update`/acks ao vivo.
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);

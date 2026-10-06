@@ -44,6 +44,24 @@ faz backfill via `listChats`/`listMessages` com dedup por `externalId` —
 sem fan-out de `process-channel-event` (não dispara auto-reply off-hours
 em mensagens antigas).
 
+### Shape do payload GOWS (confirmado via logs + fonte)
+
+O `toWAMessage` do GOWS difere do WEBJS em pontos que já quebraram o
+parser (`dc43179`):
+
+- **Nulls explícitos**: campos ausentes serializam como `null`
+  (`media`, `replyTo`, `to`, `participant`, `location`, `vCards`),
+  não como chave omitida — schemas Zod precisam de `.nullish()`.
+- **Identidade `@lid`**: contatos/chats vêm como `<lid>@lid`
+  (`Chat`/`Sender`/`from`); `SenderAlt` carrega o PN (`...@s.whatsapp.net`)
+  e `_data.Info.PushName` o nome de exibição (não existe `notifyName`).
+- **Ids bare**: `replyTo.id` e `revokedMessageId` são stanzaIDs puros
+  (`3EB0...`); o id serializado é `"{fromMe}_{chat}_{stanza}"`
+  (grupos ganham `_{participant}`). `message.revoked` manda
+  `before:null` + `revokedMessageId` — o alvo se compõe via `after`.
+- **Media**: `media.url` pode ser path relativo — resolver contra
+  `WAHA_BASE_URL` antes do fetch.
+
 ## Envs do container WAHA (produção)
 
 ### Obrigatórias / núcleo
