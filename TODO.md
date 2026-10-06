@@ -68,9 +68,12 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `_data.Info.PushName`; `fetchMedia` resolve paths relativos; chats
   `@lid` são identidade válida de ponta a ponta. `pg-boss` também foi
   corrigido (self-healing: `starting` reseta em falha + timeout 15s +
-  lazy-start no enqueue, `6298f1a`). Falta: confirmar ingestão
-  end-to-end no staging (o reconcile 30min deve backfillar as msgs
-  perdidas) e observar `presence.update`/acks ao vivo.
+  lazy-start no enqueue, `6298f1a`). **Ingestão end-to-end ✅**
+  (2026-10-06): inbound real responde `processed:1` e persiste.
+  Refinamentos ficam no backlog: observar `presence.update`/acks ao
+  vivo, backfill das msgs perdidas via reconcile 30min (automático),
+  `channel_event` audit só se RLS, `ENV NEXT_RUNTIME=nodejs` no
+  Dockerfile se quisermos instrumentation no boot standalone.
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);
