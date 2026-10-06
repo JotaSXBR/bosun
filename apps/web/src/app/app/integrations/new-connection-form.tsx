@@ -27,7 +27,12 @@ const formSchema = z.discriminatedUnion("kind", [
     baseUrl: z.url("Informe uma URL válida"),
     apiKey: z.string().min(1, "Obrigatório"),
     webhookHmacKey: z.string().min(1, "Obrigatório"),
-    session: z.string().optional(),
+    session: z
+      .string()
+      .trim()
+      .regex(/^[a-zA-Z0-9_-]*$/, "Apenas letras, números, '-' e '_'")
+      .max(64)
+      .optional(),
   }),
   z.object({
     kind: z.literal("meta_cloud"),
@@ -46,7 +51,7 @@ const WAHA_FIELDS = [
   { name: "baseUrl", label: "URL base do WAHA", placeholder: "http://localhost:3001" },
   { name: "apiKey", label: "API key", placeholder: "" },
   { name: "webhookHmacKey", label: "Webhook HMAC key", placeholder: "" },
-  { name: "session", label: "Sessão (opcional)", placeholder: "default" },
+  { name: "session", label: "Nome da sessão WAHA (opcional)", placeholder: "loja-principal" },
 ] as const;
 
 const META_FIELDS = [
@@ -67,6 +72,8 @@ export function NewConnectionForm() {
 
   async function onSubmit(values: FormValues) {
     const { kind, name, ...credentials } = values;
+    // Empty session → omit so the service assigns `conn_<random>`.
+    if ("session" in credentials && !credentials.session) delete credentials.session;
     const result = await createChannelConnectionAction({ kind, name, credentials });
     if (!result.ok) {
       toast.error(result.error);

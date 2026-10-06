@@ -9,55 +9,8 @@ import { FakeChannelProvider } from "../testing";
 import metaFixtures from "./__fixtures__/meta-webhooks.json";
 import wahaFixtures from "./__fixtures__/waha-webhooks.json";
 import { MetaCloudChannelProvider } from "./meta-cloud";
-import type { FetchLike } from "./waha";
+import { mockFetch, wahaRequest } from "./test-utils";
 import { WahaChannelProvider } from "./waha";
-
-function hmacSha512(body: string, secret: string): string {
-  return createHmac("sha512", secret).update(body).digest("hex");
-}
-
-function wahaRequest(payload: unknown, secret?: string): RawWebhookRequest {
-  const rawBody = JSON.stringify(payload);
-  return {
-    rawBody,
-    headers: secret ? { "x-webhook-hmac": hmacSha512(rawBody, secret) } : {},
-    query: {},
-  };
-}
-
-function mockFetch(
-  responder: (
-    url: string,
-    init?: { method?: string; headers?: Record<string, string>; body?: string },
-  ) => {
-    status?: number;
-    json?: unknown;
-  },
-): {
-  fetch: FetchLike;
-  calls: {
-    url: string;
-    init?: { method?: string; headers?: Record<string, string>; body?: string };
-  }[];
-} {
-  const calls: {
-    url: string;
-    init?: { method?: string; headers?: Record<string, string>; body?: string };
-  }[] = [];
-  const fetchImpl: FetchLike = (url, init) => {
-    calls.push({ url, init });
-    const res = responder(url, init);
-    return Promise.resolve({
-      ok: (res.status ?? 200) >= 200 && (res.status ?? 200) < 300,
-      status: res.status ?? 200,
-      headers: { get: () => null },
-      json: () => Promise.resolve(res.json),
-      text: () => Promise.resolve(JSON.stringify(res.json)),
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-    });
-  };
-  return { fetch: fetchImpl, calls };
-}
 
 const wahaConfig = {
   baseUrl: "https://waha.example.com/",

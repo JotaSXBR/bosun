@@ -10,99 +10,36 @@ import type {
   ChannelEvent,
   ConnectionStatus,
   ConnectResult,
-  MessageContent,
+  ExternalChat,
+  InboundChannelMessage,
   OutboundMessage,
   RawWebhookRequest,
   SendMessageResult,
+  ServerInfo,
+  SessionInfo,
 } from "../domain";
 import type { ChannelProvider } from "../provider";
 import { verifyHmacSignature } from "../shared/hmac";
+import type { FetchLike, WahaConfig } from "./waha-payloads";
+import {
+  mapSessionStatus,
+  WAHA_WEBHOOK_EVENTS,
+  WAHA_WEBHOOK_RETRIES,
+  wahaAckToEvents,
+  wahaChatSchema,
+  wahaMeSchema,
+  wahaMessageSchema,
+  wahaMessageToEvents,
+  wahaPairingCodeSchema,
+  wahaServerVersionSchema,
+  wahaSessionSchema,
+  wahaSessionStatusToEvents,
+  wahaToInbound,
+  wahaWebhookSchema,
+} from "./waha-payloads";
 
-export type WahaConfig = {
-  baseUrl: string;
-  apiKey: string;
-  session: string;
-  webhookHmacKey?: string | undefined;
-};
-
-export type FetchLike = (
-  input: string,
-  init?: { method?: string; headers?: Record<string, string>; body?: string },
-) => Promise<{
-  ok: boolean;
-  status: number;
-  headers: { get(name: string): string | null };
-  json(): Promise<unknown>;
-  text(): Promise<string>;
-  arrayBuffer(): Promise<ArrayBuffer>;
-}>;
-
-const wahaSessionSchema = z.looseObject({
-  name: z.string(),
-  status: z.string(),
-});
-
-const wahaWebhookSchema = z.looseObject({
-  event: z.string(),
-  session: z.string().optional(),
-  timestamp: z.number().optional(),
-  payload: z.unknown(),
-});
-
-const wahaMessageSchema = z.looseObject({
-  id: z.string(),
-  from: z.string(),
-  fromMe: z.boolean().optional(),
-  body: z.string().optional(),
-  timestamp: z.number().optional(),
-  hasMedia: z.boolean().optional(),
-  mediaUrl: z.string().optional(),
-  mimetype: z.string().optional(),
-  filename: z.string().optional(),
-  notifyName: z.string().optional(),
-});
-
-const wahaAckSchema = z.looseObject({
-  id: z.string(),
-  ack: z.number(),
-});
-
-const wahaSessionStatusSchema = z.looseObject({
-  status: z.string(),
-});
-
-function mapSessionStatus(status: string): ConnectionStatus {
-  switch (status) {
-    case "WORKING":
-      return "connected";
-    case "STARTING":
-    case "SCAN_QR_CODE":
-    case "PASSKEY_REQUIRED":
-    case "PASSKEY_CONFIRMATION_REQUIRED":
-      return "connecting";
-    case "FAILED":
-      return "error";
-    default:
-      return "disconnected";
-  }
-}
-
-/** WAHA ack codes: -1 error, 0 pending, 1 server, 2 device, 3 read, 4 played. */
-function mapAck(ack: number): "sent" | "delivered" | "read" | "failed" | null {
-  switch (ack) {
-    case -1:
-      return "failed";
-    case 1:
-      return "sent";
-    case 2:
-      return "delivered";
-    case 3:
-    case 4:
-      return "read";
-    default:
-      return null; // 0 = pending and unknown codes are ignored
-  }
-}
+export type { FetchLike, WahaConfig } from "./waha-payloads";
+export { WAHA_WEBHOOK_EVENTS, WAHA_WEBHOOK_RETRIES } from "./waha-payloads";
 
 export class WahaChannelProvider implements ChannelProvider {
   readonly kind = "waha" as const;
@@ -132,27 +69,66 @@ export class WahaChannelProvider implements ChannelProvider {
     return wahaSessionSchema.parse(await res.json());
   }
 
+  /**
+   * Session `config` for create/update — the per-connection webhook with
+   * HMAC + retries. Undefined when no webhookUrl is configured (never send
+   * an empty config: PUT is a full replace and would wipe the session's
+   * webhooks).
+   */
+  private webhookSessionConfig(): { webhooks: Record<string, unknown>[] } | undefined {
+    if (!this.config.webhookUrl) return undefined;
+    const webhook: Record<string, unknown> = {
+      url: this.config.webhookUrl,
+      events: [...WAHA_WEBHOOK_EVENTS],
+      retries: { ...WAHA_WEBHOOK_RETRIES },
+    };
+    if (this.config.webhookHmacKey) {
+      webhook.hmac = { key: this.config.webhookHmacKey };
+    }
+    return { webhooks: [webhook] };
+  }
+
+  /** Idempotent config write — PUT is a FULL replace, send the whole config. */
+  private async writeSessionConfig(config: { webhooks: Record<string, unknown>[] }): Promise<void> {
+    const res = await this.fetchImpl(`${this.baseUrl}/api/sessions/${this.config.session}`, {
+      method: "PUT",
+      headers: this.headers({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ name: this.config.session, config }),
+    });
+    if (!res.ok) {
+      throw new Error(`WAHA update session config failed: HTTP ${res.status}`);
+    }
+  }
+
   async connect(): Promise<ConnectResult> {
     const existing = await this.getSession();
+    const config = this.webhookSessionConfig();
     if (!existing) {
-      // Create + start; webhook config (incl. hmac.key) lives on the session
-      // config — the caller passes it via WAHA session setup; we only manage
-      // lifecycle here.
       const created = await this.fetchImpl(`${this.baseUrl}/api/sessions`, {
         method: "POST",
         headers: this.headers({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ name: this.config.session, start: true }),
+        body: JSON.stringify({
+          name: this.config.session,
+          start: true,
+          ...(config ? { config } : {}),
+        }),
       });
       if (!created.ok) {
         throw new Error(`WAHA create session failed: HTTP ${created.status}`);
       }
-    } else if (existing.status === "STOPPED" || existing.status === "FAILED") {
-      const started = await this.fetchImpl(
-        `${this.baseUrl}/api/sessions/${this.config.session}/start`,
-        { method: "POST", headers: this.headers() },
-      );
-      if (!started.ok) {
-        throw new Error(`WAHA start session failed: HTTP ${started.status}`);
+    } else {
+      // Re-register the webhook on existing sessions — PUT is idempotent
+      // with our desired state (and covers sessions created before
+      // webhookUrl existed).
+      if (config) await this.writeSessionConfig(config);
+      if (existing.status === "STOPPED" || existing.status === "FAILED") {
+        const started = await this.fetchImpl(
+          `${this.baseUrl}/api/sessions/${this.config.session}/start`,
+          { method: "POST", headers: this.headers() },
+        );
+        if (!started.ok) {
+          throw new Error(`WAHA start session failed: HTTP ${started.status}`);
+        }
       }
     }
 
@@ -193,6 +169,133 @@ export class WahaChannelProvider implements ChannelProvider {
     if (!res.ok && res.status !== 404) {
       throw new Error(`WAHA stop session failed: HTTP ${res.status}`);
     }
+  }
+
+  async restart(): Promise<void> {
+    const res = await this.fetchImpl(
+      `${this.baseUrl}/api/sessions/${this.config.session}/restart`,
+      {
+        method: "POST",
+        headers: this.headers(),
+      },
+    );
+    if (!res.ok && res.status !== 404) {
+      throw new Error(`WAHA restart session failed: HTTP ${res.status}`);
+    }
+  }
+
+  /** Unpairs the device — next connect() will need QR/pairing code again. */
+  async logout(): Promise<void> {
+    const res = await this.fetchImpl(`${this.baseUrl}/api/sessions/${this.config.session}/logout`, {
+      method: "POST",
+      headers: this.headers(),
+    });
+    if (!res.ok && res.status !== 404) {
+      throw new Error(`WAHA logout session failed: HTTP ${res.status}`);
+    }
+  }
+
+  /** WhatsApp "connect with phone number" — the code the user types in the app. */
+  async requestPairingCode(phoneNumber: string): Promise<{ code: string }> {
+    const res = await this.fetchImpl(
+      `${this.baseUrl}/api/${this.config.session}/auth/request-code`,
+      {
+        method: "POST",
+        headers: this.headers({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ phoneNumber }),
+      },
+    );
+    if (!res.ok) {
+      throw new Error(`WAHA request pairing code failed: HTTP ${res.status}`);
+    }
+    return wahaPairingCodeSchema.parse(await res.json());
+  }
+
+  async getSessionInfo(): Promise<SessionInfo> {
+    const session = await this.getSession();
+    const status = mapSessionStatus(session?.status ?? "STOPPED");
+    const info: SessionInfo = { status, warnings: [] };
+    const res = await this.fetchImpl(`${this.baseUrl}/api/sessions/${this.config.session}/me`, {
+      headers: this.headers(),
+    });
+    if (!res.ok) return info;
+    const me = wahaMeSchema.parse(await res.json());
+    if (me.id) info.phone = me.id.split("@")[0];
+    if (me.pushName) info.pushName = me.pushName;
+    if (me.reachoutTimelock) info.warnings.push("reachout_timelock");
+    const capping = me.messageCapping?.state;
+    if (capping && capping !== "NONE") {
+      info.warnings.push(`message_capping:${capping.toLowerCase()}`);
+    }
+    return info;
+  }
+
+  async getServerInfo(): Promise<ServerInfo> {
+    const res = await this.fetchImpl(`${this.baseUrl}/api/server/version`, {
+      headers: this.headers(),
+    });
+    if (!res.ok) {
+      throw new Error(`WAHA server version failed: HTTP ${res.status}`);
+    }
+    const parsed = wahaServerVersionSchema.parse(await res.json());
+    return { version: parsed.version, engine: parsed.engine ?? "unknown", tier: parsed.tier };
+  }
+
+  /** 1:1 chats only — groups (@g.us), broadcasts and newsletters are skipped. */
+  async listChats(opts?: { limit?: number; offset?: number }): Promise<ExternalChat[]> {
+    const params = new URLSearchParams({
+      limit: String(opts?.limit ?? 100),
+      offset: String(opts?.offset ?? 0),
+    });
+    const res = await this.fetchImpl(
+      `${this.baseUrl}/api/${this.config.session}/chats/overview?${params.toString()}`,
+      { headers: this.headers() },
+    );
+    if (!res.ok) {
+      throw new Error(`WAHA list chats failed: HTTP ${res.status}`);
+    }
+    const chats = z.array(wahaChatSchema).parse(await res.json());
+    return chats
+      .filter(
+        (chat) =>
+          !chat.id.endsWith("@g.us") &&
+          !chat.id.endsWith("@broadcast") &&
+          !chat.id.endsWith("@newsletter"),
+      )
+      .map((chat) => ({
+        id: chat.id,
+        ...(chat.name ? { name: chat.name } : {}),
+        ...(chat.lastMessage?.timestamp
+          ? { lastMessageAt: new Date(chat.lastMessage.timestamp * 1000) }
+          : {}),
+      }));
+  }
+
+  /** Backfill source — same message mapping as live webhooks. */
+  async listMessages(
+    chatId: string,
+    opts?: { limit?: number; offset?: number },
+  ): Promise<InboundChannelMessage[]> {
+    const params = new URLSearchParams({
+      chatId,
+      limit: String(opts?.limit ?? 100),
+      offset: String(opts?.offset ?? 0),
+      session: this.config.session,
+    });
+    const res = await this.fetchImpl(`${this.baseUrl}/api/messages?${params.toString()}`, {
+      headers: this.headers(),
+    });
+    if (!res.ok) {
+      throw new Error(`WAHA list messages failed: HTTP ${res.status}`);
+    }
+    const rows = z.array(z.unknown()).parse(await res.json());
+    const messages: InboundChannelMessage[] = [];
+    for (const row of rows) {
+      const message = wahaMessageSchema.safeParse(row);
+      if (!message.success || message.data.fromMe) continue;
+      messages.push(wahaToInbound(message.data));
+    }
+    return messages;
   }
 
   async getConnectionStatus(): Promise<ConnectionStatus> {
@@ -279,55 +382,4 @@ export class WahaChannelProvider implements ChannelProvider {
         return [];
     }
   }
-}
-
-function wahaMessageToEvents(payload: unknown, timestamp: number | undefined): ChannelEvent[] {
-  const message = wahaMessageSchema.safeParse(payload);
-  if (!message.success || message.data.fromMe) return [];
-  const data = message.data;
-  return [
-    {
-      type: "message.received",
-      externalMessageId: data.id,
-      from: {
-        channelUserId: data.from,
-        ...(data.notifyName ? { displayName: data.notifyName } : {}),
-      },
-      content: wahaMessageContent(data),
-      timestamp: new Date((data.timestamp ?? timestamp ?? 0) * 1000),
-    },
-  ];
-}
-
-function wahaMessageContent(data: z.infer<typeof wahaMessageSchema>): MessageContent {
-  if (!data.hasMedia) return { type: "text", text: data.body ?? "" };
-  return {
-    type: "media",
-    mediaKind: "document",
-    source: { type: "url", url: data.mediaUrl ?? "" },
-    ...(data.mimetype ? { mimeType: data.mimetype } : {}),
-    ...(data.filename ? { filename: data.filename } : {}),
-    ...(data.body ? { caption: data.body } : {}),
-  };
-}
-
-function wahaAckToEvents(payload: unknown, timestamp: number | undefined): ChannelEvent[] {
-  const ack = wahaAckSchema.safeParse(payload);
-  if (!ack.success) return [];
-  const status = mapAck(ack.data.ack);
-  if (!status) return [];
-  return [
-    {
-      type: "message.status",
-      externalMessageId: ack.data.id,
-      status,
-      timestamp: new Date(timestamp ?? Date.now()),
-    },
-  ];
-}
-
-function wahaSessionStatusToEvents(payload: unknown): ChannelEvent[] {
-  const session = wahaSessionStatusSchema.safeParse(payload);
-  if (!session.success) return [];
-  return [{ type: "connection.status", status: mapSessionStatus(session.data.status) }];
 }

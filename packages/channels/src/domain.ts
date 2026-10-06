@@ -38,14 +38,41 @@ export type ConnectResult = {
   qrCode?: { mimeType: string; data: string };
 };
 
+/** Live session details beyond the coarse status (WAHA /me + session). */
+export type SessionInfo = {
+  status: ConnectionStatus;
+  /** Paired phone number without the "@c.us" suffix (WAHA /me). */
+  phone?: string;
+  /** WhatsApp display name of the paired account. */
+  pushName?: string;
+  /** Active restriction warnings (e.g. "reachout_timelock", "message_capping"). */
+  warnings: string[];
+};
+
+/** WAHA server build info (GET /api/server/version). */
+export type ServerInfo = {
+  version: string;
+  engine: string;
+  tier?: string;
+};
+
+/** A chat as the provider lists it (WAHA chats/overview). */
+export type ExternalChat = {
+  id: string;
+  name?: string;
+  lastMessageAt?: Date;
+};
+
+/** One inbound message — shared by live webhooks and backfill listing. */
+export type InboundChannelMessage = {
+  externalMessageId: string;
+  from: Participant;
+  content: MessageContent;
+  timestamp: Date;
+};
+
 export type ChannelEvent =
-  | {
-      type: "message.received";
-      externalMessageId: string;
-      from: Participant;
-      content: MessageContent;
-      timestamp: Date;
-    }
+  | ({ type: "message.received" } & InboundChannelMessage)
   | {
       type: "message.status";
       externalMessageId: string;

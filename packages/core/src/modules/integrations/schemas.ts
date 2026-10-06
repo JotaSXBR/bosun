@@ -7,7 +7,17 @@ export const wahaCredentialsSchema = z.object({
   baseUrl: z.url(),
   apiKey: z.string().min(1),
   webhookHmacKey: z.string().min(1),
-  session: z.string().min(1).optional(),
+  /**
+   * WAHA session name — user-chosen, validated for URL-safety (it appears
+   * in WAHA API paths). The service fills `conn_<random>` when omitted.
+   */
+  session: z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z0-9_-]+$/, "Sessão: apenas letras, números, '-' e '_'")
+    .min(1)
+    .max(64)
+    .optional(),
 });
 
 export const metaCloudCredentialsSchema = z.object({

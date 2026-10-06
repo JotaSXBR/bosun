@@ -3,6 +3,7 @@ import { getServerEnv } from "@crm/config";
 import { createLogger } from "@crm/observability";
 import { PgBoss } from "pg-boss";
 
+import { channelReconcileHandler } from "./tasks/channel-messages-reconcile";
 import { closeResolvedTicketsHandler } from "./tasks/close-resolved-tickets";
 import { organizationOnboardingHandler } from "./tasks/organization-onboarding";
 import { processChannelEventHandler } from "./tasks/process-channel-event";
@@ -13,6 +14,7 @@ export const QUEUES = {
   processChannelEvent: "process-channel-event",
   organizationOnboarding: "organization-onboarding",
   closeResolvedTickets: "close-resolved-tickets",
+  channelReconcile: "channel-messages-reconcile",
 } as const;
 
 let boss: PgBoss | undefined;
@@ -60,6 +62,12 @@ async function start(env: ServerEnv): Promise<PgBoss> {
   });
   // Sweep resolved tickets past the reopen window every 15 minutes.
   await instance.schedule(QUEUES.closeResolvedTickets, "*/15 * * * *");
+  await instance.work(QUEUES.channelReconcile, async (jobs) => {
+    for (const job of jobs) await channelReconcileHandler(job.data);
+  });
+  // Backfill messages WAHA received while the stack was down — the webhook
+  // retry window only covers short outages.
+  await instance.schedule(QUEUES.channelReconcile, "*/30 * * * *");
 
   logger.info("pg-boss started", { queues: Object.values(QUEUES) });
   return (boss = instance);

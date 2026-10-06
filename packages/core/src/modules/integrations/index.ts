@@ -6,13 +6,19 @@ export {
   metaCloudCredentialsSchema,
   wahaCredentialsSchema,
 } from "./schemas";
+export type { ConnectionHealth, RefreshResult } from "./service";
 export {
   applyConnectionStatus,
+  connectionLifecycle,
   createChannelConnection,
+  getConnectionHealth,
   getConnectionWebhookUrl,
   listChannelConnectionsForTenant,
+  listConnectionsForReconcile,
   providerForConnection,
   refreshConnectionStatus,
   removeChannelConnection,
+  requestConnectionPairingCode,
+  resolveConnectionProvider,
   resolveWebhookConnection,
 } from "./service";

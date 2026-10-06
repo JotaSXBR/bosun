@@ -41,11 +41,12 @@ app auto-migrate.
 
 ## Queues
 
-| Queue                     | Trigger                              | Handler                                               |
-| ------------------------- | ------------------------------------ | ----------------------------------------------------- |
-| `process-channel-event`   | enqueue inside ingest tx (per event) | fan-out — currently the off-hours auto-reply          |
-| `organization-onboarding` | enqueue post-commit on org creation  | membership-derived TenantContext + audit event        |
-| `close-resolved-tickets`  | `boss.schedule` `*/15 * * * *`       | `closeExpiredResolvedTickets` — materializes `closed` |
+| Queue                        | Trigger                              | Handler                                                                                                                 |
+| ---------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `process-channel-event`      | enqueue inside ingest tx (per event) | fan-out — currently the off-hours auto-reply                                                                            |
+| `organization-onboarding`    | enqueue post-commit on org creation  | membership-derived TenantContext + audit event                                                                          |
+| `close-resolved-tickets`     | `boss.schedule` `*/15 * * * *`       | `closeExpiredResolvedTickets` — materializes `closed`                                                                   |
+| `channel-messages-reconcile` | `*/30 * * * *` + enqueue on connect  | WAHA backfill via `listChats`/`listMessages` — deduped ingest, no event fan-out (no off-hours replies for old messages) |
 
 ## Writing a task
 

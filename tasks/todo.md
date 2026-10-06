@@ -1,51 +1,42 @@
-# TODO — Multi-atendimento slice 5 (pg-boss + auto-reply + closed)
+# Todo — WAHA go-live (Brief 1)
 
-> Plano em `tasks/plan.md`. Ordem bottom-up; checkpoint após cada fase.
+## Fase A — Adapter WAHA
 
-## Phase 1 — Jobs layer
+- [x] **T1** `waha.ts`: session lifecycle — create com `config.webhooks`
+      (7 eventos + hmac + retries exp 5s×8), `PUT` idempotente, `logout`,
+      `restart`, `requestPairingCode`, `getSessionInfo`, `getServerInfo`,
+      `listChats`/`listMessages` + unit tests (9 lifecycle + 14 existentes)
+- [x] **T2** `provider.ts`/`domain.ts`/`registry.ts`/`testing.ts`: tipos +
+      métodos opcionais (`requestPairingCode`, `getSessionInfo`,
+      `getServerInfo`, `listChats`, `listMessages`, `logout`), `webhookUrl`
+      na config, fake provider
 
-- [x] **T1 pg-boss foundation**
-  - [x] dep `pg-boss` em `@crm/automation` (versão estável ≥7d)
-  - [x] `boss.ts`: `startJobs()` singleton + adapter `executeSql` sobre tx drizzle
-  - [x] migration custom: `PGBoss.getConstructionPlans("pgboss")` + GRANTs p/ `crm_app`
-  - [x] `register()` (instrumentation.ts): boot nodejs-only, `createQueue` ×3, `work`/`schedule` registrados
-  - [x] erro de boot → log + captureException, sem derrubar o web
-- [x] **T2 handlers + remove Trigger**
-  - [x] `process-channel-event` + `organization-onboarding` → handlers pg-boss (zod no payload)
-  - [x] `enqueue*` helpers → `boss.send` (tx-aware via `{ db }` adapter)
-  - [x] `ingestChannelWebhook(db, token, body, deps)` recebe `deps.enqueue` (dentro da tx)
-  - [x] callers: webhook route + `actions/organization.ts` ajustados
-  - [x] remove `@trigger.dev/*` deps + scripts + `docker/trigger/` + `TRIGGER_*` (config/test/env.example)
-  - [x] ADR 0016: pg-boss in-process (substitui decisão Trigger.dev do ADR 0010)
+## Fase B — Service + UI
 
-## Checkpoint fundação
+- [x] **T3** `integrations/service.ts`: connect propagando QR/status;
+      pairing code; lifecycle stop/restart/logout; health via
+      `getConnectionHealth` (live, sem metadata persistida); `webhookUrl`
+      na factory (`APP_URL` + token); session no schema com fallback
+      `conn_<hex>`; `resolveConnectionProvider` + `listConnectionsForReconcile`
+- [x] **T4** UI `/app/integrations` + actions: `PairingPanel` (QR poll 15s +
+      código por telefone), campo session validado, botões
+      Conectar/Reconectar/Parar/Desparear/Reiniciar/Excluir, `ConnectionHealth`
+      (número, pushName, versão WAHA, warnings anti-ban); reconcile enfileirado
+      ao conectar
 
-- [x] `typecheck`+`lint` verdes · `db:migrate` limpo · `pnpm dev` sobe com boss · 0 imports `@trigger.dev`
+## Checkpoint A+B
 
-## Phase 2 — Features
+- [x] `pnpm typecheck` + `pnpm lint` verdes; unit channels+core verdes
 
-- [x] **T3 `closed` materializado**
-  - [x] migration: `'closed'` no `conversations_status_check` + partial unique index `not in ('resolved','closed')`
-  - [x] `loadActiveTicket` rejeita closed; `resumeTicket` aceita fonte closed; views `mine`/`resolved` tratam closed
-  - [x] sweep `close-resolved-tickets`: `withServiceAccess` → per-org `withTenant` update + `emitDomainEvent`
-  - [x] badge/label "Encerrada" onde status renderiza no inbox
-  - [x] int tests: resolve→sweep→closed; follow-up em chat com closed; reopen rejeitado; queue/mine sem closed
-- [x] **T4 auto-reply fora de horário**
-  - [x] helpers puros `isOffHours`/`nextOpening`/`renderOffHoursMessage` (+ unit tests, timezone-aware)
-  - [x] send path de sistema (`authorId null`, `metadata.system:"off_hours_reply"`, sem patchTicket)
-  - [x] dedup 1×/conversa/dia org-local via marcador
-  - [x] wiring no handler `process-channel-event` (eventType `message.received`)
-  - [x] int test: dispara fora de horário / dedupa / silencioso em horário ou sem `offHoursMessage`
+## Fase C — Reconciler
 
-## Checkpoint domínio
+- [x] **T5** `automation`: fila `channel-messages-reconcile`, handler
+      service-scope com ingest sem fan-out (sem `process-channel-event` →
+      sem auto-reply off-hours em backfill), enqueue no connect, schedule
+      */30min + int test (idempotente, RLS ok, payload adulterado rejeitado)
 
-- [x] unit + int alvo verdes · `pnpm test` sem regressão
+## Fase D — Docs + gate
 
-## Phase 3 — Close-out
-
-- [x] **T5 docs**
-  - [x] `docs/development/jobs-trigger-dev.md` → pg-boss
-  - [x] `AGENTS.md` (comandos, how-to "New job", refs Trigger)
-  - [x] `docs/product/rules.md` + `domain-model.md` (pendências entregues)
-  - [x] `TODO.md`: P1 multi-atendimento ✅ fechado; decisão pg-boss → Concluído
-- [x] Gate: `format:check && typecheck && lint` + `test` + int alvo + `next build`
+- [x] **T6** docs: `waha-setup.md` marcado implementado + checklist Coolify
+      no `TODO.md`; `jobs-pg-boss.md` com a nova fila; gate final verde
+      (format/typecheck/lint/unit/int)

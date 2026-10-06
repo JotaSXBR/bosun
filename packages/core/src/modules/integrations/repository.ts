@@ -83,6 +83,19 @@ export async function findConnectionByWebhookToken(
   return row;
 }
 
+/**
+ * Service-scope listing for the scheduled reconcile sweep — only live WAHA
+ * sessions can be backfilled. Call inside withServiceAccess.
+ */
+export async function listReconcilableConnections(
+  executor: DbExecutor,
+): Promise<ChannelConnectionRow[]> {
+  return executor
+    .select()
+    .from(channelConnections)
+    .where(and(eq(channelConnections.kind, "waha"), eq(channelConnections.status, "connected")));
+}
+
 /** Service-scope status update driven by provider events/refresh. */
 export async function updateConnectionStatus(
   executor: DbExecutor,

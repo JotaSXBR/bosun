@@ -1,11 +1,12 @@
 import { randomBytes } from "node:crypto";
 
-import type { ChannelProvider } from "@crm/channels";
+import type { ChannelProvider, ConnectResult, ServerInfo, SessionInfo } from "@crm/channels";
 import { createChannelProvider } from "@crm/channels";
 import type { Database, DbExecutor } from "@crm/db";
 import { withServiceAccess, withTenant } from "@crm/db";
+import { z } from "zod";
 
-import { NotFoundError } from "../../errors";
+import { DomainError, NotFoundError } from "../../errors";
 import { decryptJson, encryptJson } from "../../lib/crypto";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
@@ -16,9 +17,10 @@ import {
   getChannelConnection,
   insertChannelConnection,
   listChannelConnections,
+  listReconcilableConnections,
   updateConnectionStatus,
 } from "./repository";
-import type { ChannelCredentials, CreateChannelConnectionInput } from "./schemas";
+import type { CreateChannelConnectionInput } from "./schemas";
 import {
   createChannelConnectionInput,
   metaCloudCredentialsSchema,
@@ -46,38 +48,162 @@ export async function createChannelConnection(
 ): Promise<ChannelConnectionRow> {
   assertPermission(ctx, { integrations: ["manage"] });
   const parsed = createChannelConnectionInput.parse(input);
+  const credentials =
+    parsed.kind === "waha"
+      ? {
+          ...parsed.credentials,
+          session: parsed.credentials.session ?? `conn_${randomBytes(8).toString("hex")}`,
+        }
+      : parsed.credentials;
   return insertChannelConnection(db, ctx.organizationId, {
     kind: parsed.kind,
     name: parsed.name,
-    credentialsEncrypted: encryptJson(parsed.credentials),
+    credentialsEncrypted: encryptJson(credentials),
     webhookToken: randomBytes(24).toString("base64url"),
   });
 }
 
 /**
- * Requires integrations:manage. Decrypts credentials, asks the provider for a
- * live status (WAHA: starts/polls the session; Meta: validates the phone
- * number) and persists the result.
+ * Requires integrations:manage. Drives the provider connect flow — WAHA:
+ * create/register/start the session and re-register the webhook; returns
+ * the live result including the QR code while pairing. Persists status;
+ * when connected, also stores the paired phone as externalRef.
  */
 export async function refreshConnectionStatus(
   db: Database,
   ctx: TenantContext,
   id: string,
-): Promise<ChannelConnectionRow> {
+): Promise<RefreshResult> {
   assertPermission(ctx, { integrations: ["manage"] });
   const conn = await getConnectionOrThrow(db, ctx, id);
-  const credentials = decryptJson(conn.credentialsEncrypted);
-  const { status } = await providerFromCredentials(conn.kind, credentials).connect();
+  const provider = providerFor(conn);
+  const result = await provider.connect();
+
+  // On connect, read /me once so externalRef shows the paired number.
+  let externalRef = conn.externalRef ?? undefined;
+  if (result.status === "connected" && provider.getSessionInfo) {
+    const info = await provider.getSessionInfo().catch(() => undefined);
+    if (info?.phone) externalRef = info.phone;
+  }
+
   await withTenant(db, ctx.organizationId, (tx) =>
     updateConnectionStatus(tx, conn.id, {
-      status,
-      connectedAt: status === "connected" ? new Date() : null,
-      externalRef: externalRefFor(conn.kind, credentials),
+      status: result.status,
+      connectedAt: result.status === "connected" ? new Date() : null,
+      ...(externalRef ? { externalRef } : {}),
     }),
   );
   const updated = await getChannelConnection(db, ctx.organizationId, conn.id);
   if (!updated) throw new NotFoundError("Channel connection", id);
-  return updated;
+  return { connection: updated, status: result.status, qrCode: result.qrCode };
+}
+
+export type RefreshResult = {
+  connection: ChannelConnectionRow;
+  status: ConnectResult["status"];
+  qrCode?: ConnectResult["qrCode"];
+};
+
+/**
+ * Requires integrations:manage. WhatsApp "connect with phone number" —
+ * returns the code the user types in WhatsApp (Aparelhos conectados →
+ * Conectar com número). WAHA-only.
+ */
+export async function requestConnectionPairingCode(
+  db: Database,
+  ctx: TenantContext,
+  id: string,
+  phoneNumber: string,
+): Promise<{ code: string }> {
+  assertPermission(ctx, { integrations: ["manage"] });
+  const parsed = z
+    .string()
+    .regex(/^\d{10,15}$/, "Informe o número com DDI+DDD, só dígitos")
+    .parse(phoneNumber);
+  const conn = await getConnectionOrThrow(db, ctx, id);
+  const provider = providerFor(conn);
+  if (!provider.requestPairingCode) {
+    throw new DomainError("PROVIDER_UNSUPPORTED", "Este canal não suporta código de pareamento.");
+  }
+  return provider.requestPairingCode(parsed);
+}
+
+/**
+ * Requires integrations:manage. Lifecycle actions — `stop` parks the
+ * session (reconnectable), `logout` unpairs (needs QR again), `restart`
+ * bounces a broken session in place.
+ */
+export async function connectionLifecycle(
+  db: Database,
+  ctx: TenantContext,
+  id: string,
+  action: "stop" | "logout" | "restart",
+): Promise<RefreshResult> {
+  assertPermission(ctx, { integrations: ["manage"] });
+  const conn = await getConnectionOrThrow(db, ctx, id);
+  const provider = providerFor(conn);
+  if (action === "stop") await provider.disconnect();
+  else if (action === "logout") await (provider.logout?.() ?? provider.disconnect());
+  else if (provider.restart) await provider.restart();
+  const status =
+    (await provider.getSessionInfo?.().catch(() => undefined))?.status ??
+    (await provider.getConnectionStatus());
+  await withTenant(db, ctx.organizationId, (tx) =>
+    updateConnectionStatus(tx, conn.id, {
+      status,
+      connectedAt: status === "connected" ? conn.connectedAt : null,
+    }),
+  );
+  const updated = await getChannelConnection(db, ctx.organizationId, conn.id);
+  if (!updated) throw new NotFoundError("Channel connection", id);
+  return { connection: updated, status };
+}
+
+/**
+ * Internal (jobs): resolves a connection row + provider by id. No
+ * permission assertion — callers are trusted server-side paths (job
+ * payloads carry identity only; the handler re-scopes every write under
+ * the row's organizationId).
+ */
+export async function resolveConnectionProvider(
+  db: Database,
+  organizationId: string,
+  connectionId: string,
+): Promise<{ connection: ChannelConnectionRow; provider: ChannelProvider } | undefined> {
+  const conn = await getChannelConnection(db, organizationId, connectionId);
+  if (!conn) return undefined;
+  return { connection: conn, provider: providerFor(conn) };
+}
+
+/**
+ * Internal (scheduled sweep): every connection that can be reconciled —
+ * WAHA sessions whose status is `connected`.
+ */
+export async function listConnectionsForReconcile(db: Database): Promise<ChannelConnectionRow[]> {
+  return withServiceAccess(db, (tx) => listReconcilableConnections(tx));
+}
+
+export type ConnectionHealth = {
+  session?: SessionInfo;
+  server?: ServerInfo;
+};
+
+/**
+ * Requires integrations:read. Live health card data — session info (paired
+ * phone, restriction warnings) + WAHA server version. Read-only, no side
+ * effects.
+ */
+export async function getConnectionHealth(
+  db: Database,
+  ctx: TenantContext,
+  id: string,
+): Promise<ConnectionHealth> {
+  assertPermission(ctx, { integrations: ["read"] });
+  const conn = await getConnectionOrThrow(db, ctx, id);
+  const provider = providerFor(conn);
+  const session = await provider.getSessionInfo?.().catch(() => undefined);
+  const server = await provider.getServerInfo?.().catch(() => undefined);
+  return { session, server };
 }
 
 /** Requires integrations:manage. */
@@ -119,10 +245,7 @@ export async function resolveWebhookConnection(
     findConnectionByWebhookToken(tx, webhookToken),
   );
   if (!connection) return undefined;
-  const provider = providerFromCredentials(
-    connection.kind,
-    decryptJson(connection.credentialsEncrypted),
-  );
+  const provider = providerFor(connection);
   return { connection, provider };
 }
 
@@ -154,7 +277,7 @@ export async function providerForConnection(
 ): Promise<ChannelProvider> {
   const conn = await getChannelConnection(db, organizationId, connectionId);
   if (!conn) throw new NotFoundError("Channel connection", connectionId);
-  return providerFromCredentials(conn.kind, decryptJson(conn.credentialsEncrypted));
+  return providerFor(conn);
 }
 
 async function getConnectionOrThrow(
@@ -167,19 +290,36 @@ async function getConnectionOrThrow(
   return conn;
 }
 
-function providerFromCredentials(kind: string, raw: unknown): ChannelProvider {
+/**
+ * Builds the per-connection webhook URL WAHA posts to. `APP_URL` is read
+ * directly like crypto.ts reads its key — @crm/config validates it at boot.
+ * Undefined when the env is absent (unit tests) — the adapter then skips
+ * webhook registration.
+ */
+function webhookUrlFor(webhookToken: string): string | undefined {
+  const base = process.env.APP_URL?.replace(/\/+$/, "");
+  return base ? `${base}/api/webhooks/channels/${webhookToken}` : undefined;
+}
+
+/** Decrypts credentials and builds the provider with the conn's webhook URL. */
+function providerFor(conn: ChannelConnectionRow): ChannelProvider {
+  return providerFromCredentials(
+    conn.kind,
+    decryptJson(conn.credentialsEncrypted),
+    webhookUrlFor(conn.webhookToken),
+  );
+}
+
+function providerFromCredentials(kind: string, raw: unknown, webhookUrl?: string): ChannelProvider {
   if (kind === "waha") {
     const credentials = wahaCredentialsSchema.parse(raw);
-    return createChannelProvider({ kind: "waha", session: "default", ...credentials });
+    return createChannelProvider({
+      kind: "waha",
+      session: "default",
+      ...credentials,
+      webhookUrl,
+    });
   }
   const credentials = metaCloudCredentialsSchema.parse(raw);
   return createChannelProvider({ kind: "meta_cloud", ...credentials });
-}
-
-function externalRefFor(kind: string, raw: unknown): string | undefined {
-  const credentials = raw as ChannelCredentials;
-  if (kind === "waha") {
-    return "session" in credentials ? credentials.session : undefined;
-  }
-  return "phoneNumberId" in credentials ? credentials.phoneNumberId : undefined;
 }

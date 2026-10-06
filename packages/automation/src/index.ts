@@ -1,5 +1,14 @@
 export { getBoss, QUEUES, startJobs } from "./boss";
-export { enqueueChannelEventProcessed, enqueueOrganizationOnboarding } from "./enqueue";
+export {
+  enqueueChannelEventProcessed,
+  enqueueChannelReconcile,
+  enqueueOrganizationOnboarding,
+} from "./enqueue";
+export type { ChannelReconcilePayload } from "./tasks/channel-messages-reconcile";
+export {
+  channelReconcileHandler,
+  channelReconcilePayload,
+} from "./tasks/channel-messages-reconcile";
 export type { OrganizationOnboardingPayload } from "./tasks/organization-onboarding";
 export {
   organizationOnboardingHandler,

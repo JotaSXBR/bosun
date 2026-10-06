@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { enqueueChannelEventProcessed, enqueueOrganizationOnboarding } from "./enqueue";
+import {
+  enqueueChannelEventProcessed,
+  enqueueChannelReconcile,
+  enqueueOrganizationOnboarding,
+} from "./enqueue";
 
 describe("enqueueOrganizationOnboarding", () => {
   it("skips when the jobs layer is not started", async () => {
@@ -19,6 +23,21 @@ describe("enqueueChannelEventProcessed", () => {
       channelConnectionId: "218f8b9a-7c3d-7f2e-9a4b-1c2d3e4f5a6b",
       eventType: "message.received",
     });
+    expect(result).toEqual({ skipped: true });
+  });
+});
+
+describe("enqueueChannelReconcile", () => {
+  it("skips when the jobs layer is not started", async () => {
+    const result = await enqueueChannelReconcile({
+      organizationId: "018f8b9a-7c3d-7f2e-9a4b-1c2d3e4f5a6b",
+      channelConnectionId: "218f8b9a-7c3d-7f2e-9a4b-1c2d3e4f5a6b",
+    });
+    expect(result).toEqual({ skipped: true });
+  });
+
+  it("skips the scheduled sweep payload too", async () => {
+    const result = await enqueueChannelReconcile({});
     expect(result).toEqual({ skipped: true });
   });
 });

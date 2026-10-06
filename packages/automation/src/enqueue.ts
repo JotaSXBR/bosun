@@ -4,6 +4,7 @@ import { createLogger } from "@crm/observability";
 import { fromDrizzle } from "pg-boss";
 
 import { getBoss, QUEUES } from "./boss";
+import type { ChannelReconcilePayload } from "./tasks/channel-messages-reconcile";
 import type { OrganizationOnboardingPayload } from "./tasks/organization-onboarding";
 import type { ProcessChannelEventPayload } from "./tasks/process-channel-event";
 
@@ -35,6 +36,17 @@ export async function enqueueChannelEventProcessed(
   tx?: DbExecutor,
 ): Promise<{ skipped: boolean }> {
   return send(QUEUES.processChannelEvent, payload, tx);
+}
+
+/**
+ * Enqueues a targeted channel reconcile — used right after a connection
+ * goes live (post-commit best-effort). The periodic sweep is scheduled in
+ * boss.ts and needs no enqueue.
+ */
+export async function enqueueChannelReconcile(
+  payload: ChannelReconcilePayload,
+): Promise<{ skipped: boolean }> {
+  return send(QUEUES.channelReconcile, payload);
 }
 
 /**

@@ -6,6 +6,7 @@ import { listChannelConnections } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
 
 import { ConnectionActions } from "./connection-actions";
+import { ConnectionHealth } from "./connection-health";
 import { CopyButton } from "./copy-button";
 import { NewConnectionForm } from "./new-connection-form";
 
@@ -72,9 +73,15 @@ export default async function IntegrationsPage() {
                         >
                           {STATUS_LABELS[conn.status] ?? conn.status}
                         </span>
+                        {conn.externalRef && (
+                          <span className="text-muted-foreground text-xs">{conn.externalRef}</span>
+                        )}
                       </div>
-                      {canManage && <ConnectionActions id={conn.id} />}
+                      {canManage && (
+                        <ConnectionActions id={conn.id} kind={conn.kind} status={conn.status} />
+                      )}
                     </div>
+                    <ConnectionHealth id={conn.id} kind={conn.kind} />
                     <div className="flex items-center gap-2">
                       <code className="bg-muted flex-1 truncate rounded px-2 py-1 text-xs">
                         {webhookUrl}
