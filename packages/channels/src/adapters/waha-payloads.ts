@@ -77,31 +77,45 @@ export const wahaWebhookSchema = z.looseObject({
 export const wahaMessageSchema = z.looseObject({
   id: z.string(),
   from: z.string(),
-  fromMe: z.boolean().optional(),
-  body: z.string().optional(),
-  timestamp: z.number().optional(),
-  hasMedia: z.boolean().optional(),
-  mediaUrl: z.string().optional(),
-  mimetype: z.string().optional(),
-  filename: z.string().optional(),
+  fromMe: z.boolean().nullish(),
+  body: z.string().nullish(),
+  timestamp: z.number().nullish(),
+  hasMedia: z.boolean().nullish(),
+  mediaUrl: z.string().nullish(),
+  mimetype: z.string().nullish(),
+  filename: z.string().nullish(),
   // Engines disagree on the media shape — accept both flat and nested.
+  // GOWS emits explicit nulls (media/replyTo/etc.) where WEBJS omits keys.
   media: z
     .looseObject({
-      url: z.string().optional(),
-      mimetype: z.string().optional(),
-      filename: z.string().nullable().optional(),
+      url: z.string().nullish(),
+      mimetype: z.string().nullish(),
+      filename: z.string().nullish(),
     })
-    .optional(),
-  replyTo: z.looseObject({ id: z.string().optional() }).optional(),
-  notifyName: z.string().optional(),
+    .nullish(),
+  replyTo: z
+    .looseObject({
+      // GOWS sends the bare stanzaID; WEBJS the full serialized id.
+      id: z.string().nullish(),
+      participant: z.string().nullish(),
+    })
+    .nullish(),
+  notifyName: z.string().nullish(),
+  // GOWS keeps the raw engine event here — display name lives at
+  // _data.Info.PushName (WEBJS uses the top-level notifyName).
+  _data: z
+    .looseObject({
+      Info: z.looseObject({ PushName: z.string().nullish() }).nullish(),
+    })
+    .nullish(),
 });
 
 export const wahaReactionSchema = z.looseObject({
-  fromMe: z.boolean().optional(),
-  from: z.string().optional(),
-  participant: z.string().optional(),
+  fromMe: z.boolean().nullish(),
+  from: z.string().nullish(),
+  participant: z.string().nullish(),
   // messageId is the FULL external id ("true_123@c.us_AAA"); text "" = removed.
-  reaction: z.looseObject({ text: z.string().optional(), messageId: z.string() }),
+  reaction: z.looseObject({ text: z.string().nullish(), messageId: z.string() }),
 });
 
 export const wahaEditedSchema = z.looseObject({
@@ -109,12 +123,15 @@ export const wahaEditedSchema = z.looseObject({
   id: z.string(),
   // bare message id — no chatId, no true_/false_ prefix.
   editedMessageId: z.string(),
-  body: z.string().optional(),
+  body: z.string().nullish(),
 });
 
 export const wahaRevokedSchema = z.looseObject({
-  before: z.looseObject({ id: z.string().optional() }).optional(),
-  after: z.looseObject({ id: z.string().optional() }).optional(),
+  // WEBJS carries the pre-revoke message in `before`; GOWS sends before:null
+  // plus the bare `revokedMessageId` to compose from the action in `after`.
+  before: z.looseObject({ id: z.string().nullish() }).nullish(),
+  after: z.looseObject({ id: z.string().nullish(), fromMe: z.boolean().nullish() }).nullish(),
+  revokedMessageId: z.string().nullish(),
 });
 
 export const wahaPresenceSchema = z.looseObject({
@@ -200,14 +217,16 @@ export function wahaToInbound(
   data: z.infer<typeof wahaMessageSchema>,
   fallbackTimestamp?: number,
 ): InboundChannelMessage {
+  const displayName = data.notifyName ?? data._data?.Info?.PushName ?? undefined;
   return {
     externalMessageId: data.id,
     from: {
       channelUserId: data.from,
-      ...(data.notifyName ? { displayName: data.notifyName } : {}),
+      ...(displayName ? { displayName } : {}),
     },
     content: wahaMessageContent(data),
-    timestamp: new Date((data.timestamp ?? fallbackTimestamp ?? 0) * 1000),
+    // payload ts is seconds; the envelope fallback is already milliseconds.
+    timestamp: new Date(data.timestamp ? data.timestamp * 1000 : (fallbackTimestamp ?? 0)),
   };
 }
 
@@ -221,9 +240,26 @@ export function wahaMessageToEvents(
 }
 
 function wahaMessageContent(data: z.infer<typeof wahaMessageSchema>): MessageContent {
-  const quoted = data.replyTo?.id ? { quotedExternalId: data.replyTo.id } : {};
+  const quotedId = wahaQuotedExternalId(data);
+  const quoted = quotedId ? { quotedExternalId: quotedId } : {};
   if (!data.hasMedia) return { type: "text", text: data.body ?? "", ...quoted };
   return wahaMediaContent(data, quoted);
+}
+
+/**
+ * GOWS `replyTo.id` is the bare stanzaID while stored external ids are
+ * "{fromMe}_{chatId}_{stanzaID}" — compose it. `replyTo.participant` names
+ * the quoted author: equal to `from` ⇒ peer-authored (false_), otherwise
+ * ours (true_). Missing participant defaults to the peer (common reply case).
+ */
+function wahaQuotedExternalId(data: z.infer<typeof wahaMessageSchema>): string | undefined {
+  const stanza = data.replyTo?.id;
+  if (!stanza) return undefined;
+  if (stanza.includes("@")) return stanza; // already serialized (WEBJS)
+  const chatId = data.id.split("_")[1];
+  if (!chatId) return undefined;
+  const peerAuthored = !data.replyTo?.participant || data.replyTo.participant === data.from;
+  return `${peerAuthored ? "false" : "true"}_${chatId}_${stanza}`;
 }
 
 function wahaMediaContent(
@@ -243,7 +279,9 @@ function wahaMediaContent(
   };
 }
 
-function wahaMediaKind(mimeType: string | undefined): "image" | "video" | "audio" | "document" {
+function wahaMediaKind(
+  mimeType: string | null | undefined,
+): "image" | "video" | "audio" | "document" {
   if (mimeType?.startsWith("image/")) return "image";
   if (mimeType?.startsWith("video/")) return "video";
   if (mimeType?.startsWith("audio/")) return "audio";
@@ -303,9 +341,19 @@ export function wahaEditedToEvents(payload: unknown): ChannelEvent[] {
 
 export function wahaRevokedToEvents(payload: unknown): ChannelEvent[] {
   const revoked = wahaRevokedSchema.safeParse(payload);
-  const id = revoked.success ? revoked.data.before?.id : undefined;
-  if (!id) return [];
-  return [{ type: "message.revoked", messageExternalId: id }];
+  if (!revoked.success) return [];
+  const { before, after, revokedMessageId } = revoked.data;
+  if (before?.id) {
+    return [{ type: "message.revoked", messageExternalId: before.id }];
+  }
+  // GOWS: compose "{fromMe}_{chat}_{stanza}" — the revoke actor in `after` is
+  // always the revoked message's author (delete-for-everyone is self-only).
+  const chatId = after?.id?.split("_")[1];
+  if (!chatId || !revokedMessageId) return [];
+  const fromMe = after.fromMe === true ? "true" : "false";
+  return [
+    { type: "message.revoked", messageExternalId: `${fromMe}_${chatId}_${revokedMessageId}` },
+  ];
 }
 
 const PRESENCE_KINDS = new Set<string>(["online", "offline", "typing", "recording", "paused"]);

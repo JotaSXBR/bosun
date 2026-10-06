@@ -348,11 +348,13 @@ export class WahaChannelProvider implements ChannelProvider {
   }
 
   async fetchMedia(url: string): Promise<{ body: Uint8Array; contentType: string | null }> {
+    // GOWS may emit relative media paths — resolve them on the WAHA host.
     // media.url is provider-generated, but never send the api key off-host.
-    if (!url.startsWith(this.baseUrl)) {
+    const absolute = url.startsWith("/") ? `${this.baseUrl}${url}` : url;
+    if (!absolute.startsWith(this.baseUrl)) {
       throw new Error("WAHA fetchMedia refused: url outside the WAHA host");
     }
-    return wahaFetchMedia(this.request, url);
+    return wahaFetchMedia(this.request, absolute);
   }
 
   verifyWebhook(request: RawWebhookRequest): boolean {

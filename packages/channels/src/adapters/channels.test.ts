@@ -124,6 +124,58 @@ describe("WahaChannelProvider", () => {
     expect(provider.parseWebhook(wahaRequest(wahaFixtures.unknown))).toEqual([]);
     expect(provider.parseWebhook({ rawBody: "not json", headers: {}, query: {} })).toEqual([]);
   });
+
+  it("parses GOWS payloads — null fields, @lid identity, bare quoted/revoked ids", () => {
+    const provider = new WahaChannelProvider(wahaConfig);
+    const [msg] = provider.parseWebhook(wahaRequest(wahaFixtures.gowsMessage));
+    expect(msg).toMatchObject({
+      type: "message.received",
+      externalMessageId: "false_16449842241553@lid_3EB001F893C4BA9DD928D4",
+      from: { channelUserId: "16449842241553@lid", displayName: "Contato Teste" },
+      content: { type: "text", text: "oi" },
+    });
+    const [media] = provider.parseWebhook(wahaRequest(wahaFixtures.gowsMediaMessage));
+    expect(media).toMatchObject({
+      type: "message.received",
+      content: {
+        type: "media",
+        mediaKind: "document",
+        mimeType: "application/pdf",
+        filename: "contrato.pdf",
+        source: { type: "url", url: "/api/media/3EB0D7524B890A7692C07C" },
+      },
+    });
+    const [quoted] = provider.parseWebhook(wahaRequest(wahaFixtures.gowsQuotedMessage));
+    expect(quoted).toMatchObject({
+      type: "message.received",
+      content: {
+        type: "text",
+        quotedExternalId: "false_16449842241553@lid_3EB001F893C4BA9DD928D4",
+      },
+    });
+    const [revoked] = provider.parseWebhook(wahaRequest(wahaFixtures.gowsRevoked));
+    expect(revoked).toMatchObject({
+      type: "message.revoked",
+      messageExternalId: "false_16449842241553@lid_3EB001F893C4BA9DD928D4",
+    });
+    const [reaction] = provider.parseWebhook(wahaRequest(wahaFixtures.gowsReaction));
+    expect(reaction).toMatchObject({
+      type: "message.reaction",
+      messageExternalId: "false_16449842241553@lid_3EB001F893C4BA9DD928D4",
+      emoji: "👍",
+      actorChannelUserId: "16449842241553@lid",
+    });
+  });
+
+  it("resolves relative media urls against the WAHA host and refuses foreign hosts", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch(() => ({ json: {} }));
+    const provider = new WahaChannelProvider(wahaConfig, { fetch: fetchImpl });
+    await provider.fetchMedia("/api/media/abc");
+    expect(calls[0]?.url).toBe("https://waha.example.com/api/media/abc");
+    await provider.fetchMedia("https://waha.example.com/api/media/def");
+    expect(calls[1]?.url).toBe("https://waha.example.com/api/media/def");
+    await expect(provider.fetchMedia("https://evil.example.com/api/media/x")).rejects.toThrow();
+  });
 });
 
 describe("MetaCloudChannelProvider", () => {

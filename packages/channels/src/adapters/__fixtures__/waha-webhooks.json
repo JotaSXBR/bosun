@@ -48,5 +48,115 @@
     "session": "default",
     "timestamp": 1704067200000,
     "payload": {}
+  },
+  "gowsMessage": {
+    "event": "message",
+    "session": "motorola-edge-60-e5804fc3",
+    "timestamp": 1791317901623,
+    "payload": {
+      "id": "false_16449842241553@lid_3EB001F893C4BA9DD928D4",
+      "timestamp": 1791317901,
+      "from": "16449842241553@lid",
+      "fromMe": false,
+      "source": "app",
+      "body": "oi",
+      "to": null,
+      "participant": null,
+      "hasMedia": false,
+      "media": null,
+      "ack": 2,
+      "ackName": "DEVICE",
+      "replyTo": null,
+      "_data": {
+        "Info": {
+          "Chat": "16449842241553@lid",
+          "Sender": "16449842241553:53@lid",
+          "SenderAlt": "5511999888777:53@s.whatsapp.net",
+          "PushName": "Contato Teste"
+        }
+      }
+    }
+  },
+  "gowsMediaMessage": {
+    "event": "message",
+    "session": "motorola-edge-60-e5804fc3",
+    "timestamp": 1791317957000,
+    "payload": {
+      "id": "false_16449842241553@lid_3EB0D7524B890A7692C07C",
+      "timestamp": 1791317957,
+      "from": "16449842241553@lid",
+      "fromMe": false,
+      "body": "veja o arquivo",
+      "to": null,
+      "participant": null,
+      "hasMedia": true,
+      "media": {
+        "url": "/api/media/3EB0D7524B890A7692C07C",
+        "mimetype": "application/pdf",
+        "filename": "contrato.pdf"
+      },
+      "ack": 2,
+      "replyTo": null,
+      "_data": { "Info": { "PushName": "Contato Teste" } }
+    }
+  },
+  "gowsQuotedMessage": {
+    "event": "message",
+    "session": "motorola-edge-60-e5804fc3",
+    "timestamp": 1791318000000,
+    "payload": {
+      "id": "false_16449842241553@lid_3EB0REPLYAAA",
+      "timestamp": 1791318000,
+      "from": "16449842241553@lid",
+      "fromMe": false,
+      "body": "concordo",
+      "to": null,
+      "participant": null,
+      "hasMedia": false,
+      "media": null,
+      "replyTo": {
+        "id": "3EB001F893C4BA9DD928D4",
+        "participant": "16449842241553@lid",
+        "body": "oi",
+        "hasMedia": false,
+        "media": null
+      },
+      "_data": { "Info": { "PushName": "Contato Teste" } }
+    }
+  },
+  "gowsRevoked": {
+    "event": "message.revoked",
+    "session": "motorola-edge-60-e5804fc3",
+    "timestamp": 1791318100000,
+    "payload": {
+      "after": {
+        "id": "false_16449842241553@lid_3EB0REVOKEACT",
+        "from": "16449842241553@lid",
+        "fromMe": false,
+        "to": null,
+        "participant": null,
+        "media": null,
+        "replyTo": null
+      },
+      "before": null,
+      "revokedMessageId": "3EB001F893C4BA9DD928D4"
+    }
+  },
+  "gowsReaction": {
+    "event": "message.reaction",
+    "session": "motorola-edge-60-e5804fc3",
+    "timestamp": 1791318200000,
+    "payload": {
+      "id": "false_16449842241553@lid_3EB0REACTION",
+      "timestamp": 1791318200,
+      "from": "16449842241553@lid",
+      "fromMe": false,
+      "to": null,
+      "participant": null,
+      "reaction": {
+        "text": "👍",
+        "messageId": "false_16449842241553@lid_3EB001F893C4BA9DD928D4"
+      }
+    }
   }
 }
