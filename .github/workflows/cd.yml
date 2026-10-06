@@ -17,6 +17,14 @@ on:
   push:
     branches: [main]
     tags: ["v*.*.*"]
+    # Merges that can't change the image (docs, workflows, tasks) skip the
+    # build+deploy entirely — saves Actions minutes. Tag pushes always run.
+    paths-ignore:
+      - ".github/**"
+      - ".devin/**"
+      - "docs/**"
+      - "tasks/**"
+      - "**.md"
   workflow_dispatch:
     inputs:
       rollback_ref:
@@ -26,7 +34,8 @@ on:
 
 concurrency:
   group: cd-${{ github.ref }}
-  cancel-in-progress: false
+  # A merge storm only needs the newest build — cancel superseded ones.
+  cancel-in-progress: true
 
 permissions:
   contents: read

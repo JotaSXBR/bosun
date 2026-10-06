@@ -3,7 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: ["docs/**", "tasks/**", "**.md", ".devin/**"]
   pull_request:
+    paths-ignore: ["docs/**", "tasks/**", "**.md", ".devin/**"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -47,6 +49,12 @@ jobs:
 
   integration:
     needs: quality
+    # Workflow-file and Dockerfile bumps can't change app behavior — quality
+    # (lint/typecheck/build) is enough. npm bumps still get the full suite.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (!startsWith(github.head_ref, 'dependabot/github_actions') &&
+        !startsWith(github.head_ref, 'dependabot/docker'))
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -117,6 +125,10 @@ jobs:
   # bundled installer proved flaky). Image scanning happens in cd.yml.
   scan:
     needs: quality
+    if: >-
+      github.event_name != 'pull_request' ||
+      (!startsWith(github.head_ref, 'dependabot/github_actions') &&
+        !startsWith(github.head_ref, 'dependabot/docker'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
