@@ -27,7 +27,7 @@
     "@crm/tsconfig": "workspace:*",
     "@trigger.dev/build": "4.7.2",
     "@trigger.dev/core": "4.7.2",
-    "@types/node": "^24",
+    "@types/node": "^26",
     "eslint": "9.39.2",
     "trigger.dev": "4.7.2",
     "typescript": "6.0.3",

@@ -22,7 +22,7 @@
   "devDependencies": {
     "@crm/eslint-config": "workspace:*",
     "@crm/tsconfig": "workspace:*",
-    "@types/node": "^24",
+    "@types/node": "^26",
     "@types/nodemailer": "^8",
     "eslint": "9.39.2",
     "typescript": "6.0.3",
