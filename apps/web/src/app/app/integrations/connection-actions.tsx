@@ -102,6 +102,30 @@ export function ConnectionActions({
             </Button>
           </>
         )}
+        {kind === "waha" && (status === "error" || status === "disconnected") && (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pending}
+              onClick={() =>
+                lifecycle("restart", "Sessão reiniciada — clique em Conectar para o QR")
+              }
+            >
+              Reiniciar sessão
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pending}
+              onClick={() => lifecycle("logout", "Aparelho despareado")}
+            >
+              Desparear
+            </Button>
+          </>
+        )}
         <Button type="button" variant="destructive" size="sm" disabled={pending} onClick={remove}>
           Excluir
         </Button>
