@@ -113,32 +113,8 @@ export class WahaChannelProvider implements ChannelProvider {
   async connect(): Promise<ConnectResult> {
     const existing = await this.getSession();
     const config = this.webhookSessionConfig();
-    if (!existing) {
-      const created = await this.request(`/api/sessions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: this.config.session,
-          start: true,
-          ...(config ? { config } : {}),
-        }),
-      });
-      if (!created.ok) {
-        throw new Error(`WAHA create session failed: HTTP ${created.status}`);
-      }
-    } else {
-      // Re-register the webhook (idempotent) — covers sessions created
-      // before webhookUrl existed too.
-      if (config) await this.writeSessionConfig(config);
-      if (existing.status === "STOPPED" || existing.status === "FAILED") {
-        const started = await this.request(`/api/sessions/${this.config.session}/start`, {
-          method: "POST",
-        });
-        if (!started.ok) {
-          throw new Error(`WAHA start session failed: HTTP ${started.status}`);
-        }
-      }
-    }
+    if (!existing) await this.createSession(config);
+    else await this.updateSession(existing, config);
 
     const session = await this.getSession();
     const status = mapSessionStatus(session?.status ?? "FAILED");
@@ -147,6 +123,47 @@ export class WahaChannelProvider implements ChannelProvider {
       result.qrCode = await this.getQrCode();
     }
     return result;
+  }
+
+  private async createSession(
+    config: { webhooks: Record<string, unknown>[] } | undefined,
+  ): Promise<void> {
+    const created = await this.request(`/api/sessions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: this.config.session,
+        start: true,
+        ...(config ? { config } : {}),
+      }),
+    });
+    if (!created.ok) {
+      throw new Error(`WAHA create session failed: HTTP ${created.status}`);
+    }
+  }
+
+  private async updateSession(
+    existing: z.infer<typeof wahaSessionSchema>,
+    config: { webhooks: Record<string, unknown>[] } | undefined,
+  ): Promise<void> {
+    // A config PUT restarts the session — rewriting it on every connect
+    // poll keeps the session bouncing STARTING↔SCAN_QR_CODE and the QR
+    // is never fetched. Skip when our webhook is already registered or
+    // the session is mid-pairing (config necessarily got there with it).
+    const webhookRegistered = existing.config?.webhooks?.some(
+      (hook) => hook.url === this.config.webhookUrl,
+    );
+    if (config && !webhookRegistered && existing.status !== "SCAN_QR_CODE") {
+      await this.writeSessionConfig(config);
+    }
+    if (existing.status === "STOPPED" || existing.status === "FAILED") {
+      const started = await this.request(`/api/sessions/${this.config.session}/start`, {
+        method: "POST",
+      });
+      if (!started.ok) {
+        throw new Error(`WAHA start session failed: HTTP ${started.status}`);
+      }
+    }
   }
 
   private async getQrCode(): Promise<ConnectResult["qrCode"]> {

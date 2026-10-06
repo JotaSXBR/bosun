@@ -60,6 +60,11 @@ export type FetchLike = (
 export const wahaSessionSchema = z.looseObject({
   name: z.string(),
   status: z.string(),
+  config: z
+    .looseObject({
+      webhooks: z.array(z.looseObject({ url: z.string() })).optional(),
+    })
+    .optional(),
 });
 
 export const wahaWebhookSchema = z.looseObject({

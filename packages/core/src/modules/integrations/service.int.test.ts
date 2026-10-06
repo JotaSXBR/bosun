@@ -39,6 +39,9 @@ type Stub = {
   url: string;
   requests: { method: string; path: string; body?: unknown }[];
   sessionStatus: string;
+  /** When set, GET session reports this webhook URL already registered —
+   *  mirrors WAHA returning `config.webhooks` in the session response. */
+  webhookUrl?: string;
   close: () => Promise<void>;
 };
 
@@ -46,13 +49,25 @@ type StubReply = { status: number; value?: unknown; png?: Buffer };
 
 /** /api/sessions/<name>[/<sub>] routes — session names are derived from the
  *  connection name (`<slug>-<hex>`), so they match dynamically. */
-function sessionRoute(parts: string[], method: string, sessionStatus: string): StubReply {
+function sessionRoute(
+  parts: string[],
+  method: string,
+  sessionStatus: string,
+  webhookUrl?: string,
+): StubReply {
   const name = parts[2];
   const sub = parts[3];
   if (method === "PUT" && name) return { status: 200, value: {} };
   switch (`${method}:${name ? "id" : "-"}:${sub ?? "-"}`) {
     case "GET:id:-":
-      return { status: 200, value: { name, status: sessionStatus } };
+      return {
+        status: 200,
+        value: {
+          name,
+          status: sessionStatus,
+          ...(webhookUrl ? { config: { webhooks: [{ url: webhookUrl }] } } : {}),
+        },
+      };
     case "GET:id:me":
       return { status: 200, value: { id: "5511999998888@c.us", pushName: "Loja IT" } };
     case "POST:id:start":
@@ -68,12 +83,17 @@ function sessionRoute(parts: string[], method: string, sessionStatus: string): S
 
 /** WAHA route table — anything not listed answers 404 so a wrong call
  *  surfaces immediately in the test run. */
-function stubRoute(method: string, path: string, sessionStatus: string): StubReply {
+function stubRoute(
+  method: string,
+  path: string,
+  sessionStatus: string,
+  webhookUrl?: string,
+): StubReply {
   const parts = path.split("?")[0]!.split("/").filter(Boolean);
   if (method === "GET" && path.endsWith("/auth/qr")) {
     return { status: 200, png: Buffer.from("89504e47", "hex") };
   }
-  if (parts[1] === "sessions") return sessionRoute(parts, method, sessionStatus);
+  if (parts[1] === "sessions") return sessionRoute(parts, method, sessionStatus, webhookUrl);
   if (method === "POST" && parts[2] === "auth" && parts[3] === "request-code") {
     return { status: 200, value: { code: "ABCD-EFGH" } };
   }
@@ -84,6 +104,7 @@ function stubRoute(method: string, path: string, sessionStatus: string): StubRep
 }
 
 async function startWahaStub(sessionStatus: string): Promise<Stub> {
+  const state: { webhookUrl?: string } = {};
   const requests: Stub["requests"] = [];
   const server: Server = createServer((req, res) => {
     const chunks: Buffer[] = [];
@@ -93,7 +114,7 @@ async function startWahaStub(sessionStatus: string): Promise<Stub> {
       const path = req.url ?? "";
       const raw = Buffer.concat(chunks).toString("utf8");
       requests.push({ method, path, body: raw ? (JSON.parse(raw) as unknown) : undefined });
-      const reply = stubRoute(method, path, sessionStatus);
+      const reply = stubRoute(method, path, sessionStatus, state.webhookUrl);
       if (reply.png) {
         res.writeHead(reply.status, { "content-type": "image/png" });
         return res.end(reply.png);
@@ -109,6 +130,12 @@ async function startWahaStub(sessionStatus: string): Promise<Stub> {
     url: `http://127.0.0.1:${port}`,
     requests,
     sessionStatus,
+    get webhookUrl() {
+      return state.webhookUrl;
+    },
+    set webhookUrl(value: string | undefined) {
+      state.webhookUrl = value;
+    },
     close: () => new Promise((resolve) => server.close(() => resolve())),
   };
 }
@@ -261,6 +288,33 @@ describe("refreshConnectionStatus (WAHA connect)", () => {
       expect(typeof result.qrCode?.data).toBe("string");
     } finally {
       await scanStub.close();
+    }
+  });
+
+  it("does not rewrite config mid-pairing (PUT restarts the session)", async () => {
+    const scanStub = await startWahaStub("SCAN_QR_CODE");
+    try {
+      const conn = await createWahaConnection(scanStub.url);
+      scanStub.requests.length = 0;
+      const result = await refreshConnectionStatus(db, ctx("owner"), conn.id);
+      expect(result.status).toBe("connecting");
+      expect(result.qrCode?.mimeType).toBe("image/png");
+      expect(scanStub.requests.some((r) => r.method === "PUT")).toBe(false);
+    } finally {
+      await scanStub.close();
+    }
+  });
+
+  it("skips the config PUT when our webhook is already registered", async () => {
+    const conn = await createWahaConnection(stub.url);
+    stub.webhookUrl = `https://app.test/api/webhooks/channels/${conn.webhookToken}`;
+    try {
+      stub.requests.length = 0;
+      const result = await refreshConnectionStatus(db, ctx("owner"), conn.id);
+      expect(result.status).toBe("connected");
+      expect(stub.requests.some((r) => r.method === "PUT")).toBe(false);
+    } finally {
+      stub.webhookUrl = undefined;
     }
   });
 
