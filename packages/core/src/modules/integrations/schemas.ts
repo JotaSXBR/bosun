@@ -1,23 +1,21 @@
 import { z } from "zod";
 
 // Credentials stored encrypted per connection — the shapes mirror the
-// provider configs in @crm/channels (WAHA session optional, defaults to
-// "default"; Meta graphApiVersion optional, the adapter defaults it).
+// provider configs in @crm/channels. For WAHA they are built by the service
+// from platform envs (baseUrl/apiKey) plus a generated per-connection HMAC
+// key and a session name derived from the connection name — the client only
+// supplies `name`. Meta credentials stay user-supplied (per-org apps).
 export const wahaCredentialsSchema = z.object({
   baseUrl: z.url(),
   apiKey: z.string().min(1),
   webhookHmacKey: z.string().min(1),
-  /**
-   * WAHA session name — user-chosen, validated for URL-safety (it appears
-   * in WAHA API paths). The service fills `conn_<random>` when omitted.
-   */
+  /** WAHA session name — URL-safe (it appears in WAHA API paths). */
   session: z
     .string()
     .trim()
     .regex(/^[a-zA-Z0-9_-]+$/, "Sessão: apenas letras, números, '-' e '_'")
     .min(1)
-    .max(64)
-    .optional(),
+    .max(64),
 });
 
 export const metaCloudCredentialsSchema = z.object({
@@ -41,7 +39,6 @@ export const createChannelConnectionInput = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("waha"),
     name: connectionName,
-    credentials: wahaCredentialsSchema,
   }),
   z.object({
     kind: z.literal("meta_cloud"),

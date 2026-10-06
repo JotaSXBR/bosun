@@ -20,6 +20,18 @@ import { requireTenantContext } from "@/server/tenant";
 
 export type IntegrationActionResult = { ok: true } | { ok: false; error: string };
 
+export type CreateConnectionResult =
+  | {
+      ok: true;
+      connectionId: string;
+      status: string;
+      qrCode?: { mimeType: string; data: string };
+      /** Connection created but the provider connect call failed — the
+       *  pairing panel retries via connectChannelConnectionAction. */
+      warning?: string;
+    }
+  | { ok: false; error: string };
+
 export type ConnectActionResult =
   | {
       ok: true;
@@ -43,14 +55,37 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+/**
+ * Create + connect in one call: for WAHA the QR code comes back immediately
+ * (pairing panel polls connectChannelConnectionAction to keep it fresh).
+ * A failed connect doesn't roll back the row — the connection stays pending
+ * and the panel retries.
+ */
 export async function createChannelConnectionAction(
   input: unknown,
-): Promise<IntegrationActionResult> {
+): Promise<CreateConnectionResult> {
   const ctx = await requireTenantContext();
   try {
-    await createChannelConnection(getDb(), ctx, input as CreateChannelConnectionInput);
+    const conn = await createChannelConnection(getDb(), ctx, input as CreateChannelConnectionInput);
+    let status = conn.status;
+    let qrCode: { mimeType: string; data: string } | undefined;
+    let warning: string | undefined;
+    try {
+      const refresh = await refreshConnectionStatus(getDb(), ctx, conn.id);
+      status = refresh.status;
+      qrCode = refresh.qrCode;
+      if (refresh.status === "connected") {
+        await enqueueChannelReconcile({
+          organizationId: ctx.organizationId,
+          channelConnectionId: conn.id,
+        });
+      }
+    } catch (connectError) {
+      captureException(connectError, { action: "integrations.create-connect" });
+      warning = "Conexão criada, mas o provedor não respondeu — tente Conectar.";
+    }
     revalidatePath("/app/integrations");
-    return { ok: true };
+    return { ok: true, connectionId: conn.id, status, qrCode, warning };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível criar a conexão.") };
   }

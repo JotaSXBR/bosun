@@ -49,12 +49,7 @@ export async function createChannelConnection(
   assertPermission(ctx, { integrations: ["manage"] });
   const parsed = createChannelConnectionInput.parse(input);
   const credentials =
-    parsed.kind === "waha"
-      ? {
-          ...parsed.credentials,
-          session: parsed.credentials.session ?? `conn_${randomBytes(8).toString("hex")}`,
-        }
-      : parsed.credentials;
+    parsed.kind === "waha" ? wahaPlatformCredentials(parsed.name) : parsed.credentials;
   return insertChannelConnection(db, ctx.organizationId, {
     kind: parsed.kind,
     name: parsed.name,
@@ -301,6 +296,45 @@ function webhookUrlFor(webhookToken: string): string | undefined {
   return base ? `${base}/api/webhooks/channels/${webhookToken}` : undefined;
 }
 
+/**
+ * WAHA credentials are platform-owned: baseUrl/apiKey come from env (read
+ * directly like webhookUrlFor reads APP_URL — @crm/config validates them at
+ * boot). The webhook HMAC key is generated per connection and the session
+ * name derives from the connection name with a random suffix — two
+ * connections with the same name must never share a WAHA session or their
+ * webhooks would cross-wire.
+ */
+function wahaPlatformCredentials(name: string) {
+  const baseUrl = process.env.WAHA_BASE_URL;
+  const apiKey = process.env.WAHA_API_KEY;
+  if (!baseUrl || !apiKey) {
+    throw new DomainError(
+      "WAHA_NOT_CONFIGURED",
+      "WhatsApp (WAHA) não está configurado nesta instância.",
+    );
+  }
+  return {
+    baseUrl,
+    apiKey,
+    webhookHmacKey: randomBytes(24).toString("base64url"),
+    session: sessionNameFrom(name),
+  };
+}
+
+/** URL-safe slug of the connection name + uniqueness suffix. */
+function sessionNameFrom(name: string): string {
+  const slug = name
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 55);
+  return slug
+    ? `${slug}-${randomBytes(4).toString("hex")}`
+    : `conn_${randomBytes(8).toString("hex")}`;
+}
+
 /** Decrypts credentials and builds the provider with the conn's webhook URL. */
 function providerFor(conn: ChannelConnectionRow): ChannelProvider {
   return providerFromCredentials(
@@ -313,12 +347,7 @@ function providerFor(conn: ChannelConnectionRow): ChannelProvider {
 function providerFromCredentials(kind: string, raw: unknown, webhookUrl?: string): ChannelProvider {
   if (kind === "waha") {
     const credentials = wahaCredentialsSchema.parse(raw);
-    return createChannelProvider({
-      kind: "waha",
-      session: "default",
-      ...credentials,
-      webhookUrl,
-    });
+    return createChannelProvider({ kind: "waha", ...credentials, webhookUrl });
   }
   const credentials = metaCloudCredentialsSchema.parse(raw);
   return createChannelProvider({ kind: "meta_cloud", ...credentials });

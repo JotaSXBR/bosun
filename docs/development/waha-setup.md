@@ -197,17 +197,20 @@ para `connecting`; maioria nunca atinge). Em `FAILED`: `restart`, senão
 ## Modelo de sessão (multi-tenant)
 
 - Uma sessão WAHA = um número de WhatsApp. `name` é o ID da sessão.
-- **Decidido**: nome da sessão **escolhido pelo usuário** na criação da
-  conexão — `wahaCredentialsSchema.session` já existe como campo opcional
-  (validar: `[a-zA-Z0-9_-]+`, sem espaços; fallback = `connection.id` se
-  vazio). Único por WAHA — colisão entre conexões deve falhar com erro
-  amigável.
+- **Decidido**: nome da sessão **derivado do nome da conexão** — slug
+  `[a-z0-9_-]` (acentos removidos) + sufixo aleatório (`loja-a1b2c3d4`).
+  O sufixo garante unicidade por WAHA: duas conexões com o mesmo nome
+  nunca compartilham sessão (o que cruzaria os webhooks entre tenants).
+  Fallback `conn_<hex>` quando o nome não gera slug.
 - `external_ref` guarda o número pareado (de `GET /me`).
 - `WAHA_NAMESPACE=all` evita prefixo por engine no storage.
 
 ## Fluxo de UI proposto (`/app/integrations`)
 
-1. **Criar conexão** (nome + credenciais WAHA) — já existe.
+1. **Criar conexão** (só o nome — `baseUrl`/`apiKey` vêm das envs da
+   plataforma; `webhookHmacKey` é gerada por conexão e armazenada
+   criptografada). A action já dispara `connect()` na mesma chamada e o
+   painel de pareamento abre com o QR — sem clique extra.
 2. **Botão "Conectar"** → `refreshConnectionStatus` (re)cria/religa a
    sessão **com `config.webhooks`** e retorna também `qrCode`.
 3. **Modal de pareamento**: aba "QR code" (auto-refresh: server action que

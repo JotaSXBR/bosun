@@ -23,6 +23,8 @@ let userId: string;
 
 const ORIGINAL_KEY = process.env.CHANNEL_CREDENTIALS_KEY;
 const ORIGINAL_APP_URL = process.env.APP_URL;
+const ORIGINAL_WAHA_BASE_URL = process.env.WAHA_BASE_URL;
+const ORIGINAL_WAHA_API_KEY = process.env.WAHA_API_KEY;
 
 function ctx(role: TenantContext["role"]): TenantContext {
   return { organizationId: orgId, userId, role, isPlatformAdmin: false };
@@ -42,29 +44,43 @@ type Stub = {
 
 type StubReply = { status: number; value?: unknown; png?: Buffer };
 
+/** /api/sessions/<name>[/<sub>] routes — session names are derived from the
+ *  connection name (`<slug>-<hex>`), so they match dynamically. */
+function sessionRoute(parts: string[], method: string, sessionStatus: string): StubReply {
+  const name = parts[2];
+  const sub = parts[3];
+  if (method === "PUT" && name) return { status: 200, value: {} };
+  switch (`${method}:${name ? "id" : "-"}:${sub ?? "-"}`) {
+    case "GET:id:-":
+      return { status: 200, value: { name, status: sessionStatus } };
+    case "GET:id:me":
+      return { status: 200, value: { id: "5511999998888@c.us", pushName: "Loja IT" } };
+    case "POST:id:start":
+      return { status: 200, value: {} };
+    case "POST:-:-":
+      return { status: 201, value: {} };
+    case "GET:-:-":
+      return { status: 200, value: [{ name: "it-session", status: sessionStatus }] };
+    default:
+      return { status: 404, value: { error: `unstubbed ${method} /${parts.join("/")}` } };
+  }
+}
+
 /** WAHA route table — anything not listed answers 404 so a wrong call
  *  surfaces immediately in the test run. */
 function stubRoute(method: string, path: string, sessionStatus: string): StubReply {
-  if (method === "PUT" && path.startsWith("/api/sessions/")) return { status: 200, value: {} };
+  const parts = path.split("?")[0]!.split("/").filter(Boolean);
   if (method === "GET" && path.endsWith("/auth/qr")) {
     return { status: 200, png: Buffer.from("89504e47", "hex") };
   }
-  const session = { name: "it-session", status: sessionStatus };
-  const table: Record<string, StubReply> = {
-    "GET /api/sessions?all=true": { status: 200, value: [session] },
-    "GET /api/sessions/it-session": { status: 200, value: session },
-    "GET /api/sessions/it-session/me": {
-      status: 200,
-      value: { id: "5511999998888@c.us", pushName: "Loja IT" },
-    },
-    "POST /api/sessions": { status: 201, value: {} },
-    "POST /api/sessions/it-session/start": { status: 200, value: {} },
-    "POST /api/it-session/auth/request-code": { status: 200, value: { code: "ABCD-EFGH" } },
-    "GET /api/server/version": { status: 200, value: { version: "2026.1.0", engine: "GOWS" } },
-  };
-  return (
-    table[`${method} ${path}`] ?? { status: 404, value: { error: `unstubbed ${method} ${path}` } }
-  );
+  if (parts[1] === "sessions") return sessionRoute(parts, method, sessionStatus);
+  if (method === "POST" && parts[2] === "auth" && parts[3] === "request-code") {
+    return { status: 200, value: { code: "ABCD-EFGH" } };
+  }
+  if (method === "GET" && parts[1] === "server" && parts[2] === "version") {
+    return { status: 200, value: { version: "2026.1.0", engine: "GOWS" } };
+  }
+  return { status: 404, value: { error: `unstubbed ${method} ${path}` } };
 }
 
 async function startWahaStub(sessionStatus: string): Promise<Stub> {
@@ -97,17 +113,12 @@ async function startWahaStub(sessionStatus: string): Promise<Stub> {
   };
 }
 
-async function createWahaConnection(baseUrl: string, session?: string) {
-  return createChannelConnection(db, ctx("owner"), {
-    kind: "waha",
-    name: "IT WAHA",
-    credentials: {
-      baseUrl,
-      apiKey: "it-key",
-      webhookHmacKey: "it-hmac",
-      ...(session ? { session } : {}),
-    },
-  });
+/** Credentials are platform-owned — point the envs at the stub and the
+ *  service snapshots them into the (encrypted) connection row. */
+async function createWahaConnection(baseUrl: string, name = "IT WAHA") {
+  process.env.WAHA_BASE_URL = baseUrl;
+  process.env.WAHA_API_KEY = "it-key";
+  return createChannelConnection(db, ctx("owner"), { kind: "waha", name });
 }
 
 let stub: Stub;
@@ -146,34 +157,78 @@ afterAll(async () => {
   await db.$client.end();
   process.env.CHANNEL_CREDENTIALS_KEY = ORIGINAL_KEY;
   process.env.APP_URL = ORIGINAL_APP_URL;
+  if (ORIGINAL_WAHA_BASE_URL === undefined) delete process.env.WAHA_BASE_URL;
+  else process.env.WAHA_BASE_URL = ORIGINAL_WAHA_BASE_URL;
+  if (ORIGINAL_WAHA_API_KEY === undefined) delete process.env.WAHA_API_KEY;
+  else process.env.WAHA_API_KEY = ORIGINAL_WAHA_API_KEY;
 });
 
 describe("createChannelConnection", () => {
-  it("assigns a conn_* session when none is given", async () => {
-    const conn = await createWahaConnection(stub.url);
+  it("derives the WAHA session name from the connection name", async () => {
+    const conn = await createWahaConnection(stub.url, "Motorola Edge 60");
+    const credentials = decryptJson<{ session?: string }>(conn.credentialsEncrypted);
+    expect(credentials.session).toMatch(/^motorola-edge-60-[0-9a-f]{8}$/);
+  });
+
+  it("gives same-named connections distinct sessions (no webhook cross-wiring)", async () => {
+    const [a, b] = await Promise.all([
+      createWahaConnection(stub.url, "IT WAHA"),
+      createWahaConnection(stub.url, "IT WAHA"),
+    ]);
+    const credsA = decryptJson<{ session?: string }>(a.credentialsEncrypted);
+    const credsB = decryptJson<{ session?: string }>(b.credentialsEncrypted);
+    expect(credsA.session).not.toBe(credsB.session);
+  });
+
+  it("falls back to conn_* when the name has no slug-able characters", async () => {
+    const conn = await createWahaConnection(stub.url, "!!!");
     const credentials = decryptJson<{ session?: string }>(conn.credentialsEncrypted);
     expect(credentials.session).toMatch(/^conn_[0-9a-f]{16}$/);
   });
 
-  it("keeps a user-chosen session name", async () => {
-    const conn = await createWahaConnection(stub.url, "loja-principal");
-    const credentials = decryptJson<{ session?: string }>(conn.credentialsEncrypted);
-    expect(credentials.session).toBe("loja-principal");
+  it("generates a distinct webhook HMAC key per connection", async () => {
+    const [a, b] = await Promise.all([
+      createWahaConnection(stub.url),
+      createWahaConnection(stub.url),
+    ]);
+    const credsA = decryptJson<{ webhookHmacKey?: string }>(a.credentialsEncrypted);
+    const credsB = decryptJson<{ webhookHmacKey?: string }>(b.credentialsEncrypted);
+    expect(credsA.webhookHmacKey).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(credsB.webhookHmacKey).not.toBe(credsA.webhookHmacKey);
+  });
+
+  it("snapshots platform envs as the connection credentials", async () => {
+    const conn = await createWahaConnection(stub.url);
+    const credentials = decryptJson<{ baseUrl?: string; apiKey?: string }>(
+      conn.credentialsEncrypted,
+    );
+    expect(credentials.baseUrl).toBe(stub.url);
+    expect(credentials.apiKey).toBe("it-key");
+  });
+
+  it("fails with WAHA_NOT_CONFIGURED when the platform envs are absent", async () => {
+    delete process.env.WAHA_BASE_URL;
+    await expect(
+      createChannelConnection(db, ctx("owner"), { kind: "waha", name: "x" }),
+    ).rejects.toThrow(/não está configurado/);
   });
 });
 
 describe("refreshConnectionStatus (WAHA connect)", () => {
   it("registers the session webhook and reports connected + paired phone", async () => {
-    const conn = await createWahaConnection(stub.url, "it-session");
+    const conn = await createWahaConnection(stub.url);
     const result = await refreshConnectionStatus(db, ctx("owner"), conn.id);
 
     expect(result.status).toBe("connected");
     expect(result.connection.externalRef).toBe("5511999998888");
 
     // The session update carried the full webhook config — per-connection
-    // URL, all subscribed events and the HMAC key.
+    // URL, all subscribed events and the generated HMAC key.
+    const session = decryptJson<{ session: string; webhookHmacKey: string }>(
+      conn.credentialsEncrypted,
+    );
     const put = stub.requests.find(
-      (r) => r.method === "PUT" && r.path === "/api/sessions/it-session",
+      (r) => r.method === "PUT" && r.path === `/api/sessions/${session.session}`,
     );
     expect(put).toBeDefined();
     const body = put!.body as {
@@ -182,7 +237,7 @@ describe("refreshConnectionStatus (WAHA connect)", () => {
     expect(body.config.webhooks).toHaveLength(1);
     const hook = body.config.webhooks[0]!;
     expect(hook.url).toBe(`https://app.test/api/webhooks/channels/${conn.webhookToken}`);
-    expect(hook.hmac?.key).toBe("it-hmac");
+    expect(hook.hmac?.key).toBe(session.webhookHmacKey);
     expect(hook.events).toEqual(
       expect.arrayContaining([
         "message",
@@ -199,7 +254,7 @@ describe("refreshConnectionStatus (WAHA connect)", () => {
   it("returns the QR code while the session waits for a scan", async () => {
     const scanStub = await startWahaStub("SCAN_QR_CODE");
     try {
-      const conn = await createWahaConnection(scanStub.url, "it-session");
+      const conn = await createWahaConnection(scanStub.url);
       const result = await refreshConnectionStatus(db, ctx("owner"), conn.id);
       expect(result.status).toBe("connecting");
       expect(result.qrCode?.mimeType).toBe("image/png");
@@ -210,7 +265,7 @@ describe("refreshConnectionStatus (WAHA connect)", () => {
   });
 
   it("issues a pairing code for a phone number", async () => {
-    const conn = await createWahaConnection(stub.url, "it-session");
+    const conn = await createWahaConnection(stub.url);
     const { code } = await requestConnectionPairingCode(db, ctx("owner"), conn.id, "5511999998888");
     expect(code).toBe("ABCD-EFGH");
     const request = stub.requests.find((r) => r.path.endsWith("/auth/request-code"));

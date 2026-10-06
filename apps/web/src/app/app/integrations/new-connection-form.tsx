@@ -12,27 +12,25 @@ import {
 } from "@crm/ui/components/form";
 import { Input } from "@crm/ui/components/input";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { createChannelConnectionAction } from "@/server/actions/integrations";
 
+import { PairingPanel } from "./pairing-panel";
+
+type QrCode = { mimeType: string; data: string };
+
 const nameField = z.string().trim().min(1, "Informe um nome").max(120);
 
+// WAHA creds are platform-owned (env) — creating one needs only a name and
+// the QR opens right away. Meta credentials stay per-connection.
 const formSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("waha"),
     name: nameField,
-    baseUrl: z.url("Informe uma URL válida"),
-    apiKey: z.string().min(1, "Obrigatório"),
-    webhookHmacKey: z.string().min(1, "Obrigatório"),
-    session: z
-      .string()
-      .trim()
-      .regex(/^[a-zA-Z0-9_-]*$/, "Apenas letras, números, '-' e '_'")
-      .max(64)
-      .optional(),
   }),
   z.object({
     kind: z.literal("meta_cloud"),
@@ -46,13 +44,6 @@ const formSchema = z.discriminatedUnion("kind", [
 ]);
 
 type FormValues = z.input<typeof formSchema>;
-
-const WAHA_FIELDS = [
-  { name: "baseUrl", label: "URL base do WAHA", placeholder: "http://localhost:3001" },
-  { name: "apiKey", label: "API key", placeholder: "" },
-  { name: "webhookHmacKey", label: "Webhook HMAC key", placeholder: "" },
-  { name: "session", label: "Nome da sessão WAHA (opcional)", placeholder: "loja-principal" },
-] as const;
 
 const META_FIELDS = [
   { name: "phoneNumberId", label: "Phone number ID", placeholder: "" },
@@ -68,21 +59,20 @@ export function NewConnectionForm() {
     defaultValues: { kind: "waha", name: "" },
   });
   const kind = useWatch({ control: form.control, name: "kind" });
-  const fields = kind === "waha" ? WAHA_FIELDS : META_FIELDS;
+  const [pairing, setPairing] = useState<{ id: string; qr?: QrCode } | null>(null);
 
   async function onSubmit(values: FormValues) {
     const { kind, name, ...credentials } = values;
-    // Empty session → omit so the service assigns `conn_<random>`.
-    if ("session" in credentials && !credentials.session) delete credentials.session;
-    const result = await createChannelConnectionAction({ kind, name, credentials });
+    const result = await createChannelConnectionAction(
+      kind === "waha" ? { kind, name } : { kind, name, credentials },
+    );
     if (!result.ok) {
       toast.error(result.error);
       return;
     }
-    toast.success("Conexão criada. Configure o webhook no provedor.");
     form.reset(
       kind === "waha"
-        ? { kind, name: "", baseUrl: "", apiKey: "", webhookHmacKey: "", session: "" }
+        ? { kind, name: "" }
         : {
             kind,
             name: "",
@@ -93,6 +83,18 @@ export function NewConnectionForm() {
             graphApiVersion: "",
           },
     );
+    if (result.warning) toast.warning(result.warning);
+    if (kind === "waha") {
+      if (result.status === "connected") {
+        toast.success("WhatsApp conectado");
+      } else {
+        setPairing({ id: result.connectionId, qr: result.qrCode });
+      }
+    } else {
+      toast.success(
+        result.status === "connected" ? "Conexão criada e validada." : "Conexão criada.",
+      );
+    }
   }
 
   return (
@@ -138,29 +140,34 @@ export function NewConnectionForm() {
                 )}
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {fields.map((item) => (
-                <FormField
-                  key={`${kind}-${item.name}`}
-                  control={form.control}
-                  name={item.name}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{item.label}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={item.placeholder} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
-            </div>
+            {kind === "meta_cloud" && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {META_FIELDS.map((item) => (
+                  <FormField
+                    key={`${kind}-${item.name}`}
+                    control={form.control}
+                    name={item.name}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{item.label}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={item.placeholder} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+            )}
             <Button type="submit" disabled={form.formState.isSubmitting}>
               Criar conexão
             </Button>
           </form>
         </Form>
+        {pairing && (
+          <PairingPanel id={pairing.id} initialQr={pairing.qr} onDone={() => setPairing(null)} />
+        )}
       </CardContent>
     </Card>
   );

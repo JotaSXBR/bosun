@@ -15,8 +15,8 @@ describe("wahaCredentialsSchema", () => {
     );
   });
 
-  it("leaves session undefined when omitted (service assigns the fallback)", () => {
-    expect(wahaCredentialsSchema.parse(base).session).toBeUndefined();
+  it("requires a session name (the service always derives one)", () => {
+    expect(wahaCredentialsSchema.safeParse(base).success).toBe(false);
   });
 
   it.each(["minha sessão", "sessao/x", "a.b", "sessão!"])(

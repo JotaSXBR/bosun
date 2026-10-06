@@ -55,16 +55,21 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   documentos/mídia (`sendFile` via upload → RustFS → URL assinada),
   `sendSeen` só ao assumir o ticket, resposta citada (`reply_to`),
   proxy autenticado `GET /api/media/[id]` p/ mídia inbound. Pesquisa em
-  `docs/development/waha-setup.md`. Falta: validação com aparelho real
-  (staging bloqueado — ver envs Coolify abaixo) e payload shapes reais
-  do GOWS (`message.edited`/`reaction`/`presence.update` parseados com
-  zod loose — confirmar no primeiro webhook real).
-- **Deploy — envs WAHA (Coolify)**: aplicar checklist de
-  `docs/development/waha-setup.md` (IGNORE_GROUPS, S3/RustFS 7d,
+  `docs/development/waha-setup.md`. **Nova conexão simplificada** (brief 3):
+  form WAHA = só nome; creds vêm das envs da plataforma (`WAHA_BASE_URL`/
+  `WAHA_API_KEY`), HMAC gerado por conexão, sessão = slug-do-nome + hex,
+  criar já abre o QR (create+connect na mesma action). Falta: validação
+  com aparelho real no staging e payload shapes reais do GOWS
+  (`message.edited`/`reaction`/`presence.update` parseados com zod loose —
+  confirmar no primeiro webhook real).
+- **Deploy — envs WAHA (Coolify)**: ✅ aplicado no staging (IGNORE_*,
   `WAHA_APPS_ON=brazilian-phone-numbers`, `WAHA_PRESENCE_AUTO_ONLINE=False`,
-  API key hash sha512, session restart envs). E Resend no staging:
-  `EMAIL_PROVIDER=resend` + `RESEND_API_KEY` + `EMAIL_FROM` (sign-up está
-  preso na verificação de email).
+  `WHATSAPP_FILES_LIFETIME=7d`, session restart envs, logs JSON).
+  Resend ✅ (`EMAIL_PROVIDER=resend` + `EMAIL_FROM=Bosun APP
+<noreply@send.fluxie.com.br>`) — verificação de email funciona.
+  Restam do checklist: API key como hash sha512 (exige update conjunto no
+  app) e S3/RustFS p/ mídia (hoje `media.url` aponta pro WAHA local;
+  `WAHA_S3_PROXY_FILES=False` quebraria o `fetchMedia` — ver doc).
 - **P2 — Config de produto no app (env→DB criptografada)**: decisão de
   design (2026-10-06). Split de envs: infra-secrets **geradas pelo
   Coolify** (`DATABASE_*`, `REDIS_*`, `STORAGE_*`, `WAHA_*`,
