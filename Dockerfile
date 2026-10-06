@@ -5,7 +5,7 @@
 #   <standalone>/node_modules            traced runtime deps
 #   <standalone>/apps/web/server.js      the server entrypoint
 
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 
@@ -37,12 +37,12 @@ RUN BETTER_AUTH_SECRET=build-time-secret-build-time-secret- \
 
 # --- DB migrator: isolated two-package install (drizzle-kit is dev-only and
 # the standalone trace intentionally excludes the migrator module). ---
-FROM node:24-alpine AS migrator
+FROM node:26-alpine AS migrator
 WORKDIR /migrate
 COPY docker/web/migrator/package.json docker/web/migrator/package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
