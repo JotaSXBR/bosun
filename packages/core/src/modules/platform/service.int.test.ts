@@ -23,6 +23,10 @@ import {
 
 const { organizations, users } = schema;
 
+// encryptJson reads CHANNEL_CREDENTIALS_KEY lazily per call — provide a test
+// key when the environment has none (CI has no .env).
+process.env.CHANNEL_CREDENTIALS_KEY ??= "a".repeat(64);
+
 let db: Database;
 let orgId: string;
 let userId: string;
@@ -47,10 +51,6 @@ beforeAll(async () => {
       { cause: error },
     );
   }
-  if (!env.channels.credentialsKey) {
-    throw new Error("Integration tests require CHANNEL_CREDENTIALS_KEY set in .env");
-  }
-
   const suffix = crypto.randomUUID().slice(0, 8);
   const [user] = await db
     .insert(users)
@@ -66,8 +66,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await withPlatformScope(db, (tx) => deletePlatformSettingRows(tx, touchedKeys));
-  await db.delete(organizations).where(sql`${organizations.id} = ${orgId}`);
-  await db.delete(users).where(sql`${users.id} = ${userId}`);
+  // beforeAll may have bailed before seeding (e.g. DB down) — don't emit
+  // `where id = undefined` deletes on teardown.
+  if (orgId) await db.delete(organizations).where(sql`${organizations.id} = ${orgId}`);
+  if (userId) await db.delete(users).where(sql`${users.id} = ${userId}`);
   await db.$client.end();
 });
 

@@ -32,6 +32,10 @@ const {
 process.env.ASAAS_WEBHOOK_TOKEN = "it-asaas-webhook-token";
 const WEBHOOK_TOKEN = "it-asaas-webhook-token";
 
+// encryptJson (setPlatformSetting) reads CHANNEL_CREDENTIALS_KEY lazily per
+// call — provide a test key when the environment has none (CI has no .env).
+process.env.CHANNEL_CREDENTIALS_KEY ??= "a".repeat(64);
+
 let db: Database;
 let orgA: string;
 let orgB: string;
