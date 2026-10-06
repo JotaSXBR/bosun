@@ -46,8 +46,20 @@ deterministically on GitHub runners; the container path has zero install
 surface and pins the scanner version by tag.
 
 Dependency hygiene is proactive via **Dependabot** (`.github/dependabot.yml`):
-weekly PRs for npm (pnpm workspace), github-actions and docker base-image
-updates; dev-deps minor/patch grouped into a single PR.
+**monthly** PRs for npm (pnpm workspace), github-actions and docker base-image
+updates — one grouped PR per ecosystem.
+
+### Actions minutes budget (Free tier)
+
+The free tier gives ~2,000 Actions minutes/month, and a dependabot storm once
+burned ~half of it in a day. The pipeline is therefore budget-aware:
+
+- **cd.yml** skips the image build+deploy when a merge only touches
+  `.github/`, `.devin/`, `docs/`, `tasks/` or markdown; tag pushes always run.
+  `cancel-in-progress` drops superseded builds during merge storms.
+- **ci.yml** skips entirely on docs-only diffs, and `dependabot/github_actions`
+  - `dependabot/docker` PRs run only `quality` (workflow/Dockerfile edits
+    can't change app behavior — npm bumps still get the full suite).
 
 ## CD stages
 
