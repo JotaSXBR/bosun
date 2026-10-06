@@ -23,6 +23,10 @@ export const crmAppRole = pgRole("crm_app").existing();
 // transaction runs under platform scope (withPlatformScope()/withServiceAccess()).
 export const tenantPredicate = sql`organization_id = nullif(current_setting('app.organization_id', true), '')::uuid OR current_setting('app.platform_scope', true) = 'on'`;
 
+// Platform-scoped RLS predicate for installation-level tables (no
+// organization_id): only transactions under platform scope may touch rows.
+export const platformPredicate = sql`current_setting('app.platform_scope', true) = 'on'`;
+
 export const auditLogs = pgTable(
   "audit_logs",
   {

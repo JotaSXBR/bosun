@@ -7,6 +7,7 @@ import { createLogger } from "@crm/observability";
 import { DomainError, WebhookVerificationError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
+import { resolveBillingConfig } from "../platform";
 import type { BillingCustomerRow, BillingPaymentRow, BillingSubscriptionRow } from "./repository";
 import {
   findBillingCustomerByExternalId,
@@ -68,7 +69,7 @@ export async function handleAsaasWebhook(
   db: Database,
   request: RawWebhookRequest,
 ): Promise<AsaasWebhookResult> {
-  const provider = billingProviderFromEnv();
+  const provider = asaasProvider(await resolveBillingConfig(db));
   if (!provider.verifyWebhook(request)) {
     throw new WebhookVerificationError();
   }
@@ -155,18 +156,19 @@ function parseAsaasPayload(rawBody: string): AsaasWebhookPayload {
 }
 
 /**
- * Provider built from env — a single platform-level ASAAS account. Reads
- * process.env directly (same precedent as lib/crypto.ts with
- * CHANNEL_CREDENTIALS_KEY); @crm/config validates these vars at boot.
+ * Provider for resolved product settings — a single platform-level ASAAS
+ * account. `platform_settings.billing` wins over ASAAS_* env vars.
  */
-function billingProviderFromEnv(): BillingProvider {
+function asaasProvider(config: ResolvedBillingConfig): BillingProvider {
   return createBillingProvider({
     kind: "asaas",
-    apiKey: process.env.ASAAS_API_KEY ?? "",
-    environment: process.env.ASAAS_ENVIRONMENT === "production" ? "production" : "sandbox",
-    webhookToken: process.env.ASAAS_WEBHOOK_TOKEN,
+    apiKey: config.asaasApiKey ?? "",
+    environment: config.asaasEnvironment,
+    webhookToken: config.asaasWebhookToken,
   });
 }
+
+type ResolvedBillingConfig = Awaited<ReturnType<typeof resolveBillingConfig>>;
 
 /** Requires billing:read (owner/admin — finance data). */
 export async function listBillingPayments(
@@ -202,10 +204,11 @@ export async function ensureBillingCustomer(
   const parsed = ensureBillingCustomerInput.parse(input);
   const existing = await findBillingCustomerByOrg(db, ctx.organizationId);
   if (existing) return existing;
-  if (!process.env.ASAAS_API_KEY) {
-    throw new DomainError("BILLING_NOT_CONFIGURED", "ASAAS_API_KEY is not configured");
+  const billing = await resolveBillingConfig(db);
+  if (!billing.asaasApiKey) {
+    throw new DomainError("BILLING_NOT_CONFIGURED", "ASAAS billing is not configured");
   }
-  const { externalId } = await billingProviderFromEnv().createCustomer({
+  const { externalId } = await asaasProvider(billing).createCustomer({
     name: parsed.name,
     email: parsed.email,
     document: parsed.cpfCnpj,

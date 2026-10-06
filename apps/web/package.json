@@ -19,6 +19,7 @@
     "@crm/config": "workspace:*",
     "@crm/core": "workspace:*",
     "@crm/db": "workspace:*",
+    "@crm/email": "workspace:*",
     "@crm/observability": "workspace:*",
     "@crm/permissions": "workspace:*",
     "@crm/storage": "workspace:*",

@@ -1,6 +1,5 @@
 "use server";
 
-import { getAuth } from "@crm/auth";
 import { enqueueOrganizationOnboarding } from "@crm/automation";
 import { recordAuditEvent } from "@crm/core/audit";
 import { getDb } from "@crm/db";
@@ -8,6 +7,8 @@ import { captureException } from "@crm/observability";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+
+import { getAuth } from "@/server/auth";
 
 const inputSchema = z.object({
   name: z.string().trim().min(2, "Informe o nome da organização").max(80),

@@ -2,9 +2,10 @@ import { hasPermission } from "@crm/permissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
 import Link from "next/link";
 
-import { getOrgSettings } from "@/server/services";
+import { getOrgSettings, getPlatformSettings } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
 
+import { PlatformSettings } from "./platform-settings";
 import { SettingsForm } from "./settings-form";
 
 // Reads the session + database → must never be prerendered at build time.
@@ -13,6 +14,8 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const ctx = await requireTenantContext();
   const settings = await getOrgSettings(ctx);
+  // Product settings live in platform_settings — platform_admin only.
+  const platform = ctx.isPlatformAdmin ? await getPlatformSettings(ctx) : null;
   // organization:update is owner/admin only — managers can still reach
   // /app/settings/teams, agents and viewers read everything.
   const canEdit = hasPermission(ctx.role, { organization: ["update"] });
@@ -39,6 +42,8 @@ export default async function SettingsPage() {
           </Link>
         </CardContent>
       </Card>
+
+      {platform && <PlatformSettings summaries={platform} />}
     </main>
   );
 }

@@ -89,7 +89,16 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   Restam do checklist: API key como hash sha512 (exige update conjunto no
   app) e S3/RustFS p/ mídia (hoje `media.url` aponta pro WAHA local;
   `WAHA_S3_PROXY_FILES=False` quebraria o `fetchMedia` — ver doc).
-- **P2 — Config de produto no app (env→DB criptografada)**: decisão de
+- **P2 — Config de produto no app (env→DB criptografada)** ✅ implementado
+  2026-10-06 — `platform_settings` (RLS `app.platform_scope`, AES-256-GCM via
+  `encryptJson`), `resolveProductSettings`/`isProductConfigured` em
+  `@crm/core/platform` (DB→env por campo), consumers rewired (sendEmail
+  lazy por envio em `server/auth.ts`, Asaas service+webhook, Meta defaults
+  no `createChannelConnection`), seção Plataforma em `/app/settings`
+  (secrets write-only, badge "(banco)" nos campos com override) e wizard
+  `/app/setup` (gate em `requireTenantContext`: `platform_admin &&
+!isProductConfigured("email")`; `provider=console` salvo explicitamente
+  conta como configurado). Decisão de
   design (2026-10-06). Split de envs: infra-secrets **geradas pelo
   Coolify** (`DATABASE_*`, `REDIS_*`, `STORAGE_*`, `WAHA_*`,
   `BETTER_AUTH_SECRET`, `CHANNEL_CREDENTIALS_KEY` — zero digitação) vs
@@ -120,6 +129,10 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `DEPLOY_TOKEN` (escopo deploy-only) injetados; rollback via
   healthcheck já é automático. Duas classes de instalação: mantenedor
   usa tag→webhook (hoje); self-hosted usa o botão.
+  **Follow-up pendente** (fora do escopo do slice): form de nova conexão
+  Meta em `/app/integrations` ainda exige `appSecret`/`verifyToken` no
+  client — relaxar p/ "opcional — usa plataforma" quando o grupo `meta`
+  estiver configurado (backend já aceita vazio e faz o merge).
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.
 - **P1 — Site chat**: provider `site_chat` + widget embarcável + endpoint

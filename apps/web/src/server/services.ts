@@ -22,6 +22,8 @@ import {
   listOrgMembers,
   listUserOrganizations,
 } from "@crm/core/organizations";
+import type { PlatformSettingSummary } from "@crm/core/platform";
+import { isProductConfigured, listPlatformSettingSummaries } from "@crm/core/platform";
 import type { TeamWithMembers } from "@crm/core/teams";
 import { listTeams } from "@crm/core/teams";
 import { getDb } from "@crm/db";
@@ -77,4 +79,14 @@ export async function listSectors(ctx: TenantContext): Promise<TeamWithMembers[]
 
 export async function getOrgSettings(ctx: TenantContext): Promise<OrganizationSettingsRow> {
   return getOrganizationSettings(getDb(), ctx);
+}
+
+/** Platform-admin view of product settings — secrets redacted to flags. */
+export async function getPlatformSettings(ctx: TenantContext): Promise<PlatformSettingSummary[]> {
+  return listPlatformSettingSummaries(getDb(), ctx);
+}
+
+/** Setup-wizard gate: product group ready after DB→env resolution. */
+export async function productConfigured(group: "email" | "billing" | "meta" | "ai") {
+  return isProductConfigured(getDb(), group);
 }

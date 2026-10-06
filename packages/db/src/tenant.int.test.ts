@@ -1,14 +1,14 @@
 // Integration test — requires Postgres with migrations applied.
 // Run: pnpm infra:up && pnpm db:migrate && pnpm test:integration
 import { getServerEnv } from "@crm/config";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Database } from "./client";
 import { createDb, schema } from "./client";
 import { withPlatformScope, withTenant } from "./tenant";
 
-const { auditLogs, organizations } = schema;
+const { auditLogs, organizations, platformSettings } = schema;
 
 let db: Database;
 let orgA: string;
@@ -109,5 +109,40 @@ describe("tenant RLS isolation", () => {
     const orgIds = new Set(rows.map((r) => r.organizationId));
     expect(orgIds.has(orgA)).toBe(true);
     expect(orgIds.has(orgB)).toBe(true);
+  });
+});
+
+describe("platform_settings RLS", () => {
+  it("only platform-scope transactions can read or write", async () => {
+    const key = `it-${crypto.randomUUID().slice(0, 8)}`;
+
+    await withPlatformScope(db, async (tx) => {
+      await tx.insert(platformSettings).values({ key, valueEncrypted: "v1.test" });
+    });
+
+    const platformRows = await withPlatformScope(db, (tx) =>
+      tx.select().from(platformSettings).where(eq(platformSettings.key, key)),
+    );
+    expect(platformRows).toHaveLength(1);
+
+    const tenantRows = await withTenant(db, orgA, (tx) =>
+      tx.select().from(platformSettings).where(eq(platformSettings.key, key)),
+    );
+    expect(tenantRows).toHaveLength(0);
+
+    const bareRows = await db.select().from(platformSettings).where(eq(platformSettings.key, key));
+    expect(bareRows).toHaveLength(0);
+
+    const error = await withTenant(db, orgA, (tx) =>
+      tx.insert(platformSettings).values({ key: `${key}-x`, valueEncrypted: "v1.x" }),
+    ).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(error).not.toBeNull();
+
+    await withPlatformScope(db, (tx) =>
+      tx.delete(platformSettings).where(eq(platformSettings.key, key)),
+    );
   });
 });

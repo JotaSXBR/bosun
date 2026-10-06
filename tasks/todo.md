@@ -1,29 +1,38 @@
-# Task Checklist — WAHA chat features (Brief 2)
+# Tasks — Config de produto em DB (env→DB)
 
-> Ordem: T1+T2 → checkpoint → T3+T4 → checkpoint → T5→T6→T7 → T8.
-> Status: [ ] pendente · [~] em progresso · [x] concluída
+Brief: `.task-brief.md` · Plan: `tasks/plan.md`
 
-## Fase A — adapter + schema
+## Fase 1 — DB + core module
 
-- [x] **T1** channels: 4 eventos novos parseados + `sendSeen`/`sendPresence`/`subscribePresence`/`sendReaction`/`editMessage`/`deleteMessage`/`fetchMedia`/`replyToId`/`sendVoice` + fake + unit tests
-- [x] **T2** db: migration `revoked_at`/`edited_at`/`message_edits`/`message_reactions` (RLS+grant+checklists) + repository helpers
+- [x] **T1** `platform_settings` (key PK, value_encrypted, updated_by,
+      updated_at) + RLS `app.platform_scope='on'` + grant `crm_app` +
+      migration + int test de isolamento — migrations 0013/0014 aplicadas,
+      `tenant.int.test.ts` 8/8
+- [x] **T2** `@crm/core/platform` — schemas por grupo, repository,
+      `resolveProductSettings`, `isProductConfigured`, `setPlatformSetting`
+      (platform_admin gate + field-merge + audit) — `service.int.test.ts` 8/8
 
-## Fase B — core ingest + service
+## Checkpoint 1 — typecheck+lint+int platform + migrate limpo ✅
 
-- [x] **T3** ingest: `message.reaction`/`edited`/`revoked`/`presence.update` handlers + `contact.presence` notify-only + `message.updated` events + int tests
-- [x] **T4** outbound: `sendChannelMessage` (media+reply_to), `reactToMessage`, `editMessage` (15min), `deleteMessage`, `sendPresence`, `sendSeen` no `pickupConversation` + int tests
+## Fase 2 — Consumers
 
-## Fase C — web
+- [x] **T3** `server/auth.ts` + sendEmail lazy (DB→env) + call sites
+      (`api/auth/[...all]`, `tenant.ts`, `actions/organization.ts`)
+- [x] **T4** billing: `asaasProvider(resolved)` — service + webhook leem
+      `resolveBillingConfig` (int test DB-override ✅)
+- [x] **T5** meta: `metaCloudCredentialsInput` (appSecret/verifyToken/graphApi
+      blankable) + merge platform-defaults no create (int tests ✅).
+      Follow-up: form de conexão ainda exige os campos (fora do escopo —
+      `app/integrations/`)
 
-- [x] **T5** actions: voice/doc upload→send, reaction/edit/delete/presence/subscribe + `GET /api/media/[id]` proxy + `resolveMessageMedia` int tests + `media-upload` unit tests
-- [x] **T6** UI mensagens: ticks, reações, editada+histórico, apagado por papel, `PresenceIndicator`, quote, media bubbles
-- [x] **T7** composer: emoji grid, anexo, áudio recorder+preview, presence wiring
+## Checkpoint 2 — int billing+integrations verdes ✅ (37/37)
 
-## Fase D — docs + gate
+## Fase 3 — UI
 
-- [x] **T8** `waha-setup.md`/`TODO.md`/docs → gate `format:check`+`typecheck`+`lint`+unit+int
+- [x] **T6** seção Plataforma em `/app/settings` (write-only secrets,
+      badge "(banco)" em campos com override DB; e2e: oculta p/ member)
+- [x] **T7** wizard `/app/setup` + gate `platform_admin && !email` em
+      `requireTenantContext`; action usa `requireSession` (sem loop);
+      e2e spec cobrindo ambos os caminhos
 
-## Artefatos
-
-- [x] Decisões novas refletidas em `waha-setup.md`/TODO
-- [x] Checklist de validação real (aparelho) anotada p/ quando staging destravar — em `TODO.md` (payloads reais GOWS + presence AUTO_ONLINE)
+## Checkpoint 3 — gate completo + docs (TODO→Concluído, .env.example) ✅

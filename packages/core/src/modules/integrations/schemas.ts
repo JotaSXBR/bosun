@@ -26,6 +26,27 @@ export const metaCloudCredentialsSchema = z.object({
   graphApiVersion: z.string().min(1).optional(),
 });
 
+/** Blank or absent → treated as "use the platform default" at create time. */
+const blankableString = z
+  .string()
+  .optional()
+  .transform((v) => (v === "" || v === undefined ? undefined : v));
+
+/**
+ * Connection-creation input: phoneNumberId/accessToken stay required (they
+ * are per-org WABA values); app-level appSecret/verifyToken/graphApiVersion
+ * may be omitted and are filled from platform_settings.meta — the merged
+ * result must still satisfy metaCloudCredentialsSchema.
+ */
+export const metaCloudCredentialsInput = z.object({
+  phoneNumberId: z.string().min(1),
+  accessToken: z.string().min(1),
+  appSecret: blankableString,
+  verifyToken: blankableString,
+  graphApiVersion: blankableString,
+});
+export type MetaCloudCredentialsInput = z.input<typeof metaCloudCredentialsInput>;
+
 export const channelCredentialsSchema = z.union([
   wahaCredentialsSchema,
   metaCloudCredentialsSchema,
@@ -43,7 +64,7 @@ export const createChannelConnectionInput = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("meta_cloud"),
     name: connectionName,
-    credentials: metaCloudCredentialsSchema,
+    credentials: metaCloudCredentialsInput,
   }),
 ]);
 

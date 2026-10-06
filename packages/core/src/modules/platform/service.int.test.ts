@@ -1,0 +1,169 @@
+// Integration test — requires Postgres with migrations applied.
+// Run: pnpm infra:up && pnpm db:migrate && pnpm test:integration
+//
+// Group ownership across int-test files (they run in parallel on one DB):
+// this file touches only `email` and `ai`; billing tests own `billing`,
+// integrations tests own `meta`.
+import { getServerEnv } from "@crm/config";
+import type { Database } from "@crm/db";
+import { createDb, schema, withPlatformScope } from "@crm/db";
+import { sql } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { AuthorizationError } from "../../errors";
+import type { TenantContext } from "../../tenant/context";
+import { deletePlatformSettingRows } from "./repository";
+import {
+  isProductConfigured,
+  listPlatformSettingSummaries,
+  resolveEmailConfig,
+  resolveProductSettings,
+  setPlatformSetting,
+} from "./service";
+
+const { organizations, users } = schema;
+
+let db: Database;
+let orgId: string;
+let userId: string;
+const touchedKeys = ["ai", "email"];
+
+function platformAdmin(): TenantContext {
+  return { organizationId: orgId, userId, role: "owner", isPlatformAdmin: true };
+}
+
+function member(): TenantContext {
+  return { organizationId: orgId, userId, role: "admin", isPlatformAdmin: false };
+}
+
+beforeAll(async () => {
+  const env = getServerEnv();
+  db = createDb(env.database.url);
+  try {
+    await db.execute(sql`select 1`);
+  } catch (error) {
+    throw new Error(
+      "Integration tests require a migrated database. Run `pnpm infra:up && pnpm db:migrate` first.",
+      { cause: error },
+    );
+  }
+  if (!env.channels.credentialsKey) {
+    throw new Error("Integration tests require CHANNEL_CREDENTIALS_KEY set in .env");
+  }
+
+  const suffix = crypto.randomUUID().slice(0, 8);
+  const [user] = await db
+    .insert(users)
+    .values({ name: "IT Platform", email: `it-platform-${suffix}@crm.local` })
+    .returning({ id: users.id });
+  userId = user!.id;
+  const [org] = await db
+    .insert(organizations)
+    .values({ name: "Core IT Platform", slug: `core-platform-${suffix}` })
+    .returning({ id: organizations.id });
+  orgId = org!.id;
+}, 60_000);
+
+afterAll(async () => {
+  await withPlatformScope(db, (tx) => deletePlatformSettingRows(tx, touchedKeys));
+  await db.delete(organizations).where(sql`${organizations.id} = ${orgId}`);
+  await db.delete(users).where(sql`${users.id} = ${userId}`);
+  await db.$client.end();
+});
+
+describe("platform settings service", () => {
+  it("rejects non-platform-admin callers", async () => {
+    await expect(
+      setPlatformSetting(db, member(), "ai", { openaiApiKey: "x" }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+    await expect(listPlatformSettingSummaries(db, member())).rejects.toBeInstanceOf(
+      AuthorizationError,
+    );
+  });
+
+  it("stores encrypted values — no plaintext reaches the table", async () => {
+    await setPlatformSetting(db, platformAdmin(), "ai", {
+      openaiApiKey: "sk-it-openai-secret",
+    });
+    const rows = await withPlatformScope(db, (tx) => tx.select().from(schema.platformSettings));
+    const row = rows.find((r) => r.key === "ai");
+    expect(row).toBeDefined();
+    expect(row!.valueEncrypted).toMatch(/^v1\./);
+    expect(row!.valueEncrypted).not.toContain("sk-it-openai-secret");
+    expect(row!.updatedByUserId).toBe(userId);
+  });
+
+  it("resolved settings prefer DB over env, per field", async () => {
+    const env = getServerEnv();
+    const settings = await resolveProductSettings(db);
+    expect(settings.ai.openaiApiKey).toBe("sk-it-openai-secret");
+    // unset groups still resolve from env
+    expect(settings.meta.graphApiVersion).toBe(env.whatsapp.meta.graphApiVersion);
+    expect(await resolveEmailConfig(db)).toEqual(
+      expect.objectContaining({ provider: env.email.provider }),
+    );
+  });
+
+  it("field-merge preserves secrets left blank on update", async () => {
+    await setPlatformSetting(db, platformAdmin(), "ai", {
+      openaiApiKey: "", // blank = keep stored
+      anthropicApiKey: "sk-it-anthropic",
+    });
+    const settings = await resolveProductSettings(db);
+    expect(settings.ai.openaiApiKey).toBe("sk-it-openai-secret");
+    expect(settings.ai.anthropicApiKey).toBe("sk-it-anthropic");
+  });
+
+  it("isProductConfigured reflects the resolved settings", async () => {
+    expect(await isProductConfigured(db, "ai")).toBe(true);
+    expect(await isProductConfigured(db, "meta")).toBe(
+      Boolean(getServerEnv().whatsapp.meta.appSecret),
+    );
+  });
+
+  it("nested smtp fields merge field-level", async () => {
+    await setPlatformSetting(db, platformAdmin(), "email", {
+      provider: "smtp",
+      from: "it@crm.local",
+      smtp: { host: "smtp.example", port: 587, user: "u1", password: "p1", secure: false },
+    });
+    await setPlatformSetting(db, platformAdmin(), "email", {
+      provider: "smtp",
+      smtp: { password: "", secure: true }, // blank secret preserved
+    });
+    const email = await resolveEmailConfig(db);
+    expect(email.provider).toBe("smtp");
+    expect(email.smtp.host).toBe("smtp.example");
+    expect(email.smtp.password).toBe("p1");
+    expect(email.smtp.secure).toBe(true);
+    expect(await isProductConfigured(db, "email")).toBe(true);
+  });
+
+  it("summaries expose non-secret values and secret presence only", async () => {
+    const summaries = await listPlatformSettingSummaries(db, platformAdmin());
+    const email = summaries.find((s) => s.group === "email");
+    expect(email).toBeDefined();
+    expect(email!.configured).toBe(true);
+    expect(email!.values["provider"]).toBe("smtp");
+    expect(email!.values["from"]).toBe("it@crm.local");
+    expect((email!.values["smtp"] as Record<string, unknown>)["password"]).toBeUndefined();
+    expect(email!.secretsSet["smtp.password"]).toBe(true);
+    expect(email!.secretsSet["resendApiKey"]).toBe(Boolean(getServerEnv().email.resendApiKey));
+    expect(email!.dbFields).toEqual(
+      expect.arrayContaining(["provider", "from", "smtp.host", "smtp.password"]),
+    );
+    expect(email!.updatedAt).toBeInstanceOf(Date);
+
+    const ai = summaries.find((s) => s.group === "ai");
+    expect(ai!.secretsSet["openaiApiKey"]).toBe(true);
+    expect(ai!.values["openaiApiKey"]).toBeUndefined();
+  });
+
+  it("tenant-scoped transactions cannot see platform rows", async () => {
+    const rows = await db.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('app.organization_id', ${orgId}, true)`);
+      return tx.select().from(schema.platformSettings);
+    });
+    expect(rows.filter((r) => touchedKeys.includes(r.key))).toHaveLength(0);
+  });
+});

@@ -4,11 +4,13 @@ import { createServer, type Server } from "node:http";
 
 import { getServerEnv } from "@crm/config";
 import type { Database } from "@crm/db";
-import { createDb, schema, sql } from "@crm/db";
+import { createDb, schema, sql, withPlatformScope } from "@crm/db";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { decryptJson } from "../../lib/crypto";
 import type { TenantContext } from "../../tenant/context";
+import { setPlatformSetting } from "../platform";
 import {
   createChannelConnection,
   refreshConnectionStatus,
@@ -238,6 +240,70 @@ describe("createChannelConnection", () => {
     await expect(
       createChannelConnection(db, ctx("owner"), { kind: "waha", name: "x" }),
     ).rejects.toThrow(/não está configurado/);
+  });
+
+  const adminCtx = (): TenantContext => ({ ...ctx("owner"), isPlatformAdmin: true });
+  const cleanMeta = () =>
+    withPlatformScope(db, (tx) =>
+      tx.delete(schema.platformSettings).where(eq(schema.platformSettings.key, "meta")),
+    );
+
+  it("meta connection fills app-level secrets from platform_settings", async () => {
+    await setPlatformSetting(db, adminCtx(), "meta", {
+      appSecret: `meta_secret_${Date.now()}`,
+      verifyToken: "meta_verify_it",
+      graphApiVersion: "v99.0",
+    });
+    try {
+      const conn = await createChannelConnection(db, ctx("owner"), {
+        kind: "meta_cloud",
+        name: "Meta IT",
+        credentials: { phoneNumberId: "pn_it", accessToken: "at_it" },
+      });
+      const credentials = decryptJson<Record<string, string>>(conn.credentialsEncrypted);
+      expect(credentials.phoneNumberId).toBe("pn_it");
+      expect(credentials.accessToken).toBe("at_it");
+      expect(credentials.appSecret).toContain("meta_secret_");
+      expect(credentials.verifyToken).toBe("meta_verify_it");
+      expect(credentials.graphApiVersion).toBe("v99.0");
+    } finally {
+      await cleanMeta();
+    }
+  });
+
+  it("connection-supplied meta secrets win over platform defaults", async () => {
+    await setPlatformSetting(db, adminCtx(), "meta", {
+      appSecret: "platform_secret",
+      verifyToken: "platform_verify",
+    });
+    try {
+      const conn = await createChannelConnection(db, ctx("owner"), {
+        kind: "meta_cloud",
+        name: "Meta IT explicit",
+        credentials: {
+          phoneNumberId: "pn_it2",
+          accessToken: "at_it2",
+          appSecret: "conn_secret",
+          verifyToken: "conn_verify",
+        },
+      });
+      const credentials = decryptJson<Record<string, string>>(conn.credentialsEncrypted);
+      expect(credentials.appSecret).toBe("conn_secret");
+      expect(credentials.verifyToken).toBe("conn_verify");
+    } finally {
+      await cleanMeta();
+    }
+  });
+
+  it("rejects meta connection when secrets are missing from input and platform", async () => {
+    await cleanMeta();
+    await expect(
+      createChannelConnection(db, ctx("owner"), {
+        kind: "meta_cloud",
+        name: "Meta IT no secrets",
+        credentials: { phoneNumberId: "pn_it3", accessToken: "at_it3" },
+      }),
+    ).rejects.toThrow(/META_CREDENTIALS_INCOMPLETE|incompletas/);
   });
 });
 

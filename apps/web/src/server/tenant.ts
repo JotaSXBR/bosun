@@ -1,12 +1,14 @@
 import "server-only";
 
 import type { Session } from "@crm/auth";
-import { getAuth } from "@crm/auth";
 import type { TenantContext } from "@crm/core";
 import { getMembership, listUserOrganizations } from "@crm/core/organizations";
+import { isProductConfigured } from "@crm/core/platform";
 import { getDb } from "@crm/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+
+import { getAuth } from "./auth";
 
 export async function getSession(): Promise<Session | null> {
   return getAuth().api.getSession({ headers: await headers() });
@@ -59,6 +61,12 @@ export async function requireTenantContext(): Promise<TenantContext> {
 
   const ctx = await resolveTenantContext(session, organizationId);
   if (!ctx) redirect("/onboarding");
+  // First-run gate: a platform admin without product e-mail configured is
+  // sent to the setup wizard. /app/setup uses requireSession (never this
+  // helper) so the gate can't loop.
+  if (ctx.isPlatformAdmin && !(await isProductConfigured(db, "email"))) {
+    redirect("/app/setup");
+  }
   return ctx;
 }
 

@@ -10,6 +10,7 @@ import { DomainError, NotFoundError } from "../../errors";
 import { decryptJson, encryptJson } from "../../lib/crypto";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
+import { resolveMetaConfig } from "../platform";
 import type { ChannelConnectionRow } from "./repository";
 import {
   deleteChannelConnection,
@@ -20,7 +21,7 @@ import {
   listReconcilableConnections,
   updateConnectionStatus,
 } from "./repository";
-import type { CreateChannelConnectionInput } from "./schemas";
+import type { CreateChannelConnectionInput, MetaCloudCredentialsInput } from "./schemas";
 import {
   createChannelConnectionInput,
   metaCloudCredentialsSchema,
@@ -49,7 +50,9 @@ export async function createChannelConnection(
   assertPermission(ctx, { integrations: ["manage"] });
   const parsed = createChannelConnectionInput.parse(input);
   const credentials =
-    parsed.kind === "waha" ? wahaPlatformCredentials(parsed.name) : parsed.credentials;
+    parsed.kind === "waha"
+      ? wahaPlatformCredentials(parsed.name)
+      : await metaCredentialsWithPlatformFallback(db, parsed.credentials);
   return insertChannelConnection(db, ctx.organizationId, {
     kind: parsed.kind,
     name: parsed.name,
@@ -319,6 +322,32 @@ function wahaPlatformCredentials(name: string) {
     webhookHmacKey: randomBytes(24).toString("base64url"),
     session: sessionNameFrom(name),
   };
+}
+
+/**
+ * Meta app-level secrets (appSecret/verifyToken/graphApiVersion) may be
+ * omitted per connection — platform_settings.meta fills the gaps. The merged
+ * snapshot is validated against the strict credentials schema, so a missing
+ * appSecret/verifyToken with no platform default fails here with a clear
+ * error instead of a broken connection later.
+ */
+async function metaCredentialsWithPlatformFallback(db: Database, input: MetaCloudCredentialsInput) {
+  const platform = await resolveMetaConfig(db);
+  const merged = {
+    phoneNumberId: input.phoneNumberId,
+    accessToken: input.accessToken,
+    appSecret: input.appSecret ?? platform.appSecret,
+    verifyToken: input.verifyToken ?? platform.verifyToken,
+    graphApiVersion: input.graphApiVersion ?? platform.graphApiVersion,
+  };
+  const result = metaCloudCredentialsSchema.safeParse(merged);
+  if (!result.success) {
+    throw new DomainError(
+      "META_CREDENTIALS_INCOMPLETE",
+      "Credenciais Meta incompletas — informe appSecret/verifyToken na conexão ou configure o grupo Meta nas settings da plataforma.",
+    );
+  }
+  return result.data;
 }
 
 /** URL-safe slug of the connection name + uniqueness suffix. */

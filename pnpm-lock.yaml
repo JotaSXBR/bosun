@@ -247,6 +247,9 @@ importers:
       '@crm/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@crm/email':
+        specifier: workspace:*
+        version: link:../../packages/email
       '@crm/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -581,6 +584,9 @@ importers:
       '@crm/channels':
         specifier: workspace:*
         version: link:../channels
+      '@crm/config':
+        specifier: workspace:*
+        version: link:../config
       '@crm/db':
         specifier: workspace:*
         version: link:../db
@@ -597,9 +603,6 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
     devDependencies:
-      '@crm/config':
-        specifier: workspace:*
-        version: link:../config
       '@crm/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint

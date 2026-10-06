@@ -11,6 +11,7 @@
     "./integrations": "./src/modules/integrations/index.ts",
     "./messaging": "./src/modules/messaging/index.ts",
     "./organizations": "./src/modules/organizations/index.ts",
+    "./platform": "./src/modules/platform/index.ts",
     "./teams": "./src/modules/teams/index.ts"
   },
   "scripts": {
@@ -22,6 +23,7 @@
   "dependencies": {
     "@crm/billing": "workspace:*",
     "@crm/channels": "workspace:*",
+    "@crm/config": "workspace:*",
     "@crm/db": "workspace:*",
     "@crm/observability": "workspace:*",
     "@crm/permissions": "workspace:*",

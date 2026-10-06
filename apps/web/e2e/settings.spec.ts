@@ -18,6 +18,8 @@ test("settings pages render and an owner can manage teams", async ({ page }) => 
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Configurações" })).toBeVisible();
   await expect(page.getByLabel("Janela de reabertura (horas)")).toHaveValue("48");
+  // Product settings are platform_admin-only — a plain org owner never sees them.
+  await expect(page.getByRole("heading", { name: "Plataforma" })).not.toBeVisible();
 
   await page.goto("/app/settings/teams");
   await page.getByLabel("Nome").fill("Vendas");

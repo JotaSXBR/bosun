@@ -3,12 +3,13 @@
 import type { RawWebhookRequest } from "@crm/billing";
 import { getServerEnv } from "@crm/config";
 import type { Database } from "@crm/db";
-import { createDb, schema, withServiceAccess, withTenant } from "@crm/db";
+import { createDb, schema, withPlatformScope, withServiceAccess, withTenant } from "@crm/db";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { AuthorizationError, WebhookVerificationError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
+import { setPlatformSetting } from "../platform";
 import {
   ensureBillingCustomer,
   getBillingSubscription,
@@ -25,9 +26,9 @@ const {
   users,
 } = schema;
 
-// ASAAS_* are read directly from process.env by the service (same precedent as
-// CHANNEL_CREDENTIALS_KEY in lib/crypto). ASAAS_API_KEY stays unset so
-// ensureBillingCustomer exercises the not-configured path without network.
+// ASAAS_* resolve via platform_settings → env fallback; the env var here is
+// the fallback path. ASAAS_API_KEY stays unset so ensureBillingCustomer
+// exercises the not-configured path without network.
 process.env.ASAAS_WEBHOOK_TOKEN = "it-asaas-webhook-token";
 const WEBHOOK_TOKEN = "it-asaas-webhook-token";
 
@@ -237,6 +238,40 @@ describe("handleAsaasWebhook", () => {
     await withTenant(db, orgA, async (tx) => {
       expect(await tx.select().from(billingPayments)).toHaveLength(1);
     });
+  });
+
+  it("platform_settings.billing overrides env for webhook verification", async () => {
+    const adminCtx: TenantContext = {
+      organizationId: orgA,
+      userId,
+      role: "owner",
+      isPlatformAdmin: true,
+    };
+    await setPlatformSetting(db, adminCtx, "billing", {
+      asaasApiKey: `db_key_${suffix}`,
+      asaasEnvironment: "sandbox",
+      asaasWebhookToken: `db_token_${suffix}`,
+    });
+    try {
+      // DB row wins: the env token no longer verifies.
+      await expect(
+        handleAsaasWebhook(db, asaasRequest(paymentEvent(901, 901, "PAYMENT_RECEIVED"))),
+      ).rejects.toBeInstanceOf(WebhookVerificationError);
+      // The DB token verifies and processes normally (non-payment event —
+      // doesn't disturb the billing_payments assertions below).
+      const result = await handleAsaasWebhook(
+        db,
+        asaasRequest(
+          { id: `evt_${suffix}_dbcfg`, event: "SUBSCRIPTION_DELETED" },
+          `db_token_${suffix}`,
+        ),
+      );
+      expect(result).toEqual({ ok: true, processed: true });
+    } finally {
+      await withPlatformScope(db, (tx) =>
+        tx.delete(schema.platformSettings).where(eq(schema.platformSettings.key, "billing")),
+      );
+    }
   });
 });
 

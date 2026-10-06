@@ -10,8 +10,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { crmAppRole, tenantPredicate } from "./audit";
-import { organizations } from "./auth";
+import { crmAppRole, platformPredicate, tenantPredicate } from "./audit";
+import { organizations, users } from "./auth";
 
 /**
  * Per-organization settings (1:1). `business_hours` holds the weekly windows
@@ -45,6 +45,31 @@ export const organizationSettings = pgTable(
       to: crmAppRole,
       using: tenantPredicate,
       withCheck: tenantPredicate,
+    }),
+  ],
+).enableRLS();
+
+/**
+ * Installation-level product settings (e-mail, billing, Meta, platform AI
+ * keys) — one encrypted JSON blob per `key` ("email", "billing", "meta",
+ * "ai"). Values are AES-256-GCM payloads from `encryptJson`
+ * (CHANNEL_CREDENTIALS_KEY). No organization_id: reachable only inside
+ * `withPlatformScope` transactions — tenant-scoped queries see nothing.
+ */
+export const platformSettings = pgTable(
+  "platform_settings",
+  {
+    key: text().primaryKey(),
+    valueEncrypted: text().notNull(),
+    updatedByUserId: uuid().references(() => users.id, { onDelete: "set null" }),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("platform_settings_platform_scope", {
+      for: "all",
+      to: crmAppRole,
+      using: platformPredicate,
+      withCheck: platformPredicate,
     }),
   ],
 ).enableRLS();

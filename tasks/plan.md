@@ -1,108 +1,104 @@
-# Implementation Plan — WAHA chat features (Brief 2)
+# Implementation Plan — Config de produto em DB (env→DB) + settings/wizard
 
 ## Overview
 
-Levar o inbox do Bosun ao padrão WhatsApp sobre WAHA GOWS: ticks ✓✓
-cinza/azul, reações, edição com histórico (`message_edits`), apagado híbrido
-por papel (`revoked_at` + "ver original" p/ admin/manager), presence
-typing/recording nos dois sentidos, áudio com preview, documentos, emoji e
-resposta citada. Spec/decisões: `docs/development/waha-setup.md`.
+Config de produto (e-mail, Asaas, Meta, AI keys de plataforma) migra de
+env para `platform_settings` criptografada em DB (AES-256-GCM, root key
+`CHANNEL_CREDENTIALS_KEY`), leitura **DB → env** por grupo. UI: seção
+"Plataforma" em `/app/settings` visível só a `platform_admin` + wizard
+`/app/setup` de primeira execução. Destrava sign-up/verify sem env Resend.
+Brief: `.task-brief.md`.
 
 ## Architecture Decisions
 
-- **Reações/edits/revokes persistem**: `message_reactions` (reactor_key =
-  userId | channelUserId | 'me', 1 reação por ator por msg — replace),
-  `message_edits` (histórico append-only de `previous_content`),
-  `messages.revoked_at`/`edited_at` (badge barato, sem join).
-- **Edição otimista com reconciliação**: o service aplica content+histórico
-  na hora; o webhook `message.edited` só grava histórico quando o conteúdo
-  **difere** do atual — dedup natural para o eco da nossa própria edição
-  e para replays.
-- **Presence do contato é transitória**: `presence.update` → parse →
-  `emitDomainEvent({type:"contact.presence", conversationId, presence})`
-  dentro da tx de ingest (pg_notify entrega no commit mesmo sem writes).
-  SSE já carrega o evento; cliente mostra "digitando…/gravando…" ~10s sem
-  `router.refresh`.
-- **Presence do agente**: server action `sendPresenceAction` (throttle 4s
-  no client, `paused` após ~8–10s idle). `sendSeen` dispara dentro de
-  `pickupConversation` (nunca no open — decisão fechada).
-- **Mídia outbound**: upload via action (FormData) → `tenantObjectKey` →
-  RustFS → `getSignedUrl(get)` → WAHA baixa a URL assinada. Voice usa
-  `/api/sendVoice` (PTT), docs/imagem/vídeo `sendFile`/`sendImage`/`sendVideo`;
-  distinção via `mediaKind` + flag `voiceNote`.
-- **Mídia inbound**: `content.source.url` aponta pro host interno do WAHA —
-  browser não alcança → rota autenticada `GET /api/media/[messageId]` faz
-  proxy via `provider.fetchMedia(url)` (X-Api-Key) e streama os bytes.
-- **reply_to**: `OutboundMessage.replyToId?` → adapter inclui `reply_to`
-  no body; inbound guarda `quotedId` no content jsonb (quote bubble).
+- **Tabela `platform_settings`**: `(key text PK, value_encrypted text,
+updated_by uuid→users, updated_at)` — uma row por grupo
+  (`email`,`billing`,`meta`,`ai`), `encryptJson` no valor inteiro.
+  RLS com predicado `app.platform_scope = 'on'` — nem tenant nem service
+  tokens leem sem `withPlatformScope` (decisão "só se RLS" do usuário
+  aplicada por extensão: nada fora do guard).
+- **Resolver em `@crm/core/platform`**: `resolveProductSettings(db)`
+  retorna `{ email, billing, meta, ai }` no mesmo shape do `ServerEnv`
+  (consumers trocam `env.email` → `settings.email` sem mudar factory).
+  DB vence env por campo/grupo; `isProductConfigured(group)` reusa os
+  predicados do `isConfigured` sobre o merge.
+- **Sem cache v1**: leituras são low-volume (envio de e-mail, webhook,
+  página) — query direta evita staleness e invalidação. Reavaliar se
+  aparecer hot path.
+- **E-mail lazy**: composição do auth move de `@crm/auth.getAuth` para
+  `apps/web/src/server/auth.ts` — `sendEmail` resolve o provider a cada
+  envio (`createEmailProvider({email: resolved, nodeEnv})`), então trocar
+  config não exige restart. `@crm/auth` mantém `createAuth` puro;
+  `getAuth` legado fica p/ seed/tests.
+- **Meta = defaults**: merge no `createChannelConnection` (connection
+  vence; campos ausentes caem no platform meta) — snapshot igual ao WAHA.
+  `appSecret`/`verifyToken` passam a optional na conexão, validados
+  **pós-merge** (phoneNumberId+accessToken continuam obrigatórios).
+- **Wizard**: gate em `requireTenantContext` → `platform_admin &&
+!isProductConfigured("email")` → `redirect("/app/setup")`. `/app/setup`
+  usa `requireSession` + check de role próprio (sem loop). Members nunca
+  veem. Env-only também conta como configurado (fallback env legítimo).
+- **Secrets write-only**: UI exibe placeholder `••• configurado`; campo
+  vazio no submit = preserva valor guardado (merge em field-level no
+  service). GET nunca retorna secret descriptografado ao cliente.
 
 ## Task List
 
-### Fase A — Adapter + Schema
+### Fase 1 — DB + core module
 
-- [ ] **T1** channels: parse dos 4 eventos (`message.reaction`/`edited`/
-      `revoked`/`presence.update`) → novos `ChannelEvent`; métodos
-      `sendSeen`, `sendPresence`, `subscribePresence`, `sendReaction`,
-      `editMessage`, `deleteMessage`, `fetchMedia`; `replyToId` no
-      OutboundMessage + `reply_to`; `sendVoice` quando `voiceNote`;
-      fake provider + unit tests.
-- [ ] **T2** db: migration — `messages.revoked_at`, `messages.edited_at`,
-      `message_edits`, `message_reactions` (org_id + pgPolicy + RLS +
-      grant + checklists); repository helpers: `updateMessageContent` +
-      `insertMessageEdit`, `upsertReaction`/`deleteReaction`,
-      `markMessageRevoked`, `listReactionsForMessages`, `countEditsForMessages`.
+- [ ] **T1** db: `platform_settings` schema + migration (`pgPolicy`
+      platform-scope, `.enableRLS()`, grant crm_app via custom migration
+      no padrão 0002) + int test provando tenant-scope não lê.
+- [ ] **T2** core: `modules/platform/{index,service,repository,schemas}`
+      — zod por grupo, `getPlatformSetting`/`setPlatformSetting`
+      (gate `ctx.isPlatformAdmin`, merge field-level, audit log),
+      `resolveProductSettings`, `isProductConfigured`. Int tests: CRUD,
+      merge DB→env, secret-merge, gate não-admin.
 
-### Checkpoint A
+### Checkpoint 1
 
-- [ ] typecheck+lint verdes; unit channels; `db:migrate` limpo; int de
-      isolamento RLS das 2 tabelas novas.
+- [ ] `pnpm typecheck` + `lint` + int `platform` verdes; `db:migrate` limpo.
 
-### Fase B — Core ingest + service
+### Fase 2 — Consumers
 
-- [ ] **T3** messaging/service ingest: `message.reaction` (resolve msg por
-      externalId → upsert/delete reaction + `message.updated` event),
-      `message.edited` (update content + histórico quando difere),
-      `message.revoked` (`revoked_at`), `presence.update` (resolve ticket
-      ativo por externalId → `contact.presence` notify-only). Int tests.
-- [ ] **T4** messaging outbound: `sendChannelMessage` (texto+mídia via URL
-      assinada; reply_to), `reactToMessage`, `editMessage` (janela 15min),
-      `deleteMessage`, `sendPresence`, e `sendSeen` dentro de
-      `pickupConversation` (pós-tx, falha não derruba o pickup). Int tests.
+- [ ] **T3** e-mail: `apps/web/src/server/auth.ts` (composição nova;
+      call sites `api/auth/[...all]`, `tenant.ts`, `organization.ts`),
+      sendEmail lazy via `resolveEmailConfig`. Sign-up funciona com
+      Resend só-em-DB. `@crm/email` inalterado se assinatura bastar.
+- [ ] **T4** billing: `resolveBillingConfig` no lugar de
+      `process.env.ASAAS_*` (service + webhook route). Int test com
+      config em DB.
+- [ ] **T5** meta: `metaCloudCredentialsSchema` campos optional +
+      merge platform-defaults em `createChannelConnection`; rejeita se
+      pós-merge faltar phoneNumberId/accessToken. Int test.
 
-### Checkpoint B
+### Checkpoint 2
 
-- [ ] unit+int verdes; webhook end-to-end stub cobre reaction/edit/revoke.
+- [ ] Typecheck/lint verdes; int billing+integrations; sign-up e2e smoke
+      com e-mail em DB.
 
-### Fase C — Web
+### Fase 3 — UI
 
-- [ ] **T5** actions + rotas: `sendVoiceMessage`/`sendDocumentMessage`
-      (FormData→storage→send), `reactToMessage`, `editMessage`,
-      `deleteMessage`, `sendPresence`, `subscribePresence` (on open),
-      `GET /api/media/[messageId]` proxy autenticado.
-- [ ] **T6** UI mensagens: ticks (✓/✓✓ cinza→azul), chips de reação +
-      picker, badge "editada" + popover de histórico, placeholder apagado
-      (+ "ver original" admin/manager), `PresenceIndicator` (SSE filtrado,
-      sem refresh), quote bubble + "responder", media bubbles (audio
-      player/image/doc link via proxy).
-- [ ] **T7** composer: grid de emoji, anexo doc, `MediaRecorder` com
-      preview (ouvir/regravar/descartar)→send voice, wiring de presence
-      typing/paused/recording.
+- [ ] **T6** settings: seção Plataforma em `/app/settings` (4 cards de
+      grupo, write-only secrets, save via server action). Visível só
+      `isPlatformAdmin`. E2e spec: hidden para member.
+- [ ] **T7** wizard `/app/setup`: form do grupo e-mail + gate no
+      `requireTenantContext`. E2e smoke.
 
-### Fase D — Docs + gate
+### Checkpoint 3 (final)
 
-- [ ] **T8** `waha-setup.md` implementado, `TODO.md` → concluído,
-      `jobs-pg-boss.md` se mexer em fila; gate final completo + int tests.
+- [ ] Gate completo verde + int tests novos + `TODO.md` → Concluído +
+      `.env.example` anotando grupos migráveis.
 
 ## Risks and Mitigations
 
-| Risk                                                                                               | Impact | Mitigation                                                                                                                         |
-| -------------------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Shapes reais de `message.edited`/`message.reaction`/`presence.update` no GOWS divergem do esperado | Med    | zod looseObject + safeParse → evento desconhecido cai em `[]` sem 500; validar com payload real no staging quando Resend destravar |
-| `sendSeen`/presence falham mas pickup/send ok                                                      | Baixa  | provider call fora da tx, try/catch log-only                                                                                       |
-| Media inbound expira (WAHA 180s/7d)                                                                | Med    | proxy busca sob demanda; documentar que blob fora do TTL retorna 404 no player                                                     |
-| Dois EventSource por página (InboxLive + PresenceIndicator)                                        | Baixa  | PresenceIndicator pode consumir o mesmo stream; se duplicar, LISTEN extra é barato — revisitar só se doer                          |
+| Risk                                   | Impact | Mitigation                                                            |
+| -------------------------------------- | ------ | --------------------------------------------------------------------- |
+| `getAuth` singleton com resolver velho | Médio  | Resolver por envio (nunca captura provider)                           |
+| RLS platform-scope errado vaza secrets | Alto   | Int test tenant-scope não lê + grant explícito                        |
+| Merge meta quebra conexões existentes  | Médio  | Só fill de campos ausentes; snapshot preserva o que já está salvo     |
+| Wizard loop (setup chama o gate)       | Baixo  | `/app/setup` usa `requireSession` próprio, não `requireTenantContext` |
 
 ## Open Questions
 
-- `presence.subscribe`: assinar chat quando a página da conversa abre
-  (ação on-mount) — se WAHA cobrar por subscribe, revisitar.
+- nenhuma — decisões fechadas no brief.
