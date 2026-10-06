@@ -37,7 +37,8 @@ beforeAll(async () => {
     await db.execute(sql`select 1`);
   } catch (error) {
     throw new Error(
-      `Integration tests require a migrated database. Run \`pnpm infra:up && pnpm db:migrate\` first.\nCause: ${(error as Error).message}`,
+      "Integration tests require a migrated database. Run `pnpm infra:up && pnpm db:migrate` first.",
+      { cause: error },
     );
   }
 

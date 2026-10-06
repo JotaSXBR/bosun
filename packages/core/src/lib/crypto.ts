@@ -53,8 +53,6 @@ export function decryptJson<T>(payload: string): T {
     ]);
     return JSON.parse(plaintext.toString("utf8")) as T;
   } catch (error) {
-    throw new Error(
-      `Failed to decrypt payload — wrong key or corrupted data (${(error as Error).message})`,
-    );
+    throw new Error("Failed to decrypt payload — wrong key or corrupted data", { cause: error });
   }
 }
