@@ -14,6 +14,14 @@ updates:
     groups:
       dependencies:
         patterns: ["*"]
+    ignore:
+      # typescript-eslint requires typescript <6.1 — revisit when TS 7 lands upstream
+      - dependency-name: "typescript"
+        versions: ["7.x"]
+      # eslint-plugin-react/jsx-a11y/import peers cap at eslint ^9 (plugin crashes
+      # on the ESLint 10 rule-context API) — revisit on eslint-10-compatible releases
+      - dependency-name: "eslint"
+        versions: ["10.x"]
 
   # GitHub Actions versions.
   - package-ecosystem: "github-actions"
