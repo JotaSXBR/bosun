@@ -6,7 +6,9 @@
 #   <standalone>/apps/web/server.js      the server entrypoint
 
 FROM node:26-alpine AS build
-RUN corepack enable
+# Node ≥26 no longer bundles corepack — install it from npm so it can
+# activate the pinned pnpm from the packageManager field (see below).
+RUN npm i -g corepack && corepack enable
 WORKDIR /repo
 
 # No .git in the build context (.dockerignore) — CI=true makes lefthook's
