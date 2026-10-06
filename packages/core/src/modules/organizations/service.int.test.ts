@@ -96,6 +96,18 @@ describe("organization_settings service", () => {
     expect(reread.offHoursMessage).toBe("Voltamos {proximo_atendimento}.");
   });
 
+  it("update persists ticketReopenWindowHours and preserves it when omitted", async () => {
+    const updated = await updateOrganizationSettings(db, ctx(orgA, "admin"), {
+      ticketReopenWindowHours: 24,
+    });
+    expect(updated.ticketReopenWindowHours).toBe(24);
+
+    const untouched = await updateOrganizationSettings(db, ctx(orgA, "admin"), {
+      locale: "pt-BR",
+    });
+    expect(untouched.ticketReopenWindowHours).toBe(24);
+  });
+
   it("rejects invalid business_hours shapes", async () => {
     await expect(
       updateOrganizationSettings(db, ctx(orgA, "admin"), {

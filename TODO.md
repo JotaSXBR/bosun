@@ -29,10 +29,14 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   (notas âmbar, eventos de sistema, divisor "Ticket anterior"),
   actions bar (Assumir/Transferir/Resolver/Aguardando/Reabrir) +
   composer Responder/Nota interna; viewer read-only; nomes via joins
-  (`reads.ts`, `listOrgMembers`). Falta slice 4: UI de teams/settings +
-  **expor `ticketReopenWindowHours` em `updateOrgSettingsInput`/
-  `upsertSettings`** — hoje a janela só muda via SQL. Ver
-  `docs/product/domain-model.md` + `rules.md`.
+  (`reads.ts`, `listOrgMembers`). **Slice 4 entregue**: `/app/settings` —
+  formulário da org com `ticketReopenWindowHours` (1–168h; exposto em
+  `updateOrgSettingsInput`/`upsertSettings`) + `offHoursMessage`/timezone/
+  locale, edição só owner/admin — + `/app/settings/teams` (CRUD de equipes
+  - membros via `listOrgMembers`, `TEAM_NAME_TAKEN`; `teams:manage`).
+    Pendentes do item: auto-reply fora de horário 1×/dia e `closed`
+    materializado (camada de jobs). Ver `docs/product/domain-model.md` +
+    `rules.md`.
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.
 - **P1 — Site chat**: provider `site_chat` + widget embarcável + endpoint
@@ -56,6 +60,13 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 - **P3 — LGPD endpoints**: exportar/excluir dados do contato, retenção.
 
 ## Implementação futura (prioridade)
+
+- **P2 — `reopenTicket` nunca casa o catch de unique violation**:
+  `actions.ts` testa `pgError.code === "23505"` no erro direto, mas o
+  drizzle entrega `DrizzleQueryError` com o pg error em `cause` — o guard
+  de `ACTIVE_TICKET_EXISTS` (race com inbound) não dispara e o erro cru
+  chega à action. Extrair o helper `isTeamNameConflict` (teams/service.ts)
+  ou equivalente que verifica `err.code` **e** `err.cause.code`.
 
 - **P2 — Rate limit em Redis** quando houver >1 instância do web. Benefício:
   limites corretos multi-instância. Custo: baixo.

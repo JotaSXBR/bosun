@@ -22,5 +22,7 @@ export const updateOrgSettingsInput = z.object({
   offHoursMessage: z.string().trim().max(500).nullish(),
   timezone: z.string().trim().min(1).max(64).optional(),
   locale: z.string().trim().min(2).max(16).optional(),
+  // Hours a resolved ticket stays reopenable (product rules: 1h–7d).
+  ticketReopenWindowHours: z.number().int().min(1).max(168).optional(),
 });
 export type UpdateOrgSettingsInput = z.input<typeof updateOrgSettingsInput>;

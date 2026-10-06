@@ -28,6 +28,9 @@ export default async function AppPage() {
           <Link href="/app/integrations" className="text-muted-foreground text-sm underline">
             Integrações
           </Link>
+          <Link href="/app/settings" className="text-muted-foreground text-sm underline">
+            Configurações
+          </Link>
           <SignOutButton />
         </div>
       </div>
