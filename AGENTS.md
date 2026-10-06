@@ -7,7 +7,7 @@ Guidance for AI agents and contributors working on this repo.
 **Bosun** — multi-tenant customer operations platform (SaaS CRM). A
 **modular monolith**: one Next.js app + Trigger.dev background jobs +
 shared `@crm/*` packages. pnpm/Turborepo monorepo.
-Private repo: `github.com/JotaSXBR/bosun`.
+Repo: `github.com/JotaSXBR/bosun` (public, Apache-2.0).
 
 ## Working agreement
 
@@ -189,6 +189,7 @@ relevant integration tests for anything touching DB/providers.
   operations, if the MCP call fails on the first attempt, fall back to the
   `gh` CLI.
 - **Coolify**: only via the `coolify` MCP tools — never raw REST/curl to
-  `panel.fluxie.com.br`. The MCP is read + deploy + start/stop/restart; for
+  the panel (real host in `docs/development/deployment.local.md`). The MCP
+  is read + deploy + start/stop/restart; for
   config writes it doesn't expose (envs, fqdn, healthcheck), escalate to the
   user instead of bypassing.

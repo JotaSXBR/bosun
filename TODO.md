@@ -116,7 +116,8 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   docker-image (domínio, health `/api/health`, envs). `migrate.mjs`
   provisiona a role `crm_app` sozinho. GHCR auth via `docker login` no
   Terminal do host (one-time). **Staging live**:
-  `https://bosun-staging.fluxie.com.br/api/health` →
+  `https://bosun-staging.example.com/api/health` (real URL in
+  `docs/development/deployment.local.md`) →
   `{"status":"ok","db":"ok"}` + cert Let's Encrypt real. Root causes do
   ciclo de rollbacks: env vars duplicadas (removidas nos 2 apps) +
   `CHANNEL_CREDENTIALS_KEY` fora do formato hex64 (corrigida) +

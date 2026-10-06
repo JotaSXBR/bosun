@@ -37,3 +37,6 @@ research/vibe-coding-toolkit/
 
 # Session secrets staging file (never commit)
 .coolify-secrets.tmp
+
+# Local-only copies of internal endpoints/topology (public repo hygiene)
+*.local.md

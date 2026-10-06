@@ -4,14 +4,18 @@ Server-side setup for the pipeline in `docs/development/cicd.md`. Staging
 and production run on the same VPS (4 CPU / 10 GB RAM / 100 GB disk) — the
 machine only pulls images; all building happens in GitHub Actions.
 
-Coolify host: `https://panel.fluxie.com.br` (v4.3.23), single server
-`localhost` (`zto0f9qx9d6opovqflr26doe`), Traefik proxy, Let's Encrypt.
+Coolify host: `https://coolify.example.com` (v4.3.23), single server
+`localhost` (uuid in `deployment.local.md`), Traefik proxy, Let's Encrypt.
 
 Day-to-day operations go through the **Coolify MCP server**
-(`https://panel.fluxie.com.br/mcp`, streamable HTTP, bearer token — see
+(`https://coolify.example.com/mcp`, streamable HTTP, bearer token — see
 `.devin/mcp_config.json`; the token lives in gitignored
 `.devin/mcp_config.local.json` / `COOLIFY_API_TOKEN`). Provisioning used the
 REST API (`/api/v1`) — both are documented below.
+
+> Real hostnames, domains and resource UUIDs live in the gitignored
+> `docs/development/deployment.local.md` — this repo is public, keep them
+> out of committed files.
 
 ## Topologia provisionada (recursos nativos)
 
@@ -21,14 +25,14 @@ compose service):
 
 |                 | Bosun Staging                    | Bosun Production              |
 | --------------- | -------------------------------- | ----------------------------- |
-| Project uuid    | `uhzldqwk1lm8hcba5cf5i5jt`       | `mv3wx7apoqknqzh2ofxmopko`    |
-| App uuid        | `7ucigdua3sehorx48uzp1n8s`       | `zayevyus07vncxnl8hebcqur`    |
+| Project uuid    | `<local>`                        | `<local>`                     |
+| App uuid        | `<local>`                        | `<local>`                     |
 | Image           | `ghcr.io/jotasxbr/bosun:staging` | `ghcr.io/jotasxbr/bosun:prod` |
-| Domain          | `bosun-staging.fluxie.com.br`    | `bosun.fluxie.com.br`         |
-| Postgres uuid   | `qt9tftpk1udowzrd1lcd6hwi`       | `ohpx6ijwqc9lsypzksgy5fsq`    |
-| Redis uuid      | `j3xzmbrz9hjlun3aq3xx6z9x`       | `x5ei3m5cqbbdpqqu5gb3kggc`    |
-| RustFS app uuid | `6ys66aabetrnugqh39xppaka`       | `k2rkhxnht7ikm8opltcv5qk0`    |
-| WAHA app uuid   | `24maeacc6kwkl7gkxe0box4c`       | `dfvibxdrdvwpwbkibqmr1voc`    |
+| Domain          | `bosun-staging.example.com`      | `bosun.example.com`           |
+| Postgres uuid   | `<local>`                        | `<local>`                     |
+| Redis uuid      | `<local>`                        | `<local>`                     |
+| RustFS app uuid | `<local>`                        | `<local>`                     |
+| WAHA app uuid   | `<local>`                        | `<local>`                     |
 
 | Recurso  | Tipo Coolify        | Imagem                                | Notas                                                            |
 | -------- | ------------------- | ------------------------------------- | ---------------------------------------------------------------- |
