@@ -47,7 +47,9 @@ surface and pins the scanner version by tag.
 
 Dependency hygiene is proactive via **Dependabot** (`.github/dependabot.yml`):
 **monthly** PRs for npm (pnpm workspace), github-actions and docker base-image
-updates — one grouped PR per ecosystem.
+updates — one grouped PR per ecosystem. Two majors are on `ignore` until the
+plugin ecosystem catches up: `typescript` 7.x (typescript-eslint needs <6.1)
+and `eslint` 10.x (eslint-plugin-react crashes on its rule-context API).
 
 ### Actions minutes budget (Free tier)
 
