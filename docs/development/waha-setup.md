@@ -212,7 +212,11 @@ para `connecting`; maioria nunca atinge). Em `FAILED`: `restart`, senão
    criptografada). A action já dispara `connect()` na mesma chamada e o
    painel de pareamento abre com o QR — sem clique extra.
 2. **Botão "Conectar"** → `refreshConnectionStatus` (re)cria/religa a
-   sessão **com `config.webhooks`** e retorna também `qrCode`.
+   sessão **com `config.webhooks`** e retorna também `qrCode`. O PUT de
+   config **reinicia a sessão** no WAHA — por isso o connect só o faz ao
+   criar ou quando nosso webhook não está registrado; numa sessão já em
+   `SCAN_QR_CODE`/`WORKING` reescrever config a cada poll mantinha a
+   sessão quicando e o QR nunca era buscado.
 3. **Modal de pareamento**: aba "QR code" (auto-refresh: server action que
    re-busca o QR a cada ~15s ou a cada `session.status` via SSE) + aba
    "Código de pareamento" (input de telefone → `request-code` → mostra
