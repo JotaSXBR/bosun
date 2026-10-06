@@ -187,9 +187,7 @@ relevant integration tests for anything touching DB/providers.
 
 ## Tooling (integrations)
 
-- **GitHub**: prefer the `github-mcp-server` MCP tools. For pull-request
-  operations, if the MCP call fails on the first attempt, fall back to the
-  `gh` CLI.
+- **GitHub**: use the `gh` CLI for all operations (PRs, checks, releases).
 - **Coolify**: only via the `coolify` MCP tools — never raw REST/curl to
   the panel (real host in `docs/development/deployment.local.md`). The MCP
   is read + deploy + start/stop/restart; for
