@@ -1,101 +1,122 @@
-# TODO — Multi-atendimento slice 3 (inbox operável)
+# TODO — Multi-atendimento slice 4 (settings + teams UI)
 
 Plano: `tasks/plan.md` · Brief: `.task-brief.md`
 
-## Task 1: Nomes + org members nas queries de domínio
+## Task 1: `ticketReopenWindowHours` em `@crm/core/organizations`
 
-**Description:** `listOrgMembers` em organizations
-(`organization_members ⋈ users` → `{userId, name, email, role}`, permissão
-`messaging:read`); `listConversations` + leftJoin `users`→`assigneeName` +
-leftJoin `teams`→`sectorName`; `listMessages` + leftJoin
-`users`→`authorName`; `getConversation` + contact join +
-`precededTicket` (nº do ticket anterior).
+**Description:** `updateOrgSettingsInput` (schemas.ts) ganha
+`ticketReopenWindowHours: z.number().int().min(1).max(168).optional()`;
+`upsertSettings` (repository.ts) aceita `ticketReopenWindowHours?: number`
+— `undefined` preserva o valor (drizzle ignora undefined em values/set).
 
 **Acceptance criteria:**
 
-- [x] `ConversationListRow`/`MessageRow` ganham campos de nome (aditivos)
-- [x] `listOrgMembers` exportada via `@crm/core/organizations`
-- [x] Int tests ajustados + 1 assert novo (member list / names)
+- [x] Schema rejeita 0, 169, 1.5 e aceita 1/48/168 (unit test novo)
+- [x] Int test: `updateOrganizationSettings` persiste a janela e
+      `getOrganizationSettings` relê; update sem o campo preserva o anterior
 
-**Verification:** `pnpm --filter @crm/core test:integration` +
-`typecheck`/`lint`. **Files:** `packages/core/src/modules/messaging/repository.ts`,
-`packages/core/src/modules/organizations/{service,repository,index}.ts` + int
-tests. **Scope:** M · **Deps:** none
+**Verification:** `pnpm --filter @crm/core test` + `test:integration`
+(infra up) + typecheck. **Files:**
+`packages/core/src/modules/organizations/{schemas,repository}.ts`,
+`service.int.test.ts`, `schemas.test.ts` (novo). **Scope:** S · **Deps:**
+none
 
-## Task 2: Wrappers em `apps/web/src/server/services.ts`
+## Task 2: `TEAM_NAME_TAKEN` no service de teams
 
-**Description:** `listConversations(ctx, view)`, `getConversationDetail`,
-`listConversationMessages`, `listOrgMembers`, `listTeams` — binding `getDb()`.
-
-**Acceptance criteria:**
-
-- [x] Páginas nunca importam `@crm/core`/db direto (regra eslint mantida)
-
-**Verification:** typecheck. **Scope:** S · **Deps:** T1
-
-## Task 3: `/app/inbox` — views + lista
-
-**Description:** 4 abas como links `?view=queue|mine|inbox|resolved`
-(server-filtered); itens com `#ticketNumber`, contato, status PT-BR,
-assignee, setor, preview + `lastMessageAt`; `archived` sai do label map.
+**Description:** `createTeam`/`updateTeam` capturam unique violation
+(pg `23505`, `constraint_name === "teams_org_name_idx"` — verificar
+`err.code` e `err.cause?.code`, drizzle embrulha) e relançam
+`DomainError("TEAM_NAME_TAKEN", "Já existe uma equipe com esse nome.")`.
 
 **Acceptance criteria:**
 
-- [x] Cada aba chama `listConversations` com o view correto
-- [x] Item linka pra `/app/inbox/[id]`
+- [x] Duplicado vira DomainError (não erro cru de pg)
+- [x] Int test: criar/update com nome existente → `TEAM_NAME_TAKEN`
 
-**Verification:** `next build` + lint. **Files:** `app/app/inbox/page.tsx`,
-componentes ui (badge). **Scope:** M · **Deps:** T2
+**Verification:** `pnpm --filter @crm/core test:integration` + typecheck.
+**Files:** `packages/core/src/modules/teams/service.ts`,
+`service.int.test.ts`. **Scope:** S · **Deps:** none
 
-## Task 4: `/app/inbox/[id]` — header + thread + divisor
+### Checkpoint: Foundation
 
-**Description:** Header (`#ticket` + `seq` + contato + status + assignee +
-setor); thread unificada: inbound/outbound + notas (âmbar, "interna" +
-authorName) + eventos de sistema (metadata.system=transfer → linha
-discreta); divisor "Ticket anterior" linkando `precededById` quando
-existir; 404 em id inválido/cross-tenant.
+- [x] `typecheck` + `lint` verdes; testes de core passando
 
-**Acceptance criteria:**
+## Task 3: Wiring web — wrapper + Server Actions
 
-- [x] Notas e eventos visualmente distintos de mensagens
-- [x] `notFound()` em NotFoundError
-
-**Verification:** `next build` + lint. **Scope:** M · **Deps:** T2
-
-## Task 5: Actions bar + transfer picker (client)
-
-**Description:** Client component com botões por estado — Assumir (queue),
-Transferir (select de membros/setores + confirm), Resolver, Aguardando /
-Em atendimento, Reabrir (resolved) — chamando Server Actions; erros em
-toast PT-BR; viewer não recebe o island.
+**Description:** `services.ts` ganha `getOrgSettings(ctx)` →
+`getOrganizationSettings`. Novo `server/actions/settings.ts` com
+`updateOrgSettingsAction` (safeParse → `updateOrganizationSettings` →
+`revalidatePath("/app/settings")`). Novo `server/actions/teams.ts` com
+`createTeamAction`, `updateTeamAction`, `deleteTeamAction`,
+`addTeamMemberAction`, `removeTeamMemberAction` →
+`revalidatePath("/app/settings/teams")`. Ambos no padrão `messaging.ts`:
+`requireTenantContext`, `{ ok: true } | { ok: false, error }`,
+`errorMessage` PT-BR com `DomainError.message` + `captureException`.
 
 **Acceptance criteria:**
 
-- [x] Cada ação usa a action certa e mostra `error` em sonner
-- [x] Viewer: sem island; agente sem ownership vê o estado (TICKET_ASSIGNED
-      vira erro tratado)
+- [x] Actions retornam o contrato `{ ok }`; orgId vem só de
+      `requireTenantContext` (nunca do input)
+- [x] `TEAM_NAME_TAKEN` e erros zod chegam ao client em PT-BR
 
-**Verification:** build + lint + smoke. **Scope:** M · **Deps:** T4
+**Verification:** typecheck + lint. **Files:** `server/services.ts`,
+`server/actions/settings.ts`, `server/actions/teams.ts`. **Scope:** M ·
+**Deps:** T1, T2
 
-## Task 6: Composer Responder/Nota interna (client)
+## Task 4: `/app/settings` — formulário da organização
 
-**Description:** Toggle Responder/Nota → `sendOutboundMessageAction` /
-`addInternalNoteAction`; pending state; textarea; desabilitado em
-resolved com hint "Reabra o ticket"; viewer não vê.
+**Description:** `app/app/settings/page.tsx` (server): `getOrgSettings` +
+`canEdit = hasPermission(ctx.role, { organization: ["update"] })`; link
+"Gerenciar equipes" → `/app/settings/teams` + "Voltar" → `/app`.
+`settings-form.tsx` (client, receita `new-connection-form.tsx`): campos
+janela de reabertura (number 1–168, `z.coerce.number().int().min(1).max(168)`),
+`offHoursMessage` (textarea, `{proximo_atendimento}` no placeholder),
+`timezone`, `locale`; submit → `updateOrgSettingsAction` + toast PT-BR.
+`!canEdit` → campos `disabled` e sem botão salvar.
 
 **Acceptance criteria:**
 
-- [x] Resposta → outbound via provider; Nota → privada (nunca sai ao
-      cliente)
+- [x] Owner/admin salva e recarrega com valores persistidos
+- [x] manager/agent/viewer veem valores read-only
+- [x] Validação client-side rejeita janela fora de 1–168 antes do submit
 
-**Verification:** build + lint + smoke. **Scope:** M · **Deps:** T5
+**Verification:** `next build` + lint + smoke manual. **Scope:** M ·
+**Deps:** T3
 
-## Task 7: Docs + smoke
+## Task 5: `/app/settings/teams` — CRUD de equipes + membros
 
-**Description:** `TODO.md` (slice 3 entregue; slice 4 = settings/teams UI +
-campo da janela); nota UI em `domain-model.md` se convencionar algo;
-smoke manual das views/ações.
+**Description:** `app/app/settings/teams/page.tsx` (server):
+`listSectors(ctx)` + `listMembers(ctx)` +
+`canManage = hasPermission(ctx.role, { teams: ["manage"] })`.
+`teams-manager.tsx` (client island): formulário inline "Nova equipe"
+(nome + cor); por equipe — swatch de cor, nome, lista de membros com nomes,
+select de não-membros + Adicionar, remover membro (×), editar nome/cor,
+excluir com `window.confirm`. Tudo via actions da T3 + toast.
 
-**Verification:** gate completo (`format:check && typecheck && lint && test`
+**Acceptance criteria:**
 
-- int verdes). **Scope:** S · **Deps:** T6
+- [x] Criar/editar/excluir equipe reflete na lista (revalidatePath)
+- [x] Adicionar/remover membro atualiza `memberUserIds`
+- [x] agent/viewer veem equipes read-only (sem island de escrita)
+- [x] Nome duplicado → toast "Já existe uma equipe com esse nome."
+
+**Verification:** `next build` + lint + smoke manual. **Scope:** M/L ·
+**Deps:** T3
+
+## Task 6: Nav + e2e smoke + docs
+
+**Description:** Link "Configurações" no header de `/app/page.tsx`.
+`e2e/settings.spec.ts` smoke (padrão `inbox.spec.ts`): sign-up → onboarding
+→ `/app/settings` renderiza form + `/app/settings/teams` cria equipe e
+aparece na lista. `TODO.md`: slice 4 entregue → Concluído; `domain-model.md`:
+nota "UI de teams/settings entregue" se convencionar algo.
+
+**Acceptance criteria:**
+
+- [x] `/app` linka para `/app/settings`
+- [x] e2e smoke verde (ou justificativa se ambiente não permitir)
+- [x] `TODO.md` e docs atualizados
+
+**Verification:** gate completo (`format:check && typecheck && lint &&
+test` + int dos pacotes tocados + `next build`). **Scope:** S ·
+**Deps:** T4, T5

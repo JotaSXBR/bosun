@@ -18,6 +18,26 @@ import {
 import type { CreateTeamInput, TeamMemberInput, UpdateTeamInput } from "./schemas";
 import { createTeamInput, teamMemberInput, updateTeamInput } from "./schemas";
 
+/**
+ * postgres.js raises unique violations with `code`/`constraint_name` —
+ * drizzle wraps the driver error on `cause`, so check both levels.
+ */
+function isTeamNameConflict(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 2 && current; depth += 1) {
+    const pgError = current as { code?: string; constraint_name?: string; cause?: unknown };
+    if (pgError.code === "23505" && pgError.constraint_name === "teams_org_name_idx") {
+      return true;
+    }
+    current = pgError.cause;
+  }
+  return false;
+}
+
+function teamNameTaken(): never {
+  throw new DomainError("TEAM_NAME_TAKEN", "A team with this name already exists");
+}
+
 /** Requires teams:read (every org member). */
 export async function listTeams(db: Database, ctx: TenantContext): Promise<TeamWithMembers[]> {
   assertPermission(ctx, { teams: ["read"] });
@@ -32,13 +52,18 @@ export async function createTeam(
 ): Promise<TeamRow> {
   assertPermission(ctx, { teams: ["manage"] });
   const parsed = createTeamInput.parse(input);
-  return withTenant(db, ctx.organizationId, (tx) =>
-    insertTeam(tx, {
-      organizationId: ctx.organizationId,
-      name: parsed.name,
-      color: parsed.color,
-    }),
-  );
+  return withTenant(db, ctx.organizationId, async (tx) => {
+    try {
+      return await insertTeam(tx, {
+        organizationId: ctx.organizationId,
+        name: parsed.name,
+        color: parsed.color,
+      });
+    } catch (error) {
+      if (isTeamNameConflict(error)) teamNameTaken();
+      throw error;
+    }
+  });
 }
 
 /** Requires teams:manage. */
@@ -52,10 +77,16 @@ export async function updateTeam(
   return withTenant(db, ctx.organizationId, async (tx) => {
     const team = await findTeamById(tx, ctx.organizationId, parsed.teamId);
     if (!team) throw new NotFoundError("Team", parsed.teamId);
-    const updated = await repoUpdateTeam(tx, team.id, {
-      name: parsed.name,
-      color: parsed.color,
-    });
+    let updated: TeamRow | undefined;
+    try {
+      updated = await repoUpdateTeam(tx, team.id, {
+        name: parsed.name,
+        color: parsed.color,
+      });
+    } catch (error) {
+      if (isTeamNameConflict(error)) teamNameTaken();
+      throw error;
+    }
     if (!updated) throw new NotFoundError("Team", parsed.teamId);
     return updated;
   });

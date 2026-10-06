@@ -20,7 +20,8 @@ questionnaire/interview, not built yet.
 A sector exists as a real entity — the AI triage routes conversations **to a
 sector**, and statuses show "time responsável". Sectors do NOT assign
 agents automatically; a human still picks conversations manually.
-Management UI is deferred to the P2 Settings item.
+Management UI lives at `/app/settings/teams`; org settings (incl.
+`ticket_reopen_window_hours`, 1–168h) at `/app/settings`.
 
 ## Messaging — implemented
 

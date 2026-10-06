@@ -125,6 +125,22 @@ describe("teams service", () => {
     expect(after.find((t) => t.id === team.id)?.memberUserIds).toHaveLength(0);
   });
 
+  it("rejects duplicate team names with TEAM_NAME_TAKEN", async () => {
+    await createTeam(db, ctx(orgA, memberA, "admin"), { name: "Duplicada" });
+    const other = await createTeam(db, ctx(orgA, memberA, "admin"), { name: "Outra" });
+
+    await expect(
+      createTeam(db, ctx(orgA, memberA, "admin"), { name: "Duplicada" }),
+    ).rejects.toMatchObject({ code: "TEAM_NAME_TAKEN" });
+    await expect(
+      updateTeam(db, ctx(orgA, memberA, "admin"), { teamId: other.id, name: "Duplicada" }),
+    ).rejects.toMatchObject({ code: "TEAM_NAME_TAKEN" });
+    // the unique index is per-org — the same name in org B is fine
+    await expect(
+      createTeam(db, ctx(orgB, memberB, "admin"), { name: "Duplicada" }),
+    ).resolves.toBeDefined();
+  });
+
   it("denies writes to roles without teams:manage", async () => {
     await expect(
       createTeam(db, ctx(orgA, memberA, "agent"), { name: "Nope" }),

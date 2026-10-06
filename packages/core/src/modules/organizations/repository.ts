@@ -97,6 +97,7 @@ export async function upsertSettings(
     offHoursMessage?: string | null;
     timezone?: string;
     locale?: string;
+    ticketReopenWindowHours?: number;
   },
 ): Promise<OrganizationSettingsRow> {
   const [row] = await executor

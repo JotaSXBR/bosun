@@ -16,8 +16,12 @@ import {
   listConversationMessages,
   listTenantConversations,
 } from "@crm/core/messaging";
-import type { OrgMember, UserOrganization } from "@crm/core/organizations";
-import { listOrgMembers, listUserOrganizations } from "@crm/core/organizations";
+import type { OrganizationSettingsRow, OrgMember, UserOrganization } from "@crm/core/organizations";
+import {
+  getOrganizationSettings,
+  listOrgMembers,
+  listUserOrganizations,
+} from "@crm/core/organizations";
 import type { TeamWithMembers } from "@crm/core/teams";
 import { listTeams } from "@crm/core/teams";
 import { getDb } from "@crm/db";
@@ -69,4 +73,8 @@ export async function listMembers(ctx: TenantContext): Promise<OrgMember[]> {
 
 export async function listSectors(ctx: TenantContext): Promise<TeamWithMembers[]> {
   return listTeams(getDb(), ctx);
+}
+
+export async function getOrgSettings(ctx: TenantContext): Promise<OrganizationSettingsRow> {
+  return getOrganizationSettings(getDb(), ctx);
 }
