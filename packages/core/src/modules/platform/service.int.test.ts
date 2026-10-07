@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { AuthorizationError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
-import { deletePlatformSettingRows } from "./repository";
+import { deletePlatformSettingRows, upsertPlatformSettingRow } from "./repository";
 import {
   isProductConfigured,
   listPlatformSettingSummaries,
@@ -159,6 +159,36 @@ describe("platform settings service", () => {
     const ai = summaries.find((s) => s.group === "ai");
     expect(ai!.secretsSet["openaiApiKey"]).toBe(true);
     expect(ai!.values["openaiApiKey"]).toBeUndefined();
+  });
+
+  it("blank non-secret fields clear the stored override back to env", async () => {
+    // Stored from the earlier test: smtp config + from = "it@crm.local".
+    await setPlatformSetting(db, platformAdmin(), "email", { from: "" });
+    const email = await resolveEmailConfig(db);
+    expect(email.from).toBe(getServerEnv().email.from);
+    expect(email.smtp.host).toBe("smtp.example"); // untouched
+    // Summary no longer lists `from` among DB-overridden fields.
+    const summary = (await listPlatformSettingSummaries(db, platformAdmin())).find(
+      (s) => s.group === "email",
+    );
+    expect(summary!.dbFields).not.toContain("from");
+    expect(summary!.dbFields).toContain("smtp.host");
+  });
+
+  it("corrupt blobs fall back to env and self-heal on the next save", async () => {
+    await withPlatformScope(db, (tx) =>
+      upsertPlatformSettingRow(tx, "ai", "not-a-valid-payload", userId),
+    );
+    const env = getServerEnv();
+    const settings = await resolveProductSettings(db);
+    expect(settings.ai.openaiApiKey).toBe(env.ai.openaiApiKey);
+    const summary = (await listPlatformSettingSummaries(db, platformAdmin())).find(
+      (s) => s.group === "ai",
+    );
+    expect(summary!.secretsSet["openaiApiKey"]).toBe(Boolean(env.ai.openaiApiKey));
+    // The corrupt row is skipped on read — a fresh save starts clean.
+    await setPlatformSetting(db, platformAdmin(), "ai", { openaiApiKey: "sk-it-healed" });
+    expect((await resolveProductSettings(db)).ai.openaiApiKey).toBe("sk-it-healed");
   });
 
   it("tenant-scoped transactions cannot see platform rows", async () => {

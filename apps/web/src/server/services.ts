@@ -86,7 +86,12 @@ export async function getPlatformSettings(ctx: TenantContext): Promise<PlatformS
   return listPlatformSettingSummaries(getDb(), ctx);
 }
 
-/** Setup-wizard gate: product group ready after DB→env resolution. */
+/**
+ * Setup-wizard gate helper: returns only a boolean ("is the group ready?"),
+ * no data — callers still do their own auth gate (the setup page requires a
+ * session + platform_admin role). Exists because app routes can't import
+ * @crm/db directly (eslint boundary) — all DB access goes through src/server.
+ */
 export async function productConfigured(group: "email" | "billing" | "meta" | "ai") {
   return isProductConfigured(getDb(), group);
 }

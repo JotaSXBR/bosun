@@ -224,24 +224,58 @@ export async function listPlatformSettingSummaries(
   return summaries;
 }
 
-/** Blank strings are treated as "keep current" — secrets are write-only. */
-function normalizeInput(input: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (value === "") continue;
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      out[key] = normalizeInput(value as Record<string, unknown>);
-    } else {
-      out[key] = value;
-    }
+function unsetPath(obj: Record<string, unknown>, path: string): void {
+  const parts = path.split(".");
+  const leaf = parts.pop()!;
+  const parent = parts.reduce<unknown>(
+    (acc, key) =>
+      acc && typeof acc === "object" ? (acc as Record<string, unknown>)[key] : undefined,
+    obj,
+  );
+  if (parent && typeof parent === "object") {
+    delete (parent as Record<string, unknown>)[leaf];
   }
-  return out;
+}
+
+/**
+ * Splits incoming values into schema-ready values + the non-secret paths the
+ * caller cleared. Blank *secrets* are skipped (write-only — preserve the
+ * stored value); blank *non-secret* fields are explicit clears — the stored
+ * override is deleted and the field falls back to env.
+ */
+function splitInput(
+  group: PlatformSettingGroup,
+  input: Record<string, unknown>,
+): { values: Record<string, unknown>; cleared: Set<string> } {
+  const secrets = new Set(platformSecretFields[group]);
+  const values: Record<string, unknown> = {};
+  const cleared = new Set<string>();
+  const walk = (obj: Record<string, unknown>, prefix: string, out: Record<string, unknown>) => {
+    for (const [key, value] of Object.entries(obj)) {
+      const path = `${prefix}${key}`;
+      if (value === "") {
+        if (!secrets.has(path)) cleared.add(path);
+        continue;
+      }
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        const nested: Record<string, unknown> = {};
+        walk(value as Record<string, unknown>, `${path}.`, nested);
+        out[key] = nested;
+      } else {
+        out[key] = value;
+      }
+    }
+  };
+  walk(input, "", values);
+  return { values, cleared };
 }
 
 /**
  * Stores one settings group (platform admins only). Field-level merge over
- * the stored row: absent keys and empty strings preserve the stored value —
- * that's how write-only secrets survive a partial update. `updatedByUserId`
+ * the stored row: absent keys preserve the stored value, blank secrets are
+ * preserved (write-only), blank non-secrets clear the override back to env.
+ * Read-modify-write is non-atomic — concurrent admin saves are
+ * last-write-wins per field (acceptable for settings). `updatedByUserId`
  * records who changed it; platform settings are deliberately outside the
  * tenant-scoped audit log.
  */
@@ -252,11 +286,11 @@ export async function setPlatformSetting(
   input: Record<string, unknown>,
 ): Promise<void> {
   if (!ctx.isPlatformAdmin) throw new AuthorizationError();
-  const parsed: Record<string, unknown> = platformSettingValueSchemas[group].parse(
-    normalizeInput(input),
-  );
+  const { values, cleared } = splitInput(group, input);
+  const parsed: Record<string, unknown> = platformSettingValueSchemas[group].parse(values);
   const { stored } = await readStoredSettings(db);
-  const existing = stored[group] ?? {};
+  const existing = structuredClone(stored[group] ?? {});
+  for (const path of cleared) unsetPath(existing, path);
   const merged: Record<string, unknown> = mergeDefined(existing, parsed);
   const existingSmtp = existing["smtp"];
   const parsedSmtp = parsed["smtp"];
