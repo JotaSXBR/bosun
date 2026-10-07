@@ -89,7 +89,6 @@ export {
   getWidgetConversation,
   getWidgetStreamTarget,
   sendWidgetMessage,
-  widgetConfigSchema,
   widgetPreFormInput,
 } from "./sitechat";
 export type { MessageContent } from "@crm/channels";

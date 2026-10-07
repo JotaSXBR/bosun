@@ -140,8 +140,21 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   por escopo do brief na época; aprovar e aplicar.
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.
-- **P1 — Site chat**: provider `site_chat` + widget embarcável + endpoint
-  público rate-limited (sessões anônimas).
+- **P1 — Site chat**: ✅ entregue — provider `site_chat` first-party
+  (adapter em `packages/channels`, `sendMessage` no-op: entrega é SSE),
+  `site_chat_sessions` (RLS, migration `0016`), `POST /api/widget/session`
+  - `message` + `GET /api/widget/messages` + `stream` (SSE público filtrado
+    por conversa, CORS, rate limit), inbound pelo mesmo `ingestChannelWebhook`
+    (sem bypass do pipeline), contato deduplicado por e-mail (retoma thread
+    entre devices), `widget.js` vanilla em `public/` (zero deps, sessão em
+    localStorage), `/widget-demo`, integrações com snippet embarcável +
+    config do widget (`metadata` jsonb: welcome/accent/position) e sem
+    controles WAHA. **Pendências**: rate limit em memória (não compartilhado
+    entre instâncias — Redis quando escalar); sem verificação de posse do
+    e-mail do visitante (padrão de widget anônimo — qualquer e-mail válido
+    retoma a thread); sem autenticação de visitante além do token; v1 texto
+    apenas (sem mídia/anexos); sem i18n do widget; SSE fan-out revisitar se
+    concorrência de visitantes ficar alta.
 - **P1 — IA observer (v1)**: `org_llm_credentials` (BYOK + prioridade/
   fallback; OpenAI/Anthropic/Gemini), `ai_usage_events`, `agents`,
   `agent_suggestions`, `knowledge_entries`, job observer no pg-boss

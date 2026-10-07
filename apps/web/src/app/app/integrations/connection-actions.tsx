@@ -68,9 +68,11 @@ export function ConnectionActions({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" disabled={pending} onClick={connect}>
-          {status === "connected" ? "Reconectar" : "Conectar"}
-        </Button>
+        {kind !== "site_chat" && (
+          <Button type="button" size="sm" disabled={pending} onClick={connect}>
+            {status === "connected" ? "Reconectar" : "Conectar"}
+          </Button>
+        )}
         {kind === "waha" && status === "connected" && (
           <>
             <Button

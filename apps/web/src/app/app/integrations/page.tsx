@@ -9,6 +9,7 @@ import { ConnectionActions } from "./connection-actions";
 import { ConnectionHealth } from "./connection-health";
 import { CopyButton } from "./copy-button";
 import { NewConnectionForm } from "./new-connection-form";
+import { WidgetPanel } from "./widget-panel";
 
 // Reads the session + database → must never be prerendered at build time.
 export const dynamic = "force-dynamic";
@@ -82,12 +83,22 @@ export default async function IntegrationsPage() {
                       )}
                     </div>
                     <ConnectionHealth id={conn.id} kind={conn.kind} />
-                    <div className="flex items-center gap-2">
-                      <code className="bg-muted flex-1 truncate rounded px-2 py-1 text-xs">
-                        {webhookUrl}
-                      </code>
-                      <CopyButton value={webhookUrl} />
-                    </div>
+                    {conn.kind === "site_chat" ? (
+                      <WidgetPanel
+                        connectionId={conn.id}
+                        webhookToken={conn.webhookToken}
+                        origin={origin}
+                        config={conn.metadata as Record<string, string>}
+                        canManage={canManage}
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <code className="bg-muted flex-1 truncate rounded px-2 py-1 text-xs">
+                          {webhookUrl}
+                        </code>
+                        <CopyButton value={webhookUrl} />
+                      </div>
+                    )}
                   </li>
                 );
               })}

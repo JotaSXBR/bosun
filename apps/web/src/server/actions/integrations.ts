@@ -10,6 +10,7 @@ import {
   refreshConnectionStatus,
   removeChannelConnection,
   requestConnectionPairingCode,
+  updateWidgetConfig,
 } from "@crm/core/integrations";
 import { getDb } from "@crm/db";
 import { captureException } from "@crm/observability";
@@ -161,5 +162,20 @@ export async function deleteChannelConnectionAction(id: string): Promise<Integra
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível excluir a conexão.") };
+  }
+}
+
+/** Save the site_chat widget config (welcome text, accent, position). */
+export async function updateWidgetConfigAction(
+  id: string,
+  config: unknown,
+): Promise<IntegrationActionResult> {
+  const ctx = await requireTenantContext();
+  try {
+    await updateWidgetConfig(getDb(), ctx, id, config);
+    revalidatePath("/app/integrations");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível salvar o widget.") };
   }
 }

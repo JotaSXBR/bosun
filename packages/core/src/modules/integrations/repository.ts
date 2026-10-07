@@ -1,6 +1,6 @@
 import type { Database, DbExecutor } from "@crm/db";
 import { schema, withTenant } from "@crm/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 const { channelConnections } = schema;
 
@@ -94,6 +94,21 @@ export async function listReconcilableConnections(
     .select()
     .from(channelConnections)
     .where(and(eq(channelConnections.kind, "waha"), eq(channelConnections.status, "connected")));
+}
+
+/** Tenant-scoped metadata merge — new keys win over stored ones. */
+export async function updateConnectionMetadata(
+  executor: DbExecutor,
+  connectionId: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  await executor
+    .update(channelConnections)
+    .set({
+      metadata: sql`${channelConnections.metadata} || ${JSON.stringify(patch)}::jsonb`,
+      updatedAt: new Date(),
+    })
+    .where(eq(channelConnections.id, connectionId));
 }
 
 /** Service-scope status update driven by provider events/refresh. */

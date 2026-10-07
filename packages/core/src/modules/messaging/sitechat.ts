@@ -7,7 +7,8 @@
 import { randomBytes } from "node:crypto";
 
 import type { RawWebhookRequest } from "@crm/channels";
-import { findConnectionByWebhookToken } from "@crm/core/integrations";
+import type { WidgetConfig } from "@crm/core/integrations";
+import { findConnectionByWebhookToken, widgetConfigSchema } from "@crm/core/integrations";
 import type { Database } from "@crm/db";
 import { withServiceAccess, withTenant } from "@crm/db";
 import { z } from "zod";
@@ -36,13 +37,7 @@ export const widgetPreFormInput = z.object({
 });
 export type WidgetPreFormInput = z.input<typeof widgetPreFormInput>;
 
-/** Widget config stored on the connection's metadata jsonb. */
-export const widgetConfigSchema = z.object({
-  welcomeText: z.string().max(200).optional(),
-  accentColor: z.string().max(32).optional(),
-  position: z.enum(["left", "right"]).optional(),
-});
-export type WidgetConfig = z.infer<typeof widgetConfigSchema>;
+export type { WidgetConfig };
 
 export type WidgetSession = {
   sessionToken: string;

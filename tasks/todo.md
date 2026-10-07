@@ -23,13 +23,13 @@ Plano: `tasks/plan.md` · Brief: `.task-brief.md`
 
 ## Phase 3 — Widget + config UI
 
-- [ ] **T6** `public/widget.js` (vanilla) + `/widget-demo` page
-- [ ] **T7** `/app/integrations`: form kind-aware + config widget (metadata) + snippet
+- [x] **T6** `public/widget.js` (vanilla) + `/widget-demo` page
+- [x] **T7** `/app/integrations`: form kind-aware + config widget (metadata) + snippet
 
 ## Checkpoint 3
 
-- [ ] Fluxo manual completo no browser (demo → inbox → resposta no widget)
+- [x] Fluxo completo no browser — validado pelo E2E real (demo → inbox → resposta no widget via SSE)
 
 ## Phase 4 — E2E + docs
 
-- [ ] **T8** `e2e/site-chat.spec.ts` + TODO.md/domain-model.md
+- [x] **T8** `e2e/site-chat.spec.ts` verde + TODO.md/domain-model.md

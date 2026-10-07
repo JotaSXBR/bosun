@@ -19,6 +19,7 @@ import {
   insertChannelConnection,
   listChannelConnections,
   listReconcilableConnections,
+  updateConnectionMetadata,
   updateConnectionStatus,
 } from "./repository";
 import type { CreateChannelConnectionInput, MetaCloudCredentialsInput } from "./schemas";
@@ -26,6 +27,7 @@ import {
   createChannelConnectionInput,
   metaCloudCredentialsSchema,
   wahaCredentialsSchema,
+  widgetConfigSchema,
 } from "./schemas";
 
 /** Requires integrations:read (every org member). */
@@ -157,6 +159,28 @@ export async function connectionLifecycle(
   const updated = await getChannelConnection(db, ctx.organizationId, conn.id);
   if (!updated) throw new NotFoundError("Channel connection", id);
   return { connection: updated, status };
+}
+
+/**
+ * Requires integrations:manage. Widget config (welcome text, accent color,
+ * position) merges into the connection metadata — site_chat only.
+ */
+export async function updateWidgetConfig(
+  db: Database,
+  ctx: TenantContext,
+  id: string,
+  config: unknown,
+): Promise<ChannelConnectionRow> {
+  assertPermission(ctx, { integrations: ["manage"] });
+  const conn = await getConnectionOrThrow(db, ctx, id);
+  if (conn.kind !== "site_chat") {
+    throw new DomainError("PROVIDER_UNSUPPORTED", "Configuração de widget só existe em site_chat.");
+  }
+  const parsed = widgetConfigSchema.parse(config);
+  await withTenant(db, ctx.organizationId, (tx) => updateConnectionMetadata(tx, conn.id, parsed));
+  const updated = await getChannelConnection(db, ctx.organizationId, conn.id);
+  if (!updated) throw new NotFoundError("Channel connection", id);
+  return updated;
 }
 
 /**

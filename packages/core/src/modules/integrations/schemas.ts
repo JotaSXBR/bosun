@@ -74,3 +74,11 @@ export const createChannelConnectionInput = z.discriminatedUnion("kind", [
 ]);
 
 export type CreateChannelConnectionInput = z.input<typeof createChannelConnectionInput>;
+
+/** Widget config stored on a site_chat connection's metadata jsonb. */
+export const widgetConfigSchema = z.object({
+  welcomeText: z.string().max(200).optional(),
+  accentColor: z.string().max(32).optional(),
+  position: z.enum(["left", "right"]).optional(),
+});
+export type WidgetConfig = z.infer<typeof widgetConfigSchema>;

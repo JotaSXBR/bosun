@@ -142,10 +142,10 @@ feeds the storage charge.
 
 ## Channels
 
-| Channel                        | Status                                                                                               |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| WhatsApp via WAHA / Meta Cloud | implemented (providers)                                                                              |
-| Site chat widget               | spec — **next channel**; embeddable widget, anonymous visitor sessions, public rate-limited endpoint |
-| Instagram / Facebook           | spec (Meta adapter reuse)                                                                            |
-| E-mail                         | spec (provider choice deferred)                                                                      |
-| Telegram                       | later                                                                                                |
+| Channel                        | Status                                                                                                    |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| WhatsApp via WAHA / Meta Cloud | implemented (providers)                                                                                   |
+| Site chat widget               | implemented — `site_chat` provider, `site_chat_sessions`, public widget API + SSE, embeddable `widget.js` |
+| Instagram / Facebook           | spec (Meta adapter reuse)                                                                                 |
+| E-mail                         | spec (provider choice deferred)                                                                           |
+| Telegram                       | later                                                                                                     |

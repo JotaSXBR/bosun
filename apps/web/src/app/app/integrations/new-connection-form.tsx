@@ -41,6 +41,10 @@ const formSchema = z.discriminatedUnion("kind", [
     verifyToken: z.string().min(1, "Obrigatório"),
     graphApiVersion: z.string().optional(),
   }),
+  z.object({
+    kind: z.literal("site_chat"),
+    name: nameField,
+  }),
 ]);
 
 type FormValues = z.input<typeof formSchema>;
@@ -64,16 +68,15 @@ export function NewConnectionForm() {
   async function onSubmit(values: FormValues) {
     const { kind, name, ...credentials } = values;
     const result = await createChannelConnectionAction(
-      kind === "waha" ? { kind, name } : { kind, name, credentials },
+      kind === "meta_cloud" ? { kind, name, credentials } : { kind, name },
     );
     if (!result.ok) {
       toast.error(result.error);
       return;
     }
     form.reset(
-      kind === "waha"
-        ? { kind, name: "" }
-        : {
+      kind === "meta_cloud"
+        ? {
             kind,
             name: "",
             phoneNumberId: "",
@@ -81,10 +84,13 @@ export function NewConnectionForm() {
             appSecret: "",
             verifyToken: "",
             graphApiVersion: "",
-          },
+          }
+        : { kind, name: "" },
     );
     if (result.warning) toast.warning(result.warning);
-    if (kind === "waha") {
+    if (kind === "site_chat") {
+      toast.success("Widget criado — configure e copie o snippet na lista.");
+    } else if (kind === "waha") {
       if (result.status === "connected") {
         toast.success("WhatsApp conectado");
       } else {
@@ -120,6 +126,7 @@ export function NewConnectionForm() {
                       >
                         <option value="waha">WAHA (WhatsApp)</option>
                         <option value="meta_cloud">Meta Cloud API</option>
+                        <option value="site_chat">Chat do site (widget)</option>
                       </select>
                     </FormControl>
                     <FormMessage />
