@@ -108,7 +108,7 @@ export async function createWidgetSession(
 
 type ResolvedWidgetSession = {
   session: { id: string };
-  contact: { channelUserId: string; displayName: string | null };
+  contact: { id: string; channelUserId: string; displayName: string | null };
   connection: ConnectionRef & { webhookToken: string; metadata: unknown };
 };
 
@@ -187,11 +187,17 @@ export async function getWidgetConversation(
   };
 }
 
-/** Session → the conversation id its SSE stream should filter on. */
+/**
+ * Session → the stream filter. `contactId` disambiguates
+ * `conversation.created` events when the visitor has no ticket yet —
+ * adopting any created conversation in the org would leak cross-visitor.
+ */
 export async function getWidgetStreamTarget(
   db: Database,
   sessionToken: string,
-): Promise<{ organizationId: string; conversationId: string | null } | undefined> {
+): Promise<
+  { organizationId: string; contactId: string; conversationId: string | null } | undefined
+> {
   const found = await resolveWidgetSession(db, sessionToken);
   if (!found) return undefined;
   const conversation = await withServiceAccess(db, (tx) =>
@@ -199,6 +205,7 @@ export async function getWidgetStreamTarget(
   );
   return {
     organizationId: found.connection.organizationId,
+    contactId: found.contact.id,
     conversationId: conversation?.id ?? null,
   };
 }

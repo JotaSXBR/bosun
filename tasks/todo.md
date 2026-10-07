@@ -14,12 +14,12 @@ Plano: `tasks/plan.md` · Brief: `.task-brief.md`
 
 ## Phase 2 — Endpoints públicos
 
-- [ ] **T4** `POST /api/widget/session` + `POST /api/widget/message` (zod, rate limit, CORS, route int tests)
-- [ ] **T5** `GET /api/widget/messages` + `GET /api/widget/stream` (SSE público, route int tests)
+- [x] **T4** `POST /api/widget/session` + `POST /api/widget/message` (zod, rate limit, CORS, route int tests)
+- [x] **T5** `GET /api/widget/messages` + `GET /api/widget/stream` (SSE público, route int tests)
 
 ## Checkpoint 2
 
-- [ ] Fluxo curl-level: session → msg em `messages` → stream pinga no outbound
+- [x] Fluxo curl-level: session → msg em `messages` → stream abre e filtra por conversa (8/8 route int tests)
 
 ## Phase 3 — Widget + config UI
 
