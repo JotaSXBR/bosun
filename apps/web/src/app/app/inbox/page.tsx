@@ -41,6 +41,9 @@ export default async function InboxPage({
     <main className="mx-auto max-w-3xl space-y-6 p-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Inbox</h1>
+        <Link href="/app/deals" className="text-muted-foreground text-sm underline">
+          Funil →
+        </Link>
       </div>
 
       <nav className="flex gap-1 border-b" aria-label="Views da inbox">

@@ -1,0 +1,181 @@
+"use client";
+
+import type { DealCardRow, StageRow } from "@crm/core/leads";
+import { Button } from "@crm/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@crm/ui/components/dropdown-menu";
+import { cn } from "@crm/ui/lib/utils";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { MoreHorizontalIcon } from "lucide-react";
+import type { CSSProperties } from "react";
+
+import { formatValueCents, paletteStyle } from "@/components/palette";
+
+function DealCardMenu({
+  deal,
+  stages,
+  canWrite,
+  canManage,
+  onEdit,
+  onLabels,
+  onDelete,
+  onMove,
+}: DealCardProps) {
+  if (!canWrite && !canManage) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="size-6 p-0 opacity-0 group-hover:opacity-100 focus:opacity-100"
+          aria-label={`Ações do deal ${deal.title}`}
+        >
+          <MoreHorizontalIcon className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {canWrite && <DropdownMenuItem onSelect={() => onEdit(deal)}>Editar</DropdownMenuItem>}
+        {canWrite && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Mover para</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {stages
+                .filter((s) => s.id !== deal.stageId)
+                .map((s) => (
+                  <DropdownMenuItem key={s.id} onSelect={() => onMove(deal, s.id)}>
+                    {s.name}
+                  </DropdownMenuItem>
+                ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
+        {canWrite && <DropdownMenuItem onSelect={() => onLabels(deal)}>Etiquetas</DropdownMenuItem>}
+        {canManage && (
+          <DropdownMenuItem variant="destructive" onSelect={() => onDelete(deal)}>
+            Excluir
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+interface DealCardProps {
+  deal: DealCardRow;
+  /** All stages of the board — powers the "Mover para" keyboard fallback. */
+  stages: StageRow[];
+  canWrite: boolean;
+  canManage: boolean;
+  onEdit: (deal: DealCardRow) => void;
+  onLabels: (deal: DealCardRow) => void;
+  onDelete: (deal: DealCardRow) => void;
+  onMove: (deal: DealCardRow, stageId: string) => void;
+}
+
+export function DealCardView({
+  deal,
+  stages,
+  canWrite,
+  canManage,
+  onEdit,
+  onLabels,
+  onDelete,
+  onMove,
+  dragHandleProps,
+  containerRef,
+  dragging,
+  style,
+}: DealCardProps & {
+  dragHandleProps?: Record<string, unknown>;
+  containerRef?: (el: HTMLElement | null) => void;
+  dragging?: boolean;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      ref={containerRef}
+      style={style}
+      data-testid={`deal-card-${deal.id}`}
+      className={cn(
+        "bg-card group rounded-md border p-3 shadow-xs",
+        dragging && "opacity-60 shadow-md",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <button
+          type="button"
+          className={cn(
+            "min-w-0 flex-1 cursor-grab text-left active:cursor-grabbing",
+            !canWrite && "cursor-default",
+          )}
+          aria-label={`Deal ${deal.title}`}
+          {...(canWrite ? dragHandleProps : {})}
+        >
+          <p className="truncate text-sm font-medium">{deal.title}</p>
+          <p className="text-muted-foreground truncate text-xs">
+            {deal.contactName ?? deal.contactRef}
+          </p>
+        </button>
+        <DealCardMenu
+          deal={deal}
+          stages={stages}
+          canWrite={canWrite}
+          canManage={canManage}
+          onEdit={onEdit}
+          onLabels={onLabels}
+          onDelete={onDelete}
+          onMove={onMove}
+        />
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        {deal.valueCents > 0 ? (
+          <span className="text-xs font-medium">{formatValueCents(deal.valueCents)}</span>
+        ) : (
+          <span />
+        )}
+      </div>
+      {deal.labels.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {deal.labels.map((label) => (
+            <span
+              key={label.id}
+              className={cn(
+                "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                paletteStyle(label.color).chip,
+              )}
+            >
+              {label.name}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Sortable wrapper used inside a kanban column. */
+export function SortableDealCard(props: DealCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.deal.id,
+    data: { type: "deal", stageId: props.deal.stageId },
+  });
+  return (
+    <DealCardView
+      {...props}
+      containerRef={setNodeRef}
+      dragging={isDragging}
+      dragHandleProps={{ ...attributes, ...listeners }}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    />
+  );
+}

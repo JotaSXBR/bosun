@@ -19,19 +19,24 @@ Plano: `tasks/plan.md` · Brief: `.task-brief.md`
 
 ## Fase 2 — Server layer
 
-- [ ] T6 `actions/leads.ts` + wrappers `services.ts`
+- [x] T6 `actions/leads.ts` + wrappers `services.ts`
 
 ## Fase 3 — UI
 
-- [ ] T7 `/app/deals` kanban (funil select, colunas, cards, dnd, dialogs)
-- [ ] T8 conversa: aside com deal vinculado / "Virar lead" + labels
-- [ ] T9 labels: chips kanban + editor na conversa
+- [x] T7 `/app/deals` kanban (funil select, colunas, cards, dnd, dialogs)
+- [x] T8 conversa: aside com deal vinculado / "Virar lead" + labels
+- [x] T9 labels: chips kanban + editor na conversa
 
 ## Checkpoint 2
 
-- [ ] format + typecheck + lint verdes; smoke manual do fluxo
+- [x] format + typecheck + lint verdes; e2e `deals.spec` passa local
 
 ## Fase 4 — E2E + docs
 
-- [ ] T10 `deals.spec.ts` e2e real local
-- [ ] T11 TODO.md → Concluído; domain-model/roadmap status
+- [x] T10 `deals.spec.ts` e2e real local (funil via template, stages, delete)
+- [x] T11 TODO.md → Concluído; domain-model/roadmap status
+
+## Notas
+
+- Fix pós-UI: subpaths `@crm/core/leads/{schemas,templates}` para client
+  components (barrel puxava postgres pro bundle do browser → build 500).

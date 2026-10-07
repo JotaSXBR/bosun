@@ -33,6 +33,7 @@ export type {
   UpdateLabelInput,
   UpdateStageInput,
 } from "./schemas";
+export type { PaletteColor } from "./schemas";
 export { COLOR_PALETTE } from "./schemas";
 export type { BoardData, BoardStage } from "./service";
 export {
@@ -42,6 +43,7 @@ export {
   deleteStage,
   getBoard,
   listFunnels,
+  listStages,
   moveStage,
   updateFunnel,
   updateStage,

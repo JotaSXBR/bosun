@@ -5,6 +5,16 @@ import type { AuditLogRow, ListAuditEventsInput } from "@crm/core/audit";
 import { listAuditEvents } from "@crm/core/audit";
 import type { ChannelConnectionRow } from "@crm/core/integrations";
 import { listChannelConnectionsForTenant } from "@crm/core/integrations";
+import type { BoardData, DealRow, FunnelRow, LabelRow, StageRow } from "@crm/core/leads";
+import {
+  getBoard,
+  getDealForConversation,
+  listConversationLabels,
+  listFunnels,
+  listLabels,
+  listStages,
+  searchContacts,
+} from "@crm/core/leads";
 import type {
   ConversationDetailRow,
   ConversationListRow,
@@ -95,3 +105,56 @@ export async function getPlatformSettings(ctx: TenantContext): Promise<PlatformS
 export async function productConfigured(group: "email" | "billing" | "meta" | "ai") {
   return isProductConfigured(getDb(), group);
 }
+
+// ---------- leads / funil ----------
+
+export async function listOrgFunnels(ctx: TenantContext): Promise<FunnelRow[]> {
+  return listFunnels(getDb(), ctx);
+}
+
+export interface FunnelWithStages {
+  funnel: FunnelRow;
+  stages: StageRow[];
+}
+
+/** Funnels + their stages — powers the "Virar lead" dialog's stage picker. */
+export async function listFunnelsWithStages(ctx: TenantContext): Promise<FunnelWithStages[]> {
+  const funnels = await listFunnels(getDb(), ctx);
+  const stages = await Promise.all(funnels.map((funnel) => listStages(getDb(), ctx, funnel.id)));
+  return funnels.map((funnel, index) => ({ funnel, stages: stages[index] ?? [] }));
+}
+
+export async function getFunnelBoard(ctx: TenantContext, funnelId: string): Promise<BoardData> {
+  return getBoard(getDb(), ctx, funnelId);
+}
+
+export async function listOrgLabels(ctx: TenantContext): Promise<LabelRow[]> {
+  return listLabels(getDb(), ctx);
+}
+
+export type ConversationDeal = Awaited<ReturnType<typeof getDealForConversation>>;
+
+export async function getConversationDeal(
+  ctx: TenantContext,
+  conversationId: string,
+): Promise<ConversationDeal> {
+  return getDealForConversation(getDb(), ctx, conversationId);
+}
+
+export async function getConversationLabels(
+  ctx: TenantContext,
+  conversationId: string,
+): Promise<LabelRow[]> {
+  return listConversationLabels(getDb(), ctx, conversationId);
+}
+
+export type ContactPickRow = Awaited<ReturnType<typeof searchContacts>>[number];
+
+export async function searchOrgContacts(
+  ctx: TenantContext,
+  query?: string,
+): Promise<ContactPickRow[]> {
+  return searchContacts(getDb(), ctx, query);
+}
+
+export type { DealRow };

@@ -92,7 +92,7 @@ unique index on `(conversation_id, metadata->>'autoReplyDay')`.
 replied/annotated) exist; `conversations.resolved_by_id` records who closed
 a ticket.
 
-## Leads / funil — spec
+## Leads / funil — implemented
 
 Contacts are NOT leads: converting a conversation into a deal is a human
 (or later AI-tool) decision — friends, family and returning customers share

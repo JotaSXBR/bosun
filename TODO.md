@@ -147,9 +147,17 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `agent_suggestions`, `knowledge_entries`, job observer no pg-boss
   (resolve-hook + botão manual), inbox de sugestões com aprovar/rejeitar +
   notificação via SSE. Ver `docs/product/ai-agents.md`.
-- **P1 — Leads/funil**: `funnels`, `funnel_stages`, `deals`, `labels`,
-  atributos customizados, link conversa↔deal (decisão humana), UI kanban,
-  templates de funil por nicho.
+- **P1 — Leads/funil**: ✅ entregue — `funnels`, `funnel_stages`, `deals`,
+  `labels` + joins em conversa/deal (RLS ×6, migration `0015`), permissão
+  `leads:read/write/manage` (viewer só lê), `@crm/core/leads`
+  (funnel/stage/deal/label + move + `createDealFromConversation` + board),
+  templates de 4 nichos + funil demo no seed, actions + `/app/deals` kanban
+  (dnd-kit + fallback por select de etapa), aside na conversa com "Virar
+  lead" + deal card + etiquetas, `custom_attributes` jsonb, link único
+  conversa→deal (unique parcial). **Pendências**: realtime do kanban
+  adiado (v1 usa `revalidatePath`); e2e de criar deal depende de criação
+  manual de contato (não existe UI — hoje contato só nasce via ingest);
+  audit só em create/delete/link (moves são high-frequency).
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
   business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB

@@ -119,6 +119,20 @@ export async function getBoard(
 
 // ---------- stages ----------
 
+/** Ordered stages of a funnel. Requires leads:read. */
+export async function listStages(
+  db: Database,
+  ctx: TenantContext,
+  funnelId: string,
+): Promise<StageRow[]> {
+  assertPermission(ctx, { leads: ["read"] });
+  return withTenant(db, ctx.organizationId, async (tx) => {
+    const funnel = await repo.findFunnelById(tx, ctx.organizationId, funnelId);
+    if (!funnel) throw new NotFoundError("Funnel", funnelId);
+    return repo.listStages(tx, ctx.organizationId, funnelId);
+  });
+}
+
 /** Requires leads:manage. Appends at the end. */
 export async function createStage(
   db: Database,
