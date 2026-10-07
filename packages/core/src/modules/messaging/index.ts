@@ -77,4 +77,19 @@ export {
   listConversationMessages,
   listTenantConversations,
 } from "./service";
+export type {
+  WidgetConfig,
+  WidgetConversation,
+  WidgetMessage,
+  WidgetPreFormInput,
+  WidgetSession,
+} from "./sitechat";
+export {
+  createWidgetSession,
+  getWidgetConversation,
+  getWidgetStreamTarget,
+  sendWidgetMessage,
+  widgetConfigSchema,
+  widgetPreFormInput,
+} from "./sitechat";
 export type { MessageContent } from "@crm/channels";

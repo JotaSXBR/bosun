@@ -66,6 +66,11 @@ export const createChannelConnectionInput = z.discriminatedUnion("kind", [
     name: connectionName,
     credentials: metaCloudCredentialsInput,
   }),
+  z.object({
+    kind: z.literal("site_chat"),
+    name: connectionName,
+    credentials: z.object({}).optional(),
+  }),
 ]);
 
 export type CreateChannelConnectionInput = z.input<typeof createChannelConnectionInput>;

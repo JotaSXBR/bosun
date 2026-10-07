@@ -1,42 +1,35 @@
-# Tasks — Leads/funil
+# Tasks — Site chat (canal widget)
 
 Plano: `tasks/plan.md` · Brief: `.task-brief.md`
 
-## Fase 1 — Domínio
+## Phase 1 — Foundation
 
-- [x] T1 schema `leads.ts` (6 tabelas + RLS + índices) → generate+migrate
-      (`0015_loving_marvel_boy`)
-- [x] T2 permissions: resource `leads` (read/write/manage) + roles + test
-- [x] T3 `@crm/core/leads`: schemas+repo+service (funnel/stage/deal/label,
-      moveDeal, createDealFromConversation, getBoard) + subpath export
-- [x] T4 FUNNEL_TEMPLATES (4 nichos) + seed funil demo + labels demo
-- [x] T5 int tests: RLS ×6, link conversa→deal (unique), move, labels,
-      templates — 15/15 em 2 arquivos
+- [x] **T1** Schema `site_chat_sessions` + kind `site_chat` (migration, RLS, grants)
+- [x] **T2** Adapter `site-chat` (kind/registry/parse/normalize + unit tests)
+- [x] **T3** Core `modules/messaging/sitechat.ts` (createWidgetSession, resolveWidgetSession, listWidgetMessages + int tests)
 
 ## Checkpoint 1
 
-- [x] typecheck + lint + test:integration verdes; migrate limpo
+- [x] `pnpm typecheck` + `pnpm lint` + int tests do módulo verdes (9/9)
 
-## Fase 2 — Server layer
+## Phase 2 — Endpoints públicos
 
-- [x] T6 `actions/leads.ts` + wrappers `services.ts`
-
-## Fase 3 — UI
-
-- [x] T7 `/app/deals` kanban (funil select, colunas, cards, dnd, dialogs)
-- [x] T8 conversa: aside com deal vinculado / "Virar lead" + labels
-- [x] T9 labels: chips kanban + editor na conversa
+- [ ] **T4** `POST /api/widget/session` + `POST /api/widget/message` (zod, rate limit, CORS, route int tests)
+- [ ] **T5** `GET /api/widget/messages` + `GET /api/widget/stream` (SSE público, route int tests)
 
 ## Checkpoint 2
 
-- [x] format + typecheck + lint verdes; e2e `deals.spec` passa local
+- [ ] Fluxo curl-level: session → msg em `messages` → stream pinga no outbound
 
-## Fase 4 — E2E + docs
+## Phase 3 — Widget + config UI
 
-- [x] T10 `deals.spec.ts` e2e real local (funil via template, stages, delete)
-- [x] T11 TODO.md → Concluído; domain-model/roadmap status
+- [ ] **T6** `public/widget.js` (vanilla) + `/widget-demo` page
+- [ ] **T7** `/app/integrations`: form kind-aware + config widget (metadata) + snippet
 
-## Notas
+## Checkpoint 3
 
-- Fix pós-UI: subpaths `@crm/core/leads/{schemas,templates}` para client
-  components (barrel puxava postgres pro bundle do browser → build 500).
+- [ ] Fluxo manual completo no browser (demo → inbox → resposta no widget)
+
+## Phase 4 — E2E + docs
+
+- [ ] **T8** `e2e/site-chat.spec.ts` + TODO.md/domain-model.md

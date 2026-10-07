@@ -1,11 +1,14 @@
 import type { MetaCloudConfig } from "./adapters/meta-cloud";
 import { MetaCloudChannelProvider } from "./adapters/meta-cloud";
+import { SiteChatChannelProvider } from "./adapters/site-chat";
 import type { FetchLike, WahaConfig } from "./adapters/waha";
 import { WahaChannelProvider } from "./adapters/waha";
 import type { ChannelProvider } from "./provider";
 
 export type ChannelProviderConfig =
-  ({ kind: "waha" } & WahaConfig) | ({ kind: "meta_cloud" } & MetaCloudConfig);
+  | ({ kind: "waha" } & WahaConfig)
+  | ({ kind: "meta_cloud" } & MetaCloudConfig)
+  | { kind: "site_chat" };
 
 /**
  * The ONLY switch on provider kind in the codebase — everything else works
@@ -20,5 +23,7 @@ export function createChannelProvider(
       return new WahaChannelProvider(config, deps);
     case "meta_cloud":
       return new MetaCloudChannelProvider(config, deps);
+    case "site_chat":
+      return new SiteChatChannelProvider();
   }
 }

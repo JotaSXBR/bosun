@@ -52,7 +52,9 @@ export async function createChannelConnection(
   const credentials =
     parsed.kind === "waha"
       ? wahaPlatformCredentials(parsed.name)
-      : await metaCredentialsWithPlatformFallback(db, parsed.credentials);
+      : parsed.kind === "site_chat"
+        ? {}
+        : await metaCredentialsWithPlatformFallback(db, parsed.credentials);
   return insertChannelConnection(db, ctx.organizationId, {
     kind: parsed.kind,
     name: parsed.name,
@@ -377,6 +379,9 @@ function providerFromCredentials(kind: string, raw: unknown, webhookUrl?: string
   if (kind === "waha") {
     const credentials = wahaCredentialsSchema.parse(raw);
     return createChannelProvider({ kind: "waha", ...credentials, webhookUrl });
+  }
+  if (kind === "site_chat") {
+    return createChannelProvider({ kind: "site_chat" });
   }
   const credentials = metaCloudCredentialsSchema.parse(raw);
   return createChannelProvider({ kind: "meta_cloud", ...credentials });

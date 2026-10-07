@@ -3,7 +3,7 @@
 // so each file stays small.
 import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 
 const { messageEdits, messageReactions, messages } = schema;
 
@@ -211,4 +211,29 @@ export async function listMessageEdits(
     .from(messageEdits)
     .where(eq(messageEdits.messageId, messageId))
     .orderBy(desc(messageEdits.createdAt));
+}
+
+/**
+ * Visitor-visible widget messages: internal notes and revoked rows never
+ * leave the app. Cursor is the uuidv7 message id (time-ordered) — `after`
+ * returns strictly newer rows.
+ */
+export async function listWidgetMessages(
+  executor: DbExecutor,
+  conversationId: string,
+  opts?: { after?: string; limit?: number },
+): Promise<MessageRow[]> {
+  return executor
+    .select()
+    .from(messages)
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        eq(messages.private, false),
+        isNull(messages.revokedAt),
+        opts?.after ? gt(messages.id, opts.after) : undefined,
+      ),
+    )
+    .orderBy(messages.id)
+    .limit(opts?.limit ?? 50);
 }

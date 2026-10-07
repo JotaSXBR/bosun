@@ -1,4 +1,5 @@
 export type { ChannelConnectionRow } from "./repository";
+export { findConnectionByWebhookToken } from "./repository";
 export type { ChannelCredentials, CreateChannelConnectionInput } from "./schemas";
 export {
   channelCredentialsSchema,

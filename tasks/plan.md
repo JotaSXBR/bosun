@@ -1,118 +1,131 @@
-# Implementation Plan — Leads/funil (funnels, stages, deals, labels, kanban)
+# Implementation Plan: Site chat (canal widget)
 
 ## Overview
 
-Slice "uma conversa pode virar lead": funis multi-etapa por org com
-templates de nicho, deals kanban pertencentes ao contato (+conversa
-opcional), labels aplicáveis a deals e conversas, atributos customizados
-jsonb. UI funcional em shadcn stock: `/app/deals` (kanban) + painel de
-deal/labels na página da conversa (layout Synthor). Spec:
-`docs/product/domain-model.md` § Leads/funil. Brief: `.task-brief.md`.
+Canal `site_chat` first-party: visitante abre o widget embarcável →
+pré-form (nome + telefone + email válidos) → mensagens entram na inbox
+como conversa normal → agente responde → resposta chega ao widget via SSE
+público → mesmo token de sessão retoma a conversa ativa. Valida a
+abstração `ChannelProvider` sem API de terceiros.
 
 ## Architecture Decisions
 
-- **Schema** `packages/db/src/schema/leads.ts` — 6 tabelas tenant-owned
-  (padrão `conversations`: `organization_id` + `tenantPredicate` +
-  `.enableRLS()` + grant via default privileges):
-  - `funnels(id, organization_id, name, template_ref?, created_at)`
-  - `funnel_stages(id, organization_id, funnel_id→cascade, name,
-position int, color text, created_at)` — unique (funnel, position)
-  - `deals(id, organization_id, funnel_id, stage_id, contact_id→cascade,
-conversation_id?→set null, title, value_cents bigint default 0,
-position int, custom_attributes jsonb default {}, created_at,
-updated_at)`
-  - `labels(id, organization_id, name, color)` — unique (org, name)
-  - `deal_labels(deal_id, label_id, PK composto)` +
-    `conversation_labels(conversation_id, label_id, PK composto)` — ambos
-    com `organization_id` pra RLS uniforme
-  - Índices: deals (org,funnel,stage,position), (org,contact),
-    (org,conversation) parcial `where conversation_id is not null`
-- **Permissões**: resource `leads: ["read","write","manage"]` —
-  `write` (agent+): criar/editar/mover deal, aplicar label; `manage`
-  (manager+): funis/stages/labels CRUD e deletar deal; `read`: viewer+.
-- **Posição kanban**: `position int` por stage; mover = reatribuir
-  sequencial na coluna alvo (small-data, sem lexorank).
-- **Templates de nicho**: mapa declarativo `FUNNEL_TEMPLATES` no módulo
-  leads (imobiliária, clínica, varejo/ecommerce, serviços — ~4); stage
-  CRUD independente após aplicar. `template_ref` registra a origem.
-- **createDealFromConversation**: input `conversationId` → resolve
-  contato da conversa (service, dentro do tenant) → deal com
-  `contact_id`+`conversation_id`. Uma conversa linka no máx. 1 deal:
-  unique parcial `deals_conversation_unique` on
-  `(organization_id, conversation_id) where conversation_id is not null`.
-- **DnD**: `@dnd-kit/core`+`sortable` em `apps/web` (dep nova —
-  justificada: kanban). Otimista no client + server action `moveDeal`.
-- **Sem realtime v1**: kanban não recebe SSE (SSE atual é por conversa);
-  `revalidatePath` cobre ações próprias. Nota no TODO pra fase realtime.
-- **Audit**: `deal.created`/`deal.deleted`/`deal.linked` no audit log;
-  moves são high-frequency → fora (decisão documentada).
-- **Labels UI**: chips + editor type-to-create (cria label org na hora,
-  `manage` pra criar? — decisão: criar label exige `manage`, aplicar
-  existente exige `write`; UI esconde input de nova label pra quem não
-  pode).
+- **Inbound reutiliza `ingestChannelWebhook`**: o POST público do widget
+  é tratado como "webhook" first-party — `resolveWebhookConnection` pelo
+  token → `provider.verifyWebhook` (checks de sessão) → `parseWebhook`
+  normaliza o body em `message.received` → `ingestChannelEvent` dentro de
+  `withTenant`. Mesmo pipeline do WAHA/Meta, sem atalhos.
+- **`webhookToken` da connection = chave pública do embed** (já
+  unguessable, já indexado). Vai no snippet `data-token`.
+- **Sessão do visitante = `site_chat_sessions`** (nova tabela): token
+  unguessable → connection + contact. RLS tenant; endpoint público
+  resolve via token, não via org.
+- **Contato deduplica por email**: `channelUserId` e `externalId` da
+  conversa = email normalizado → mesmo email em outro device retoma o
+  ticket. Limitação: sem verificação de posse do email (padrão de widget
+  anônimo; identidade verificada fica pra fase autenticada — fora de
+  escopo).
+- **Outbound ao visitante**: `provider.sendMessage` é no-op success —
+  a mensagem já persiste + `emitDomainEvent` no write path. O stream SSE
+  público (`subscribeDomainEvents` filtrado por `conversationId`) emite
+  ping → widget rebusca via `GET /api/widget/messages`. Funciona
+  cross-process via pg LISTEN/NOTIFY.
+- **Config do widget** (`welcomeText`, `accentColor`, `position`) em
+  `channel_connections.metadata` — jsonb já existe, sem tabela nova.
+- **Rate limit em memória** (Map por IP p/ session-create, por token p/
+  message) — single instance conforme roadmap; Redis adiado.
+- **CORS `*`** nos endpoints `/api/widget/*` (embed em domínio arbitrário).
+- **`widget.js` vanilla** em `public/` — zero deps, embed via script tag;
+  não carrega React pro site do cliente.
+- **Sem mídia/anexos no v1** (texto; `sendFile` não generaliza ainda).
+  Typing/read receipts avaliados no build se baratos — provável adiar.
 
 ## Task List
 
-### Phase 1: Domínio (DB + core)
+### Phase 1 — Foundation (schema + adapter + core)
 
-- [ ] **T1** `schema/leads.ts`: 6 tabelas + índices + policies + export
-      no `schema/index.ts` → `pnpm db:generate` → revisar SQL →
-      `db:migrate`
-- [ ] **T2** `packages/permissions`: resource `leads` + roles (ver
-      decisão acima) + ajustar `index.test.ts` se a matrix for assertada
-- [ ] **T3** `@crm/core/leads` módulo: schemas zod + repository + service
-      (funnel/stage/deal/label CRUD, `moveDeal`, `createDealFromConversation`,
-      `applyTemplate`, queries kanban `listBoard`) + `index.ts` exports +
-      subpath `./leads` em `packages/core/package.json`
-- [ ] **T4** `FUNNEL_TEMPLATES` declarativos + seed do funil demo no
-      `packages/auth/src/seed.ts`
-- [ ] **T5** int tests `leads.int.test.ts`: RLS cross-org em todas as
-      tabelas, create-from-conversation (link + unique), move position,
-      label apply/remove, template gera stages
+- [ ] **T1 — Schema `site_chat_sessions` + kind `site_chat`**
+      Tabela (id, organizationId, channelConnectionId→fk cascade,
+      contactId→fk, token unique, createdAt, lastSeenAt) + RLS +
+      `index(token)`; migration altera check `channel_connections_kind_check`
+      p/ incluir `'site_chat'`; grants a `crm_app` via default privileges.
+      Verify: `pnpm db:generate` + `db:migrate` local; int test RLS mínimo.
+- [ ] **T2 — Adapter `site-chat`**
+      `adapters/site-chat.ts`: `kind:"site_chat"`, capabilities
+      `{qrCodeConnect:false, media:false}`, `connect()` → connected
+      imediato, `verifyWebhook` valida presença de session token no body,
+      `parseWebhook` → `message.received` (zod no payload), `sendMessage` →
+      `{sent:true, externalId}` no-op (delivery via SSE). Kind em
+      `ChannelProviderKind` + `case` no registry. Unit tests do normalize.
+- [ ] **T3 — Core: sessão do visitante**
+      Em `modules/messaging/sitechat.ts`: `createWidgetSession`
+      (resolve connection por webhookToken → upsert contact por email →
+      insert session), `resolveWidgetSession` (token → session+contact+
+      connection, toca lastSeenAt), `listWidgetMessages` (histórico da
+      conversa por after-cursor). Zod no pré-form (nome 2+, email, telefone
+      E.164-flex). Int tests: sessão→contato→retomada, RLS, pré-form inválido.
 
-**Checkpoint 1** — `typecheck`+`lint`+`test:integration` verdes; migrate
-limpo.
+### Checkpoint 1
 
-### Phase 2: Server layer
+- [ ] typecheck + lint verdes; int tests do módulo passam
 
-- [ ] **T6** `apps/web/src/server/actions/leads.ts` (funnel/stage/deal/
-      label actions, zod nos inputs, `{ok}`/`{ok:false,error}`,
-      `revalidatePath`) + wrappers de leitura em `services.ts`
-      (`listFunnels`, `getBoard`, `listLabels`, `getDealForConversation`)
+### Phase 2 — Endpoints públicos
 
-### Phase 3: UI
+- [ ] **T4 — `POST /api/widget/session` + `POST /api/widget/message`**
+      Session: body `{connectionToken, name, email, phone}` → zod → rate
+      limit IP → `createWidgetSession` → `{sessionToken, welcomeText,
+accentColor}` (de metadata). Message: `{sessionToken, text}` → rate
+      limit token → resolve session → monta `RawWebhookRequest` →
+      `ingestChannelWebhook`-equivalente. CORS + OPTIONS. Route int tests.
+- [ ] **T5 — `GET /api/widget/messages` + `GET /api/widget/stream`**
+      Messages: token → `listWidgetMessages` (after=cursor). Stream: token →
+      `subscribeDomainEvents(org)` filtra `conversationId` → SSE ping
+      (`retry:`/`heartbeat` iguais ao stream da inbox). Route int tests.
 
-- [ ] **T7** `/app/deals` kanban: seletor de funil (+ criar funil via
-      template), colunas de stage, cards (título, contato, valor, label
-      chips), drag entre colunas, dialog novo deal (contact combobox),
-      editor de stage (rename/cor/add/delete) — `components/kanban*`
-- [ ] **T8** conversa: aside direito na página da conversa — card do
-      deal vinculado (stage select inline, valor, attrs) ou botão
-      "Virar lead" (dialog: funil+stage+título) + seção de labels da
-      conversa
-- [ ] **T9** labels: chips nos cards do kanban + editor de labels da
-      conversa no aside (type-to-create se `manage`)
+### Checkpoint 2
 
-**Checkpoint 2** — gate completo (format/typecheck/lint) + smoke manual
-do fluxo.
+- [ ] curl-level: session → message aparece em `conversations`+`messages`;
+      stream emite evento no outbound
 
-### Phase 4: E2E + docs
+### Phase 3 — Widget + config UI
 
-- [ ] **T10** spec e2e `deals.spec.ts` (criar funil → virar lead da
-      conversa → mover no kanban) + `pnpm test:e2e` local real
-- [ ] **T11** docs: `TODO.md` → Concluído, `domain-model.md`/roadmap
-      status, `docs/domains/` nota se couber
+- [ ] **T6 — `public/widget.js` + `/widget-demo`**
+      Vanilla: bolha flutuante, janela, pré-form (ou direto se session no
+      localStorage), lista msgs, POST message, EventSource → refetch,
+      `data-token`/`data-api`/`data-position`/`data-color` attrs. Demo page
+      embeda o script local.
+- [ ] **T7 — Conexão site_chat em `/app/integrations`**
+      Form de nova conexão vira kind-aware (site_chat = só nome; creds
+      `{}` criptografadas vazias). Página da conexão: campos de config
+      (welcome/cor/position → metadata) + snippet de instalação copiável +
+      link pra demo.
+
+### Checkpoint 3
+
+- [ ] Fluxo manual completo no browser: demo → pré-form → msg na inbox →
+      resposta do agente chega ao widget
+
+### Phase 4 — E2E + docs
+
+- [ ] **T8 — E2E + docs**
+      `e2e/site-chat.spec.ts`: demo page → pré-form → msg → inbox mostra →
+      responder → widget recebe (Playwright, server actions via UI do agente).
+      TODO.md item → entregue + pendências; `domain-model.md` marca
+      `site_chat` implemented.
 
 ## Risks and Mitigations
 
-| Risk                                      | Impact | Mitigation                                                                                                                         |
-| ----------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| DnD cross-column + RSC complexity         | Med    | Client component isolado; drop = uma action `moveDeal(dealId, stageId, position)`; fallback: select de stage no card se dnd falhar |
-| 6 tabelas de uma vez                      | Baixo  | Schema único, checklist RLS por tabela, int test prova isolation de todas                                                          |
-| Labels criadas inline viram bagunça       | Baixo  | unique (org,name) case-insensitive? — decidir: normalizar `trim` + unique exata (simples)                                          |
-| Kanban sem realtime confunde multi-agente | Baixo  | `revalidatePath` + nota no TODO (fase realtime generaliza SSE)                                                                     |
+| Risk                                            | Impact | Mitigation                                                           |
+| ----------------------------------------------- | ------ | -------------------------------------------------------------------- |
+| Session token vaza → impersona visitante        | Med    | Token 32B random; rate limit; docs da limitação (sem prova de posse) |
+| LISTEN connection por visitante                 | Med    | Idêntico ao padrão inbox; revisit se fan-out alto (nota no TODO)     |
+| Check constraint `kind` em migration aplicada   | Baixo  | Migration nova altera — nunca editar aplicada (regra do repo)        |
+| Outbound não emite domain event p/ message.sent | Med    | Verificar no build; se faltar, emitir no write path de outbound      |
+| Pré-form "telefone válido" ambíguo              | Baixo  | Zod: 8–15 dígitos após strip de não-dígitos; guarda DDI              |
 
 ## Open Questions
 
-- Cor de stage/label: text field com hex ou paleta fixa? (v1: paleta fixa
-  de ~10 cores no select — simples, consistente)
+- Nome do canal na UI: "Site chat" ok ou "Chat do site"? (cosmético —
+  default "Site chat")
+- `sendSeen`/typing no widget — decidir no build se o adapter ganha os
+  métodos opcionais ou adia.

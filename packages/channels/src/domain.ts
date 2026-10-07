@@ -1,7 +1,7 @@
 // Domain model for messaging channels — provider-agnostic by design.
 // Nothing here references WAHA or Meta payload shapes.
 
-export type ChannelProviderKind = "waha" | "meta_cloud";
+export type ChannelProviderKind = "waha" | "meta_cloud" | "site_chat";
 
 export type MessageContent =
   | { type: "text"; text: string; quotedExternalId?: string }

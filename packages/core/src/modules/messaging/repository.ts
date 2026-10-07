@@ -2,10 +2,20 @@ import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 
-const { contacts, conversations, organizationMembers, teams, ticketCounters } = schema;
+const {
+  channelConnections,
+  contacts,
+  conversations,
+  organizationMembers,
+  siteChatSessions,
+  teams,
+  ticketCounters,
+} = schema;
 
 export type ContactRow = typeof contacts.$inferSelect;
 export type ConversationRow = typeof conversations.$inferSelect;
+export type SiteChatSessionRow = typeof siteChatSessions.$inferSelect;
+export type ChannelConnectionRow = typeof channelConnections.$inferSelect;
 
 // Message-scoped helpers live in repository-messages.ts — re-exported here
 // so existing `./repository` imports keep working.
@@ -30,7 +40,12 @@ export {
 export async function upsertContact(
   executor: DbExecutor,
   organizationId: string,
-  values: { channelUserId: string; displayName?: string | undefined },
+  values: {
+    channelUserId: string;
+    displayName?: string | undefined;
+    /** Shallow-merged into the stored metadata jsonb (new keys win). */
+    metadata?: Record<string, unknown> | undefined;
+  },
 ): Promise<ContactRow> {
   const [row] = await executor
     .insert(contacts)
@@ -38,11 +53,13 @@ export async function upsertContact(
       organizationId,
       channelUserId: values.channelUserId,
       displayName: values.displayName ?? null,
+      metadata: values.metadata ?? {},
     })
     .onConflictDoUpdate({
       target: [contacts.organizationId, contacts.channelUserId],
       set: {
         displayName: sql`coalesce(excluded.display_name, ${contacts.displayName})`,
+        metadata: sql`${contacts.metadata} || excluded.metadata`,
         updatedAt: new Date(),
       },
     })
@@ -288,4 +305,75 @@ export async function updateConversationLastMessage(
     .update(conversations)
     .set({ lastMessageAt, updatedAt: new Date() })
     .where(eq(conversations.id, conversationId));
+}
+
+/** Latest ticket of a chat regardless of status — the widget's visible thread. */
+export async function findLatestConversationForChat(
+  executor: DbExecutor,
+  channelConnectionId: string,
+  externalId: string,
+): Promise<ConversationRow | undefined> {
+  const [row] = await executor
+    .select()
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.channelConnectionId, channelConnectionId),
+        eq(conversations.externalId, externalId),
+      ),
+    )
+    .orderBy(desc(conversations.createdAt))
+    .limit(1);
+  return row;
+}
+
+/**
+ * Service-scope session lookup for the public widget endpoints — the token
+ * is the only authentication, so this intentionally bypasses tenant
+ * scoping (call inside withServiceAccess).
+ */
+export async function findSiteChatSessionByToken(
+  executor: DbExecutor,
+  token: string,
+): Promise<
+  | {
+      session: SiteChatSessionRow;
+      contact: ContactRow;
+      connection: ChannelConnectionRow;
+    }
+  | undefined
+> {
+  const [row] = await executor
+    .select({
+      session: siteChatSessions,
+      contact: contacts,
+      connection: channelConnections,
+    })
+    .from(siteChatSessions)
+    .innerJoin(contacts, eq(siteChatSessions.contactId, contacts.id))
+    .innerJoin(channelConnections, eq(siteChatSessions.channelConnectionId, channelConnections.id))
+    .where(eq(siteChatSessions.token, token))
+    .limit(1);
+  return row;
+}
+
+export async function insertSiteChatSession(
+  executor: DbExecutor,
+  values: {
+    organizationId: string;
+    channelConnectionId: string;
+    contactId: string;
+    token: string;
+  },
+): Promise<SiteChatSessionRow> {
+  const [row] = await executor.insert(siteChatSessions).values(values).returning();
+  if (!row) throw new Error("site_chat_sessions insert returned no row");
+  return row;
+}
+
+export async function touchSiteChatSession(executor: DbExecutor, id: string): Promise<void> {
+  await executor
+    .update(siteChatSessions)
+    .set({ lastSeenAt: new Date() })
+    .where(eq(siteChatSessions.id, id));
 }
