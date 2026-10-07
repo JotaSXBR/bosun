@@ -140,14 +140,15 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   por escopo do brief na época; aprovar e aplicar.
 - **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
   strings existentes.
-- **P1 — Design-system lint** (`@shadcn/lint`): spike ✅ — plugin em warn
-  nos eslint configs de `apps/web` + `packages/ui`; baseline em
-  `docs/development/design-system-lint.md`. **Achados**: (a) `tw-animate-css`
-  nunca foi importado — animações shadcn mortas desde o bootstrap (bug a
-  corrigir); (b) tema sem tokens semânticos success/warning — raw palette
-  amber/emerald em badges/notas/health; (c) 4 arbitrary values em apps/web.
-  **Pendente**: subir regras pra error só-em-arquivos-novos após o fix;
-  `no-restyle` adiado até o DS assentar.
+- **P1 — Design-system lint** (`@shadcn/lint`): ✅ adotado — token rules
+  em `error` nos dois pacotes UI-touching; baseline+regras em
+  `docs/development/design-system-lint.md`. **Bugs corrigidos**: (a) scan
+  do Tailwind não cobria `packages/ui` — classes exclusivas de internals
+  geravam zero CSS (dialog descentralizado, dropdown sem min-width,
+  animações mortas) — fix `@source "../"`; (b) `tw-animate-css` importado;
+  (c) tokens `success`/`warning`/`info` + troca das ~23 raw colors.
+  **Pendente**: `no-restyle` (contratos por componente) adiado até o DS
+  assentar.
 - **P1 — Site chat**: ✅ entregue — provider `site_chat` first-party
   (adapter em `packages/channels`, `sendMessage` no-op: entrega é SSE),
   `site_chat_sessions` (RLS, migration `0016`), `POST /api/widget/session`

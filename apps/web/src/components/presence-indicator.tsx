@@ -46,10 +46,7 @@ export function PresenceIndicator({ conversationId }: { conversationId: string }
   const label = presence ? PRESENCE_LABEL[presence] : null;
   if (!label) return null;
   return (
-    <span
-      className="text-xs font-normal text-emerald-600 dark:text-emerald-400"
-      data-testid="contact-presence"
-    >
+    <span className="text-success text-xs font-normal" data-testid="contact-presence">
       {label}
     </span>
   );

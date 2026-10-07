@@ -216,7 +216,7 @@ function GroupCard({ summary }: { summary: PlatformSettingSummary }) {
         <CardTitle className="flex items-center gap-2">
           {def.title}
           {summary.configured ? (
-            <span className="text-xs font-normal text-green-600">configurado</span>
+            <span className="text-success text-xs font-normal">configurado</span>
           ) : (
             <span className="text-muted-foreground text-xs font-normal">não configurado</span>
           )}

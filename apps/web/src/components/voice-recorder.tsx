@@ -63,10 +63,10 @@ function RecordingBar({
 }) {
   return (
     <div
-      className="flex items-center gap-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2"
+      className="border-destructive/40 bg-destructive/10 flex items-center gap-3 rounded-md border px-3 py-2"
       data-testid="voice-recorder"
     >
-      <span className="size-2 animate-pulse rounded-full bg-red-500" />
+      <span className="bg-destructive size-2 animate-pulse rounded-full" />
       <span className="text-sm font-medium tabular-nums">{formatElapsed(elapsed)}</span>
       <span className="text-muted-foreground flex-1 text-xs">Gravando…</span>
       <Button type="button" size="sm" variant="ghost" onClick={onDiscard}>

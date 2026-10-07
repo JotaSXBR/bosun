@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* Monorepo: auto content detection only covers the app dir — the ui
+   package's own sources must be registered or classes used exclusively
+   inside components/* generate no CSS (silent dead styles). */
+@source "../";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -19,6 +25,12 @@
   --accent-foreground: oklch(0.2264 0 0);
   --destructive: oklch(0.5954 0.2344 23.9586);
   --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.5965 0.1452 163.23);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.6664 0.1691 78.56);
+  --warning-foreground: oklch(0.2264 0 0);
+  --info: oklch(0.5882 0.1604 245.74);
+  --info-foreground: oklch(1 0 0);
   --border: oklch(1 0 0);
   --input: oklch(1 0 0);
   --ring: oklch(0.8109 0 0);
@@ -74,6 +86,12 @@
   --accent-foreground: oklch(0 0 0);
   --destructive: oklch(0.6152 0.1657 26.98);
   --destructive-foreground: oklch(0 0 0);
+  --success: oklch(0.6962 0.17 162.48);
+  --success-foreground: oklch(0 0 0);
+  --warning: oklch(0.8286 0.1892 84.43);
+  --warning-foreground: oklch(0 0 0);
+  --info: oklch(0.8286 0.1107 230.32);
+  --info-foreground: oklch(0 0 0);
   --border: oklch(0.252 0 0);
   --input: oklch(0.252 0 0);
   --ring: oklch(0.6152 0.1657 26.98);
@@ -127,6 +145,12 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

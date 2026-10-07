@@ -18,7 +18,7 @@ function messageText(content: unknown): string {
 function MessageTicks({ status }: { status: string }) {
   if (status === "read") {
     return (
-      <span className="text-sky-300" title="Lida" data-testid="tick-read">
+      <span className="text-info" title="Lida" data-testid="tick-read">
         ✓✓
       </span>
     );
@@ -150,10 +150,10 @@ function SystemLine({
 function PrivateNote({ msg }: { msg: MessageWithAuthorRow }) {
   return (
     <li
-      className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2"
+      className="border-warning/40 bg-warning/10 rounded-md border px-3 py-2"
       data-testid="internal-note"
     >
-      <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+      <p className="text-warning text-xs font-medium">
         Nota interna · {msg.authorName ?? "—"} · {msg.createdAt.toLocaleString("pt-BR")}
       </p>
       <p className="mt-1 text-sm whitespace-pre-wrap">{messageText(msg.content)}</p>
@@ -266,7 +266,7 @@ export function MessageItem({
 
   return (
     <li className={cn("group flex", outbound ? "justify-end" : "justify-start")}>
-      <div className="max-w-[80%]">
+      <div className="max-w-4/5">
         <div
           className={cn(
             "relative rounded-lg px-3 py-2",

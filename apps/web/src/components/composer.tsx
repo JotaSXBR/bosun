@@ -119,7 +119,7 @@ function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void 
             "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
             mode === m.key
               ? m.key === "note"
-                ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                ? "bg-warning/15 text-warning"
                 : "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-foreground",
           )}
@@ -134,7 +134,7 @@ function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void 
 function ReplyChip({ preview, onClear }: { preview: string; onClear: () => void }) {
   return (
     <div
-      className="bg-muted flex items-center justify-between rounded-md border-l-4 border-l-emerald-500 px-3 py-1.5 text-xs"
+      className="bg-muted border-l-success flex items-center justify-between rounded-md border-l-4 px-3 py-1.5 text-xs"
       data-testid="reply-preview"
     >
       <span className="line-clamp-1 italic opacity-80">↩ {preview}</span>

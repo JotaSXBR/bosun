@@ -42,7 +42,7 @@ export function ConnectionHealth({ id, kind }: { id: string; kind: string }) {
         </span>
       )}
       {health.session?.warnings.map((warning) => (
-        <span key={warning} className="text-amber-700">
+        <span key={warning} className="text-warning">
           {WARNING_LABELS[warning] ?? warning}
         </span>
       ))}

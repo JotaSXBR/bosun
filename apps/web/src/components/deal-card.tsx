@@ -150,7 +150,7 @@ export function DealCardView({
             <span
               key={label.id}
               className={cn(
-                "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                "rounded-full px-1.5 py-0.5 text-xs font-medium",
                 paletteStyle(label.color).chip,
               )}
             >

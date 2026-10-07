@@ -31,15 +31,17 @@ const config = [
     },
   },
   {
-    // Design-system linter spike — measuring violations before enforcing.
+    // Design-system linter — token rules are errors; dynamic-value escapes
+    // (dnd transforms, sonner hooks) stay warnings. See
+    // docs/development/design-system-lint.md.
     files: ["src/**/*.tsx"],
     plugins: { shadcn },
     rules: {
-      "shadcn/no-arbitrary-values": "warn",
-      "shadcn/no-raw-colors": "warn",
+      "shadcn/no-arbitrary-values": "error",
+      "shadcn/no-raw-colors": "error",
       "shadcn/no-inline-styles": "warn",
       "shadcn/require-static-classes": "warn",
-      "shadcn/no-unknown-classes": "warn",
+      "shadcn/no-unknown-classes": "error",
     },
   },
 ];

@@ -34,7 +34,7 @@ export function InboxLive() {
   if (!hasNew) return null;
   return (
     <div
-      className="fixed right-4 bottom-4 z-50 flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-lg"
+      className="bg-success text-success-foreground fixed right-4 bottom-4 z-50 flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium shadow-lg"
       data-testid="inbox-live-indicator"
     >
       <span className="size-2 animate-pulse rounded-full bg-white" />

@@ -257,7 +257,7 @@ export function ConversationLeadPanel({
               <Badge
                 key={label.id}
                 variant="secondary"
-                className={cn("text-[10px]", paletteStyle(label.color).chip)}
+                className={cn("text-xs", paletteStyle(label.color).chip)}
               >
                 {label.name}
               </Badge>

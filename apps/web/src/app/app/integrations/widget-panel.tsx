@@ -61,8 +61,8 @@ export function WidgetPanel({
         </Link>
       </div>
       {canManage && (
-        <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
-          <label className="space-y-1 text-sm">
+        <div className="grid gap-3 sm:grid-cols-5 sm:items-end">
+          <label className="space-y-1 text-sm sm:col-span-2">
             <span className="text-muted-foreground text-xs">Mensagem de boas-vindas</span>
             <Input
               value={welcomeText}
