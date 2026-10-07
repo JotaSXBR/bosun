@@ -17,6 +17,8 @@ env:
   DATABASE_URL: postgres://crm_app:crm_app@localhost:5432/crm
   DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/crm
   BETTER_AUTH_SECRET: ci-secret-ci-secret-ci-secret-ci
+  # Test-only AES-256-GCM root key for platform_settings/channel credentials.
+  CHANNEL_CREDENTIALS_KEY: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   STORAGE_S3_ENDPOINT: http://localhost:9000
   STORAGE_S3_REGION: us-east-1
   STORAGE_S3_BUCKET: crm
