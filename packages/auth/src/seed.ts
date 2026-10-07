@@ -26,6 +26,25 @@ const DEMO_TEAMS = [
 
 const PLATFORM_ADMIN = { email: "superadmin@crm.local", name: "Platform Admin" };
 
+// Demo funnel — mirrors FUNNEL_TEMPLATES["servicos"] in @crm/core/leads
+// (kept inline so the seed has no core dependency). Idempotent by name.
+const DEMO_FUNNEL = {
+  name: "Pipeline Demo",
+  templateRef: "servicos",
+  stages: [
+    { name: "Prospecção", color: "blue" },
+    { name: "Qualificação", color: "indigo" },
+    { name: "Proposta", color: "amber" },
+    { name: "Em execução", color: "purple" },
+    { name: "Concluído", color: "green" },
+  ],
+} as const;
+
+const DEMO_LABELS = [
+  { name: "Prioridade", color: "red" },
+  { name: "Recorrente", color: "teal" },
+] as const;
+
 type SeedDb = ReturnType<typeof createDb>;
 type SeedAuth = ReturnType<typeof createAuth>;
 
@@ -92,6 +111,52 @@ async function ensureDemoTeams(
   }
 }
 
+async function ensureDemoFunnel(db: SeedDb, orgId: string): Promise<void> {
+  let [funnel] = await db
+    .select({ id: schema.funnels.id })
+    .from(schema.funnels)
+    .where(and(eq(schema.funnels.organizationId, orgId), eq(schema.funnels.name, DEMO_FUNNEL.name)))
+    .limit(1);
+  if (!funnel) {
+    [funnel] = await db
+      .insert(schema.funnels)
+      .values({
+        organizationId: orgId,
+        name: DEMO_FUNNEL.name,
+        templateRef: DEMO_FUNNEL.templateRef,
+      })
+      .returning({ id: schema.funnels.id });
+  }
+  if (!funnel) throw new Error("failed to seed demo funnel");
+  for (const [position, stage] of DEMO_FUNNEL.stages.entries()) {
+    await db
+      .insert(schema.funnelStages)
+      .values({
+        organizationId: orgId,
+        funnelId: funnel.id,
+        name: stage.name,
+        position,
+        color: stage.color,
+      })
+      .onConflictDoNothing();
+  }
+  for (const label of DEMO_LABELS) {
+    await db
+      .insert(schema.labels)
+      .values({ organizationId: orgId, name: label.name, color: label.color })
+      .onConflictDoNothing();
+  }
+}
+
+async function ensureDemoData(
+  db: SeedDb,
+  orgId: string,
+  userIdByRole: ReadonlyMap<string, string>,
+): Promise<void> {
+  await ensureDemoTeams(db, orgId, userIdByRole);
+  await ensureDemoFunnel(db, orgId);
+}
+
 async function main() {
   const env = getServerEnv();
   if (env.nodeEnv === "production") {
@@ -119,7 +184,7 @@ async function main() {
       .onConflictDoNothing();
   }
 
-  await ensureDemoTeams(db, orgId, userIdByRole);
+  await ensureDemoData(db, orgId, userIdByRole);
 
   await db.$client.end();
 

@@ -86,12 +86,28 @@ describe("hasPermission", () => {
     }
   });
 
+  it("leads: everyone reads; agent+ writes; manager+ manages", () => {
+    for (const role of ORG_ROLES) {
+      expect(hasPermission(role, { leads: ["read"] })).toBe(true);
+    }
+    for (const role of ["owner", "admin", "manager", "agent"] as const) {
+      expect(hasPermission(role, { leads: ["write"] })).toBe(true);
+    }
+    expect(hasPermission("viewer", { leads: ["write"] })).toBe(false);
+    for (const role of ["owner", "admin", "manager"] as const) {
+      expect(hasPermission(role, { leads: ["manage"] })).toBe(true);
+    }
+    expect(hasPermission("agent", { leads: ["manage"] })).toBe(false);
+    expect(hasPermission("viewer", { leads: ["manage"] })).toBe(false);
+  });
+
   it("viewer is read-only: sees everything, changes nothing, no billing", () => {
     const reads = [
       { audit: ["read"] },
       { integrations: ["read"] },
       { messaging: ["read"] },
       { teams: ["read"] },
+      { leads: ["read"] },
     ] as const;
     for (const check of reads) {
       expect(hasPermission("viewer", check)).toBe(true);
@@ -104,6 +120,8 @@ describe("hasPermission", () => {
       { integrations: ["manage"] },
       { messaging: ["write"] },
       { teams: ["manage"] },
+      { leads: ["write"] },
+      { leads: ["manage"] },
     ] as const;
     for (const check of writes) {
       expect(hasPermission("viewer", check)).toBe(false);

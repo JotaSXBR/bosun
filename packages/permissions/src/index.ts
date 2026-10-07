@@ -11,6 +11,7 @@ const statement = {
   integrations: ["read", "manage"],
   messaging: ["read", "write"],
   teams: ["read", "manage"],
+  leads: ["read", "write", "manage"],
   billing: ["read"],
 } as const;
 
@@ -25,6 +26,7 @@ export const roles = {
     integrations: ["read", "manage"],
     messaging: ["read", "write"],
     teams: ["read", "manage"],
+    leads: ["read", "write", "manage"],
     billing: ["read"],
   }),
   admin: ac.newRole({
@@ -35,6 +37,7 @@ export const roles = {
     integrations: ["read", "manage"],
     messaging: ["read", "write"],
     teams: ["read", "manage"],
+    leads: ["read", "write", "manage"],
     billing: ["read"],
   }),
   manager: ac.newRole({
@@ -43,11 +46,13 @@ export const roles = {
     integrations: ["read", "manage"],
     messaging: ["read", "write"],
     teams: ["read", "manage"],
+    leads: ["read", "write", "manage"],
   }),
   agent: ac.newRole({
     integrations: ["read"],
     messaging: ["read", "write"],
     teams: ["read"],
+    leads: ["read", "write"],
   }),
   // Read-only member: can look at everything, change nothing, no billing.
   viewer: ac.newRole({
@@ -55,6 +60,7 @@ export const roles = {
     integrations: ["read"],
     messaging: ["read"],
     teams: ["read"],
+    leads: ["read"],
   }),
 } as const;
 

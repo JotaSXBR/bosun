@@ -1,38 +1,37 @@
-# Tasks — Config de produto em DB (env→DB)
+# Tasks — Leads/funil
 
-Brief: `.task-brief.md` · Plan: `tasks/plan.md`
+Plano: `tasks/plan.md` · Brief: `.task-brief.md`
 
-## Fase 1 — DB + core module
+## Fase 1 — Domínio
 
-- [x] **T1** `platform_settings` (key PK, value_encrypted, updated_by,
-      updated_at) + RLS `app.platform_scope='on'` + grant `crm_app` +
-      migration + int test de isolamento — migrations 0013/0014 aplicadas,
-      `tenant.int.test.ts` 8/8
-- [x] **T2** `@crm/core/platform` — schemas por grupo, repository,
-      `resolveProductSettings`, `isProductConfigured`, `setPlatformSetting`
-      (platform_admin gate + field-merge + audit) — `service.int.test.ts` 8/8
+- [x] T1 schema `leads.ts` (6 tabelas + RLS + índices) → generate+migrate
+      (`0015_loving_marvel_boy`)
+- [x] T2 permissions: resource `leads` (read/write/manage) + roles + test
+- [x] T3 `@crm/core/leads`: schemas+repo+service (funnel/stage/deal/label,
+      moveDeal, createDealFromConversation, getBoard) + subpath export
+- [x] T4 FUNNEL_TEMPLATES (4 nichos) + seed funil demo + labels demo
+- [x] T5 int tests: RLS ×6, link conversa→deal (unique), move, labels,
+      templates — 15/15 em 2 arquivos
 
-## Checkpoint 1 — typecheck+lint+int platform + migrate limpo ✅
+## Checkpoint 1
 
-## Fase 2 — Consumers
+- [x] typecheck + lint + test:integration verdes; migrate limpo
 
-- [x] **T3** `server/auth.ts` + sendEmail lazy (DB→env) + call sites
-      (`api/auth/[...all]`, `tenant.ts`, `actions/organization.ts`)
-- [x] **T4** billing: `asaasProvider(resolved)` — service + webhook leem
-      `resolveBillingConfig` (int test DB-override ✅)
-- [x] **T5** meta: `metaCloudCredentialsInput` (appSecret/verifyToken/graphApi
-      blankable) + merge platform-defaults no create (int tests ✅).
-      Follow-up: form de conexão ainda exige os campos (fora do escopo —
-      `app/integrations/`)
+## Fase 2 — Server layer
 
-## Checkpoint 2 — int billing+integrations verdes ✅ (37/37)
+- [ ] T6 `actions/leads.ts` + wrappers `services.ts`
 
 ## Fase 3 — UI
 
-- [x] **T6** seção Plataforma em `/app/settings` (write-only secrets,
-      badge "(banco)" em campos com override DB; e2e: oculta p/ member)
-- [x] **T7** wizard `/app/setup` + gate `platform_admin && !email` em
-      `requireTenantContext`; action usa `requireSession` (sem loop);
-      e2e spec cobrindo ambos os caminhos
+- [ ] T7 `/app/deals` kanban (funil select, colunas, cards, dnd, dialogs)
+- [ ] T8 conversa: aside com deal vinculado / "Virar lead" + labels
+- [ ] T9 labels: chips kanban + editor na conversa
 
-## Checkpoint 3 — gate completo + docs (TODO→Concluído, .env.example) ✅
+## Checkpoint 2
+
+- [ ] format + typecheck + lint verdes; smoke manual do fluxo
+
+## Fase 4 — E2E + docs
+
+- [ ] T10 `deals.spec.ts` e2e real local
+- [ ] T11 TODO.md → Concluído; domain-model/roadmap status
