@@ -158,6 +158,16 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   adiado (v1 usa `revalidatePath`); e2e de criar deal depende de criação
   manual de contato (não existe UI — hoje contato só nasce via ingest);
   audit só em create/delete/link (moves são high-frequency).
+- **P1 — Design system provisório**: ✅ aplicado — dark-first
+  (fundo preto, accent laranja, cantos retos `--radius:0`), Chakra
+  Petch + IBM Plex Mono via `next/font`, `class="dark"` fixo no
+  `<html>` em `apps/web/src/app/layout.tsx`, tokens em
+  `packages/ui/src/styles/globals.css`. **Pendências**: o `:root`
+  light fornecido é stub (bordas brancas sobre fundo branco —
+  inutilizável); sem theme toggle (decidido dark-único por ora);
+  dark `--input` diverge do fornecido (era preto puro = inputs
+  invisíveis, virou hairline `--border`). Se quiser light real:
+  refazer tokens light + `next-themes` toggle.
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
   business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB
