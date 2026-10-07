@@ -1,5 +1,6 @@
 import next from "@crm/eslint-config/next";
 import playwright from "@crm/eslint-config/playwright";
+import { plugin as shadcn } from "@shadcn/lint";
 
 const UI_BOUNDARY_MESSAGE =
   "UI must not touch the database or server auth; go through src/server helpers and @crm/core services.";
@@ -27,6 +28,18 @@ const config = [
           patterns: [{ group: ["@crm/db/*", "drizzle-orm/*"], message: UI_BOUNDARY_MESSAGE }],
         },
       ],
+    },
+  },
+  {
+    // Design-system linter spike — measuring violations before enforcing.
+    files: ["src/**/*.tsx"],
+    plugins: { shadcn },
+    rules: {
+      "shadcn/no-arbitrary-values": "warn",
+      "shadcn/no-raw-colors": "warn",
+      "shadcn/no-inline-styles": "warn",
+      "shadcn/require-static-classes": "warn",
+      "shadcn/no-unknown-classes": "warn",
     },
   },
 ];
