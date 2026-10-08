@@ -45,6 +45,18 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("ai.card")}</CardTitle>
+          <CardDescription>{t("ai.cardDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/app/settings/ai" className="text-sm underline">
+            {t("ai.manage")}
+          </Link>
+        </CardContent>
+      </Card>
+
       {platform && <PlatformSettings summaries={platform} />}
     </main>
   );

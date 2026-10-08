@@ -1,10 +1,16 @@
 import "server-only";
 
 import type { TenantContext } from "@crm/core";
+import type { AgentRow } from "@crm/core/agents";
+import { listAgents } from "@crm/core/agents";
+import type { LlmCredentialPublic } from "@crm/core/ai";
+import { listLlmCredentials } from "@crm/core/ai";
 import type { AuditLogRow, ListAuditEventsInput } from "@crm/core/audit";
 import { listAuditEvents } from "@crm/core/audit";
 import type { ChannelConnectionRow } from "@crm/core/integrations";
 import { listChannelConnectionsForTenant } from "@crm/core/integrations";
+import type { KnowledgeEntryRow } from "@crm/core/knowledge";
+import { listKnowledgeEntries } from "@crm/core/knowledge";
 import type { BoardData, DealRow, FunnelRow, LabelRow, StageRow } from "@crm/core/leads";
 import {
   getBoard,
@@ -34,6 +40,8 @@ import {
 } from "@crm/core/organizations";
 import type { PlatformSettingSummary } from "@crm/core/platform";
 import { isProductConfigured, listPlatformSettingSummaries } from "@crm/core/platform";
+import type { AgentSuggestionRow } from "@crm/core/suggestions";
+import { listAgentSuggestions } from "@crm/core/suggestions";
 import type { TeamWithMembers } from "@crm/core/teams";
 import { listTeams } from "@crm/core/teams";
 import { getDb } from "@crm/db";
@@ -158,3 +166,21 @@ export async function searchOrgContacts(
 }
 
 export type { DealRow };
+
+// --- AI (observer v1) ----------------------------------------------------------
+
+export async function listOrgLlmCredentials(ctx: TenantContext): Promise<LlmCredentialPublic[]> {
+  return listLlmCredentials(getDb(), ctx);
+}
+
+export async function listOrgAgents(ctx: TenantContext): Promise<AgentRow[]> {
+  return listAgents(getDb(), ctx);
+}
+
+export async function listOrgKnowledge(ctx: TenantContext): Promise<KnowledgeEntryRow[]> {
+  return listKnowledgeEntries(getDb(), ctx);
+}
+
+export async function listOrgSuggestions(ctx: TenantContext): Promise<AgentSuggestionRow[]> {
+  return listAgentSuggestions(getDb(), ctx, { limit: 100 });
+}

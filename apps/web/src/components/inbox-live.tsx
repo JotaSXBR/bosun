@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { subscribeToDomainEvents } from "@/lib/sse";
 
@@ -17,6 +18,7 @@ const INDICATOR_MS = 8_000;
  */
 export function InboxLive() {
   const t = useTranslations("inbox");
+  const tAi = useTranslations("settings.ai.suggestions");
   const router = useRouter();
   const [hasNew, setHasNew] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -25,13 +27,18 @@ export function InboxLive() {
   useEffect(() => {
     return subscribeToDomainEvents((event) => {
       if (event.type === "contact.presence") return;
+      if (event.type === "agent_suggestion.created") {
+        toast.info(tAi("newSuggestion"), {
+          action: { label: tAi("title"), onClick: () => router.push("/app/settings/ai") },
+        });
+      }
       setHasNew(true);
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
       refreshTimer.current = setTimeout(() => router.refresh(), REFRESH_DEBOUNCE_MS);
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = setTimeout(() => setHasNew(false), INDICATOR_MS);
     });
-  }, [router]);
+  }, [router, tAi]);
 
   if (!hasNew) return null;
   return (
