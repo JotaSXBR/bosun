@@ -4,6 +4,7 @@ import { Button } from "@crm/ui/components/button";
 import { Textarea } from "@crm/ui/components/textarea";
 import { cn } from "@crm/ui/lib/utils";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -22,6 +23,7 @@ const EMOJIS = (
 ).split(" ");
 
 function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
+  const t = useTranslations("composer");
   const [open, setOpen] = useState(false);
   return (
     <span className="relative">
@@ -31,7 +33,7 @@ function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
         size="sm"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        title="Emojis"
+        title={t("emojisTitle")}
         data-testid="emoji-button"
       >
         😊
@@ -68,7 +70,9 @@ function ComposerToolbar({
   onAttach,
   recorder,
   hint,
+  attachTitle,
 }: {
+  attachTitle: string;
   disabled: boolean;
   sendingMedia: boolean;
   /** Attach/voice reach the customer — hidden on the internal-note tab. */
@@ -88,7 +92,7 @@ function ComposerToolbar({
           size="sm"
           disabled={disabled || sendingMedia}
           onClick={onAttach}
-          title="Anexar arquivo"
+          title={attachTitle}
           data-testid="attach-button"
         >
           📎
@@ -101,14 +105,14 @@ function ComposerToolbar({
 }
 
 function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  const t = useTranslations("composer");
+  const MODES = [
+    { key: "reply", label: t("tabReply") },
+    { key: "note", label: t("tabNote") },
+  ] as const;
   return (
-    <div className="flex gap-1" role="tablist" aria-label="Tipo de mensagem">
-      {(
-        [
-          { key: "reply", label: "Responder" },
-          { key: "note", label: "Nota interna" },
-        ] as const
-      ).map((m) => (
+    <div className="flex gap-1" role="tablist" aria-label={t("tabsAria")}>
+      {MODES.map((m) => (
         <button
           key={m.key}
           type="button"
@@ -132,6 +136,7 @@ function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void 
 }
 
 function ReplyChip({ preview, onClear }: { preview: string; onClear: () => void }) {
+  const t = useTranslations("composer");
   return (
     <div
       className="bg-muted border-l-success flex items-center justify-between rounded-md border-l-4 px-3 py-1.5 text-xs"
@@ -142,7 +147,7 @@ function ReplyChip({ preview, onClear }: { preview: string; onClear: () => void 
         type="button"
         className="text-muted-foreground hover:text-foreground px-1"
         onClick={onClear}
-        aria-label="Cancelar resposta"
+        aria-label={t("cancelReply")}
       >
         ✕
       </button>
@@ -157,6 +162,7 @@ export function Composer({
   conversationId: string;
   disabled: boolean;
 }) {
+  const t = useTranslations("composer");
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("reply");
   const [text, setText] = useState("");
@@ -242,10 +248,10 @@ export function Composer({
         }}
         placeholder={
           disabled
-            ? "Ticket resolvido — reabra para responder."
+            ? t("placeholderDisabled")
             : mode === "reply"
-              ? "Responder ao cliente…"
-              : "Nota interna (nunca enviada ao cliente)…"
+              ? t("placeholderReply")
+              : t("placeholderNote")
         }
         disabled={disabled || pending}
         rows={3}
@@ -258,7 +264,7 @@ export function Composer({
         ref={fileInput}
         type="file"
         className="hidden"
-        aria-label="Anexar arquivo"
+        aria-label={t("attach")}
         onChange={(e) => {
           const file = e.target.files?.[0];
           e.target.value = "";
@@ -273,6 +279,7 @@ export function Composer({
           channelTools={mode === "reply"}
           onEmoji={insertEmoji}
           onAttach={() => fileInput.current?.click()}
+          attachTitle={t("attach")}
           recorder={
             <VoiceRecorder
               conversationId={conversationId}
@@ -280,10 +287,10 @@ export function Composer({
               presence={presence}
             />
           }
-          hint={sendingMedia ? "Enviando arquivo…" : "Ctrl+Enter envia"}
+          hint={sendingMedia ? t("hintSendingMedia") : t("hintSend")}
         />
         <Button onClick={send} disabled={disabled || pending || !text.trim()}>
-          {pending ? "Enviando…" : mode === "reply" ? "Enviar" : "Adicionar nota"}
+          {pending ? t("sending") : mode === "reply" ? t("send") : t("addNote")}
         </Button>
       </div>
     </div>

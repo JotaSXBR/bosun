@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { subscribeToDomainEvents } from "@/lib/sse";
@@ -15,6 +16,7 @@ const INDICATOR_MS = 8_000;
  * (the conversation header renders it directly from the event payload).
  */
 export function InboxLive() {
+  const t = useTranslations("inbox");
   const router = useRouter();
   const [hasNew, setHasNew] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,7 +40,7 @@ export function InboxLive() {
       data-testid="inbox-live-indicator"
     >
       <span className="size-2 animate-pulse rounded-full bg-white" />
-      Nova mensagem
+      {t("newMessage")}
     </div>
   );
 }

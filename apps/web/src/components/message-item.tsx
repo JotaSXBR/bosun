@@ -5,34 +5,38 @@ import type { OrgMember } from "@crm/core/organizations";
 import type { TeamWithMembers } from "@crm/core/teams";
 import { cn } from "@crm/ui/lib/utils";
 import Image from "next/image";
+import { getFormatter, getTranslations } from "next-intl/server";
 
 import { EditedIndicator, MessageMenu, RevokedActions } from "@/components/message-extras";
 import { ReactionChips } from "@/components/reaction-chips";
 
-function messageText(content: unknown): string {
+type T = Awaited<ReturnType<typeof getTranslations>>;
+type Fmt = Awaited<ReturnType<typeof getFormatter>>;
+
+function messageText(content: unknown, t: T): string {
   const c = content as { type?: string; text?: string; caption?: string };
-  return c.text ?? c.caption ?? `[${c.type ?? "mensagem"}]`;
+  return c.text ?? c.caption ?? t("unknownType", { type: c.type ?? t("fallbackType") });
 }
 
 /** WhatsApp-style ticks: ✓ enviada · ✓✓ entregue (cinza) · ✓✓ lida (azul). */
-function MessageTicks({ status }: { status: string }) {
+function MessageTicks({ status, t }: { status: string; t: T }) {
   if (status === "read") {
     return (
-      <span className="text-info" title="Lida" data-testid="tick-read">
+      <span className="text-info" title={t("tickRead")} data-testid="tick-read">
         ✓✓
       </span>
     );
   }
   if (status === "delivered") {
     return (
-      <span className="opacity-80" title="Entregue">
+      <span className="opacity-80" title={t("tickDelivered")}>
         ✓✓
       </span>
     );
   }
   if (status === "sent" || status === "queued") {
     return (
-      <span className="opacity-80" title="Enviada">
+      <span className="opacity-80" title={t("tickSent")}>
         ✓
       </span>
     );
@@ -44,9 +48,11 @@ function MessageTicks({ status }: { status: string }) {
 function QuoteBlock({
   quoted,
   outbound,
+  t,
 }: {
   quoted: NonNullable<MessageWithAuthorRow["quoted"]>;
   outbound: boolean;
+  t: T;
 }) {
   return (
     <div
@@ -59,17 +65,17 @@ function QuoteBlock({
       data-testid="quoted-message"
     >
       <p className="font-medium">
-        {quoted.direction === "outbound" ? (quoted.authorName ?? "Você") : "Contato"}
+        {quoted.direction === "outbound" ? (quoted.authorName ?? t("you")) : t("contact")}
       </p>
       <p className="line-clamp-2 italic opacity-80">
-        {quoted.revoked ? "Mensagem apagada" : (quoted.preview ?? "…")}
+        {quoted.revoked ? t("deleted") : (quoted.preview ?? "…")}
       </p>
     </div>
   );
 }
 
 /** Media bubble — the proxy route streams bytes from storage or WAHA. */
-function MediaContent({ msg }: { msg: MessageWithAuthorRow }) {
+function MediaContent({ msg, t, tc }: { msg: MessageWithAuthorRow; t: T; tc: T }) {
   const content = msg.content as Extract<MessageContent, { type: "media" }>;
   const src = `/api/media/${msg.id}`;
   return (
@@ -77,7 +83,7 @@ function MediaContent({ msg }: { msg: MessageWithAuthorRow }) {
       {content.mediaKind === "image" && (
         <Image
           src={src}
-          alt={content.caption ?? "Imagem recebida"}
+          alt={content.caption ?? t("imageAlt")}
           width={0}
           height={0}
           sizes="320px"
@@ -87,12 +93,12 @@ function MediaContent({ msg }: { msg: MessageWithAuthorRow }) {
       )}
       {content.mediaKind === "video" && (
         <video controls src={src} className="max-w-full rounded-md">
-          <track kind="captions" label="Sem legendas" />
+          <track kind="captions" label={tc("noCaptions")} />
         </video>
       )}
       {content.mediaKind === "audio" && (
         <audio controls src={src} className="w-64 max-w-full">
-          <track kind="captions" label="Sem legendas" />
+          <track kind="captions" label={tc("noCaptions")} />
         </audio>
       )}
       {content.mediaKind === "document" && (
@@ -101,7 +107,7 @@ function MediaContent({ msg }: { msg: MessageWithAuthorRow }) {
           className="flex items-center gap-2 underline underline-offset-2"
           data-testid="media-document"
         >
-          📄 {content.filename ?? "Documento"}
+          📄 {content.filename ?? t("document")}
         </a>
       )}
       {content.caption && <p className="text-sm whitespace-pre-wrap">{content.caption}</p>}
@@ -123,56 +129,73 @@ function SystemLine({
   msg,
   members,
   sectors,
+  t,
+  format,
 }: {
   msg: MessageWithAuthorRow;
   members: OrgMember[];
   sectors: TeamWithMembers[];
+  t: T;
+  format: Fmt;
 }) {
   const meta = msg.metadata as Record<string, unknown>;
-  let text = "Evento do sistema";
+  let text = t("systemEvent");
   if (meta.system === "transfer") {
     const to = meta.toAssigneeId
       ? memberName(members, meta.toAssigneeId)
       : sectorName(sectors, meta.toSectorId);
-    const from = meta.fromAssigneeId ? memberName(members, meta.fromAssigneeId) : "a fila";
-    text = `Transferido de ${from} para ${to}`;
+    const from = meta.fromAssigneeId ? memberName(members, meta.fromAssigneeId) : t("queue");
+    text = t("transfer", { from, to });
   }
   return (
     <li
       className="text-muted-foreground py-1 text-center text-xs italic"
       data-testid="system-event"
     >
-      — {text} · {msg.createdAt.toLocaleString("pt-BR")} —
+      — {text} · {format.dateTime(msg.createdAt, { dateStyle: "short", timeStyle: "medium" })} —
     </li>
   );
 }
 
-function PrivateNote({ msg }: { msg: MessageWithAuthorRow }) {
+function PrivateNote({ msg, t, format }: { msg: MessageWithAuthorRow; t: T; format: Fmt }) {
   return (
     <li
       className="border-warning/40 bg-warning/10 rounded-md border px-3 py-2"
       data-testid="internal-note"
     >
       <p className="text-warning text-xs font-medium">
-        Nota interna · {msg.authorName ?? "—"} · {msg.createdAt.toLocaleString("pt-BR")}
+        {t("internalNote", {
+          author: msg.authorName ?? "—",
+          date: format.dateTime(msg.createdAt, { dateStyle: "short", timeStyle: "medium" }),
+        })}
       </p>
-      <p className="mt-1 text-sm whitespace-pre-wrap">{messageText(msg.content)}</p>
+      <p className="mt-1 text-sm whitespace-pre-wrap">{messageText(msg.content, t)}</p>
     </li>
   );
 }
 
-function BubbleBody({ msg, canInspect }: { msg: MessageWithAuthorRow; canInspect: boolean }) {
+function BubbleBody({
+  msg,
+  canInspect,
+  t,
+  tc,
+}: {
+  msg: MessageWithAuthorRow;
+  canInspect: boolean;
+  t: T;
+  tc: T;
+}) {
   const content = msg.content as MessageContent;
   if (msg.revokedAt !== null) {
     return (
       <p className="text-sm italic opacity-70" data-testid="revoked-placeholder">
-        🚫 Mensagem apagada
+        🚫 {t("deleted")}
         {canInspect && <RevokedActions conversationId={msg.conversationId} messageId={msg.id} />}
       </p>
     );
   }
-  if (content.type === "media") return <MediaContent msg={msg} />;
-  return <p className="text-sm whitespace-pre-wrap">{messageText(content)}</p>;
+  if (content.type === "media") return <MediaContent msg={msg} t={t} tc={tc} />;
+  return <p className="text-sm whitespace-pre-wrap">{messageText(content, t)}</p>;
 }
 
 function BubbleMeta({
@@ -181,12 +204,16 @@ function BubbleMeta({
   isChannelMessage,
   canInspect,
   menu,
+  t,
+  format,
 }: {
   msg: MessageWithAuthorRow;
   outbound: boolean;
   isChannelMessage: boolean;
   canInspect: boolean;
   menu: React.ReactNode;
+  t: T;
+  format: Fmt;
 }) {
   return (
     <p
@@ -196,7 +223,7 @@ function BubbleMeta({
       )}
     >
       {outbound && msg.authorName ? `${msg.authorName} · ` : ""}
-      {msg.sentAt?.toLocaleString("pt-BR") ?? msg.createdAt.toLocaleString("pt-BR")}
+      {format.dateTime(msg.sentAt ?? msg.createdAt, { dateStyle: "short", timeStyle: "medium" })}
       {msg.editedAt && (
         <>
           {" · "}
@@ -207,20 +234,22 @@ function BubbleMeta({
           />
         </>
       )}
-      {msg.status === "failed" && " · falhou"}
-      {outbound && isChannelMessage && <MessageTicks status={msg.status} />}
+      {msg.status === "failed" && ` · ${t("failed")}`}
+      {outbound && isChannelMessage && <MessageTicks status={msg.status} t={t} />}
       {menu}
     </p>
   );
 }
 
 /** Per-message affordances — the ~15min edit window is enforced server-side. */
-function messagePermissions(
-  msg: MessageWithAuthorRow,
-  content: MessageContent,
-  currentUserId: string,
-  canInteract: boolean,
-) {
+function messagePermissions(args: {
+  msg: MessageWithAuthorRow;
+  content: MessageContent;
+  currentUserId: string;
+  canInteract: boolean;
+  t: T;
+}) {
+  const { msg, content, currentUserId, canInteract, t } = args;
   const isChannelMessage = msg.externalId !== null;
   const available = canInteract && isChannelMessage && msg.revokedAt === null;
   const ownOutbound = available && msg.direction === "outbound" && msg.authorId === currentUserId;
@@ -231,12 +260,12 @@ function messagePermissions(
     canDelete: ownOutbound,
     replyTarget:
       available && msg.externalId
-        ? { externalId: msg.externalId, preview: messageText(content) }
+        ? { externalId: msg.externalId, preview: messageText(content, t) }
         : undefined,
   };
 }
 
-export function MessageItem({
+export async function MessageItem({
   msg,
   members,
   sectors,
@@ -251,18 +280,23 @@ export function MessageItem({
   canInspect: boolean;
   canInteract: boolean;
 }) {
+  const t = await getTranslations("message");
+  const tc = await getTranslations("common");
+  const format = await getFormatter();
   const meta = msg.metadata as Record<string, unknown>;
-  if (meta.system) return <SystemLine msg={msg} members={members} sectors={sectors} />;
-  if (msg.private) return <PrivateNote msg={msg} />;
+  if (meta.system)
+    return <SystemLine msg={msg} members={members} sectors={sectors} t={t} format={format} />;
+  if (msg.private) return <PrivateNote msg={msg} t={t} format={format} />;
 
   const outbound = msg.direction === "outbound";
   const content = msg.content as MessageContent;
-  const { isChannelMessage, canReact, canEdit, canDelete, replyTarget } = messagePermissions(
+  const { isChannelMessage, canReact, canEdit, canDelete, replyTarget } = messagePermissions({
     msg,
     content,
     currentUserId,
     canInteract,
-  );
+    t,
+  });
 
   return (
     <li className={cn("group flex", outbound ? "justify-end" : "justify-start")}>
@@ -273,18 +307,20 @@ export function MessageItem({
             outbound ? "bg-primary text-primary-foreground" : "bg-muted",
           )}
         >
-          {msg.quoted && <QuoteBlock quoted={msg.quoted} outbound={outbound} />}
-          <BubbleBody msg={msg} canInspect={canInspect} />
+          {msg.quoted && <QuoteBlock quoted={msg.quoted} outbound={outbound} t={t} />}
+          <BubbleBody msg={msg} canInspect={canInspect} t={t} tc={tc} />
           <BubbleMeta
             msg={msg}
             outbound={outbound}
             isChannelMessage={isChannelMessage}
             canInspect={canInspect}
+            t={t}
+            format={format}
             menu={
               <MessageMenu
                 conversationId={msg.conversationId}
                 messageId={msg.id}
-                currentText={messageText(content)}
+                currentText={messageText(content, t)}
                 canReact={canReact}
                 canEdit={canEdit}
                 canDelete={canDelete}

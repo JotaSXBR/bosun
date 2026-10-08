@@ -4,6 +4,7 @@
 // per-message menu (react/reply/edit/delete), edited-history and
 // "ver original" expanders. Mutations are server actions → router.refresh().
 import { cn } from "@crm/ui/lib/utils";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { setReplyTarget } from "@/lib/reply-bridge";
@@ -40,6 +41,8 @@ export function MessageMenu({
   /** Set on channel messages while the ticket is workable → shows "Responder". */
   replyTarget?: { externalId: string; preview: string } | undefined;
 }) {
+  const t = useTranslations("message");
+  const tc = useTranslations("common");
   const { pending, run } = useAction();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -51,6 +54,7 @@ export function MessageMenu({
   if (editing) {
     return (
       <MessageEditForm
+        tc={tc}
         draft={draft}
         pending={pending}
         onDraftChange={setDraft}
@@ -73,7 +77,7 @@ export function MessageMenu({
     <span className="relative inline-block">
       <button
         type="button"
-        aria-label="Ações da mensagem"
+        aria-label={t("menuAria")}
         aria-expanded={open}
         onClick={() => {
           setOpen((v) => !v);
@@ -85,6 +89,8 @@ export function MessageMenu({
       </button>
       {open && (
         <MessageMenuPanel
+          t={t}
+          tc={tc}
           canReact={canReact}
           canEdit={canEdit}
           canDelete={canDelete}
@@ -121,7 +127,9 @@ function MessageEditForm({
   onDraftChange,
   onSave,
   onCancel,
+  tc,
 }: {
+  tc: ReturnType<typeof useTranslations>;
   draft: string;
   pending: boolean;
   onDraftChange: (v: string) => void;
@@ -144,10 +152,10 @@ function MessageEditForm({
           disabled={pending || !draft.trim()}
           onClick={onSave}
         >
-          Salvar
+          {tc("save")}
         </button>
         <button type="button" className="rounded border px-2 py-1" onClick={onCancel}>
-          Cancelar
+          {tc("cancel")}
         </button>
       </div>
     </div>
@@ -155,6 +163,8 @@ function MessageEditForm({
 }
 
 function MessageMenuPanel({
+  t,
+  tc,
   canReact,
   canEdit,
   canDelete,
@@ -167,6 +177,8 @@ function MessageMenuPanel({
   onDeleteCancel,
   onDeleteConfirm,
 }: {
+  t: ReturnType<typeof useTranslations>;
+  tc: ReturnType<typeof useTranslations>;
   canReact: boolean;
   canEdit: boolean;
   canDelete: boolean;
@@ -201,33 +213,33 @@ function MessageMenuPanel({
       )}
       {onReply && (
         <button type="button" className={item} onClick={onReply}>
-          Responder
+          {t("reply")}
         </button>
       )}
       {canEdit && (
         <button type="button" className={item} onClick={onEdit}>
-          Editar
+          {t("edit")}
         </button>
       )}
       {canDelete &&
         (confirming ? (
           <span className="flex items-center gap-1 px-2 py-1">
-            Apagar?
+            {t("deleteConfirm")}
             <button
               type="button"
               className="text-destructive font-medium"
               disabled={pending}
               onClick={onDeleteConfirm}
             >
-              Sim
+              {tc("yes")}
             </button>
             <button type="button" onClick={onDeleteCancel}>
-              Não
+              {tc("no")}
             </button>
           </span>
         ) : (
           <button type="button" className={cn(item, "text-destructive")} onClick={onDeleteStart}>
-            Apagar
+            {t("delete")}
           </button>
         ))}
     </span>
@@ -240,6 +252,8 @@ export function EditedIndicator({
   messageId,
   canInspect,
 }: TargetProps & { canInspect: boolean }) {
+  const t = useTranslations("message");
+  const format = useFormatter();
   const [open, setOpen] = useState(false);
   const [edits, setEdits] = useState<{ previousText: string | null; createdAt: string }[] | null>(
     null,
@@ -269,16 +283,20 @@ export function EditedIndicator({
         onClick={toggle}
         disabled={pending || !canInspect}
         className={cn("italic", canInspect && "hover:underline")}
-        title={canInspect ? "Ver edições anteriores" : undefined}
+        title={canInspect ? t("viewEdits") : undefined}
       >
-        editada
+        {t("edited")}
       </button>
       {open && edits && (
         <span className="block text-left" data-testid="edit-history">
-          {edits.length === 0 && <span className="block">Sem versões anteriores.</span>}
+          {edits.length === 0 && <span className="block">{t("noEdits")}</span>}
           {edits.map((e) => (
             <span key={e.createdAt} className="block italic">
-              “{e.previousText ?? "[mídia]"}” · {new Date(e.createdAt).toLocaleString("pt-BR")}
+              “{e.previousText ?? t("mediaPlaceholder")}” ·{" "}
+              {format.dateTime(new Date(e.createdAt), {
+                dateStyle: "short",
+                timeStyle: "medium",
+              })}
             </span>
           ))}
         </span>
@@ -289,6 +307,7 @@ export function EditedIndicator({
 
 /** Revoked placeholder extra — privileged roles may reveal the original. */
 export function RevokedActions({ conversationId, messageId }: TargetProps) {
+  const t = useTranslations("message");
   const [original, setOriginal] = useState<string | null>(null);
   const { pending, run } = useAction();
   return (
@@ -304,12 +323,12 @@ export function RevokedActions({ conversationId, messageId }: TargetProps) {
           }
           run(async () => {
             const r = await getMessageOriginalAction({ conversationId, messageId });
-            if (r.ok) setOriginal(r.text ?? "[mídia]");
+            if (r.ok) setOriginal(r.text ?? t("mediaPlaceholder"));
             return r;
           });
         }}
       >
-        {original === null ? "Ver original" : "Ocultar"}
+        {original === null ? t("viewOriginal") : t("hide")}
       </button>
       {original !== null && (
         <span className="mt-1 block rounded border border-dashed p-2 text-xs whitespace-pre-wrap">

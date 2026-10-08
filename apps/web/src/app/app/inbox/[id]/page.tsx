@@ -6,6 +6,7 @@ import { Badge } from "@crm/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm/ui/components/card";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getFormatter, getTranslations } from "next-intl/server";
 
 import { Composer } from "@/components/composer";
 import { ConversationLeadPanel } from "@/components/conversation-lead-panel";
@@ -28,7 +29,17 @@ import { requireTenantContext } from "@/server/tenant";
 // Reads the session + database → must never be prerendered at build time.
 export const dynamic = "force-dynamic";
 
-function TicketHeader({ conversation }: { conversation: ConversationDetailRow }) {
+function TicketHeader({
+  conversation,
+  t,
+  ts,
+  format,
+}: {
+  conversation: ConversationDetailRow;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+  ts: Awaited<ReturnType<typeof getTranslations>>;
+  format: Awaited<ReturnType<typeof getFormatter>>;
+}) {
   const status = TICKET_STATUS[conversation.status];
   return (
     <CardHeader className="space-y-2">
@@ -38,11 +49,18 @@ function TicketHeader({ conversation }: { conversation: ConversationDetailRow })
           {conversation.contactDisplayName ?? conversation.contactChannelUserId}{" "}
           <PresenceIndicator conversationId={conversation.id} />
         </CardTitle>
-        <Badge variant={status?.variant ?? "outline"}>{status?.label ?? conversation.status}</Badge>
+        <Badge variant={status?.variant ?? "outline"}>
+          {ts.has(conversation.status) ? ts(conversation.status) : conversation.status}
+        </Badge>
       </div>
       <p className="text-muted-foreground text-sm">
-        {conversation.ticketSeq}º atendimento deste contato · aberto em{" "}
-        {conversation.createdAt.toLocaleString("pt-BR")}
+        {t("ticketSeq", {
+          seq: conversation.ticketSeq,
+          date: format.dateTime(conversation.createdAt, {
+            dateStyle: "short",
+            timeStyle: "medium",
+          }),
+        })}
         {conversation.assigneeName && <> · {conversation.assigneeName}</>}
         {conversation.sectorName && <> · {conversation.sectorName}</>}
       </p>
@@ -51,6 +69,9 @@ function TicketHeader({ conversation }: { conversation: ConversationDetailRow })
 }
 
 export default async function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("inbox");
+  const ts = await getTranslations("ticketStatus");
+  const format = await getFormatter();
   const ctx = await requireTenantContext();
   const { id } = await params;
   let conversation;
@@ -82,13 +103,13 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
     <main className="mx-auto max-w-5xl space-y-6 p-8">
       <div className="flex items-center justify-between">
         <Link href="/app/inbox" className="text-muted-foreground text-sm underline">
-          ← Inbox
+          {t("backToList")}
         </Link>
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <Card className="min-w-0 flex-1">
-          <TicketHeader conversation={conversation} />
+          <TicketHeader conversation={conversation} t={t} ts={ts} format={format} />
 
           <CardContent className="space-y-4">
             {conversation.precededById && (
@@ -97,11 +118,11 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
                 className="text-muted-foreground hover:text-foreground block rounded-md border border-dashed px-3 py-2 text-center text-xs"
                 data-testid="previous-ticket"
               >
-                ↑ Ticket anterior
-                {conversation.precededTicketNumber
-                  ? ` #${conversation.precededTicketNumber}`
-                  : ""}{" "}
-                — ver histórico
+                {t("previousTicket", {
+                  number: conversation.precededTicketNumber
+                    ? ` #${conversation.precededTicketNumber}`
+                    : "",
+                })}
               </Link>
             )}
 

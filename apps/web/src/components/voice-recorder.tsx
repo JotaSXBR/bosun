@@ -4,6 +4,7 @@
 // discard or send. Sent as voiceNote → WAHA sendVoice (PTT bubble).
 import { Button } from "@crm/ui/components/button";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -61,6 +62,7 @@ function RecordingBar({
   onStop: () => void;
   onDiscard: () => void;
 }) {
+  const t = useTranslations("composer");
   return (
     <div
       className="border-destructive/40 bg-destructive/10 flex items-center gap-3 rounded-md border px-3 py-2"
@@ -68,12 +70,12 @@ function RecordingBar({
     >
       <span className="bg-destructive size-2 animate-pulse rounded-full" />
       <span className="text-sm font-medium tabular-nums">{formatElapsed(elapsed)}</span>
-      <span className="text-muted-foreground flex-1 text-xs">Gravando…</span>
+      <span className="text-muted-foreground flex-1 text-xs">{t("recording")}</span>
       <Button type="button" size="sm" variant="ghost" onClick={onDiscard}>
-        Descartar
+        {t("discard")}
       </Button>
       <Button type="button" size="sm" onClick={onStop}>
-        Parar
+        {t("stop")}
       </Button>
     </div>
   );
@@ -92,22 +94,24 @@ function PreviewBar({
   onDiscard: () => void;
   onSend: () => void;
 }) {
+  const t = useTranslations("composer");
+  const tc = useTranslations("common");
   return (
     <div
       className="flex items-center gap-2 rounded-md border px-3 py-2"
       data-testid="voice-preview"
     >
       <audio controls src={previewUrl} className="h-8 max-w-48">
-        <track kind="captions" label="Sem legendas" />
+        <track kind="captions" label={tc("noCaptions")} />
       </audio>
       <Button type="button" size="sm" variant="ghost" onClick={onRerecord}>
-        Regravar
+        {t("rerecord")}
       </Button>
       <Button type="button" size="sm" variant="ghost" onClick={onDiscard}>
-        Descartar
+        {t("discard")}
       </Button>
       <Button type="button" size="sm" onClick={onSend} disabled={sending}>
-        {sending ? "Enviando…" : "Enviar"}
+        {sending ? t("sending") : t("send")}
       </Button>
     </div>
   );
@@ -122,6 +126,7 @@ export function VoiceRecorder({
   disabled: boolean;
   presence: Presence;
 }) {
+  const t = useTranslations("composer");
   const router = useRouter();
   const media = useRef<MediaRefs>({
     blob: null,
@@ -188,7 +193,7 @@ export function VoiceRecorder({
         presence.signal("recording");
       }, 1000);
     } catch {
-      toast.error("Não foi possível acessar o microfone.");
+      toast.error(t("micError"));
     }
   };
 
@@ -244,7 +249,7 @@ export function VoiceRecorder({
       size="sm"
       disabled={disabled}
       onClick={() => void start()}
-      title="Gravar áudio"
+      title={t("recordTitle")}
       data-testid="voice-record-button"
     >
       🎤

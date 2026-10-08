@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { subscribeToDomainEvents } from "@/lib/sse";
@@ -10,11 +11,7 @@ const PRESENCE_TTL_MS = 12_000;
 
 type ContactPresence = "online" | "offline" | "typing" | "recording" | "paused";
 
-const PRESENCE_LABEL: Partial<Record<ContactPresence, string>> = {
-  online: "online",
-  typing: "digitando…",
-  recording: "gravando áudio…",
-};
+const PRESENCE_WITH_LABEL: ContactPresence[] = ["online", "typing", "recording"];
 
 /**
  * Live contact presence under the ticket title: subscribes the session to
@@ -22,6 +19,7 @@ const PRESENCE_LABEL: Partial<Record<ContactPresence, string>> = {
  * renders the transient `contact.presence` stream events for this ticket.
  */
 export function PresenceIndicator({ conversationId }: { conversationId: string }) {
+  const t = useTranslations("inbox");
   const [presence, setPresence] = useState<ContactPresence | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -43,7 +41,8 @@ export function PresenceIndicator({ conversationId }: { conversationId: string }
     [],
   );
 
-  const label = presence ? PRESENCE_LABEL[presence] : null;
+  const label =
+    presence && PRESENCE_WITH_LABEL.includes(presence) ? t(`presence.${presence}`) : null;
   if (!label) return null;
   return (
     <span className="text-success text-xs font-normal" data-testid="contact-presence">

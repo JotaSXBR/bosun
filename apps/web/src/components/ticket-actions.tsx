@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@crm/ui/components/select";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -48,6 +49,7 @@ export function TicketActions({
   isClosed: boolean;
   isViewer: boolean;
 }) {
+  const t = useTranslations("tickets");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [target, setTarget] = useState("");
@@ -90,7 +92,7 @@ export function TicketActions({
           disabled={pending}
           onClick={() => run(reopenTicketAction({ conversationId }))}
         >
-          Reabrir ticket
+          {t("reopen")}
         </Button>
       )}
 
@@ -100,29 +102,29 @@ export function TicketActions({
           disabled={pending}
           onClick={() => run(resumeTicketAction({ conversationId }))}
         >
-          Novo atendimento
+          {t("newService")}
         </Button>
       )}
 
       {canWork && !ownsTicket && (
         <span className="text-muted-foreground text-sm">
-          Em atendimento por {conversation.assigneeName} — transfira para assumir.
+          {t("inServiceBy", { name: conversation.assigneeName ?? "?" })}
         </span>
       )}
 
       {canWork && ownsTicket && (
-        <WorkButtons conversation={conversation} pending={pending} run={run} />
+        <WorkButtons conversation={conversation} pending={pending} run={run} t={t} />
       )}
 
       {canWork && (
         <div className="flex items-center gap-2">
           <Select value={target} onValueChange={setTarget} disabled={pending}>
-            <SelectTrigger className="w-52" aria-label="Transferir para">
-              <SelectValue placeholder="Transferir para…" />
+            <SelectTrigger className="w-52" aria-label={t("transferTo")}>
+              <SelectValue placeholder={t("transferPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectLabel>Agentes</SelectLabel>
+                <SelectLabel>{t("agents")}</SelectLabel>
                 {agents.map((m) => (
                   <SelectItem key={m.userId} value={`user:${m.userId}`}>
                     {m.name}
@@ -130,7 +132,7 @@ export function TicketActions({
                 ))}
               </SelectGroup>
               <SelectGroup>
-                <SelectLabel>Setores</SelectLabel>
+                <SelectLabel>{t("sectors")}</SelectLabel>
                 {sectors.map((s) => (
                   <SelectItem key={s.id} value={`sector:${s.id}`}>
                     {s.name}
@@ -140,7 +142,7 @@ export function TicketActions({
             </SelectContent>
           </Select>
           <Button variant="outline" disabled={pending || !target} onClick={doTransfer}>
-            Transferir
+            {t("transfer")}
           </Button>
         </div>
       )}
@@ -152,10 +154,12 @@ function WorkButtons({
   conversation,
   pending,
   run,
+  t,
 }: {
   conversation: ConversationDetailRow;
   pending: boolean;
   run: (action: Promise<ActionResult>) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const conversationId = conversation.id;
   return (
@@ -165,7 +169,7 @@ function WorkButtons({
           disabled={pending}
           onClick={() => run(pickupConversationAction({ conversationId }))}
         >
-          Assumir
+          {t("pickup")}
         </Button>
       )}
       {conversation.status === "in_progress" && (
@@ -174,7 +178,7 @@ function WorkButtons({
           disabled={pending}
           onClick={() => run(setConversationWaitingAction({ conversationId }))}
         >
-          Aguardando cliente
+          {t("waiting")}
         </Button>
       )}
       {conversation.status === "waiting_customer" && (
@@ -183,7 +187,7 @@ function WorkButtons({
           disabled={pending}
           onClick={() => run(setConversationInProgressAction({ conversationId }))}
         >
-          Em atendimento
+          {t("inProgress")}
         </Button>
       )}
       <Button
@@ -191,7 +195,7 @@ function WorkButtons({
         disabled={pending}
         onClick={() => run(resolveConversationAction({ conversationId }))}
       >
-        Resolver
+        {t("resolve")}
       </Button>
     </>
   );
