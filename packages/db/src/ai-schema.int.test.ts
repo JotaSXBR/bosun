@@ -13,13 +13,16 @@ const {
   agents,
   aiUsageEvents,
   knowledgeEntries,
+  memoryEntries,
   orgLlmCredentials,
   organizations,
+  users,
 } = schema;
 
 let db: Database;
 let orgA: string;
 let orgB: string;
+let userA: string;
 
 beforeAll(async () => {
   const env = getServerEnv();
@@ -34,6 +37,11 @@ beforeAll(async () => {
   }
 
   const suffix = crypto.randomUUID().slice(0, 8);
+  const [u] = await db
+    .insert(users)
+    .values({ name: "AI RLS", email: `ai-rls-${suffix}@crm.local` })
+    .returning({ id: users.id });
+  userA = u!.id;
   const rows = await db
     .insert(organizations)
     .values([
@@ -47,6 +55,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.delete(organizations).where(sql`${organizations.id} in (${orgA}, ${orgB})`);
+  await db.delete(users).where(sql`${users.id} = ${userA}`);
   await db.$client.end();
 });
 
@@ -77,6 +86,7 @@ describe("ai tables RLS", () => {
         targetId: agent!.id,
         payload: { systemPrompt: "novo" },
         rationale: "porque",
+        proposedBy: userA,
       });
       await tx.insert(aiUsageEvents).values({
         organizationId: orgA,
@@ -87,6 +97,13 @@ describe("ai tables RLS", () => {
         tokensIn: 10,
         tokensOut: 5,
       });
+      await tx.insert(memoryEntries).values({
+        organizationId: orgA,
+        type: "pattern",
+        scope: "org",
+        content: "Clientes perguntam preço cedo",
+        staleAfter: new Date(Date.now() + 30 * 86_400_000),
+      });
     });
 
     for (const table of [
@@ -95,6 +112,7 @@ describe("ai tables RLS", () => {
       knowledgeEntries,
       agentSuggestions,
       aiUsageEvents,
+      memoryEntries,
     ] as const) {
       const inB = await withTenant(db, orgB, (tx) => tx.select().from(table));
       expect(inB).toHaveLength(0);
@@ -122,5 +140,53 @@ describe("ai tables RLS", () => {
       const rows = await db.select().from(table);
       expect(rows).toHaveLength(0);
     }
+  });
+
+  it("agents carry brain access defaults; suggestions track proposer; memory supersedes itself", async () => {
+    const [agent] = await withTenant(db, orgA, (tx) =>
+      tx.insert(agents).values({ organizationId: orgA, name: "Brain" }).returning(),
+    );
+    expect(agent!.brainAccess).toBe("off");
+    expect(agent!.brainTypes).toEqual([]);
+
+    const [old] = await withTenant(db, orgA, (tx) =>
+      tx
+        .insert(memoryEntries)
+        .values({
+          organizationId: orgA,
+          type: "decision",
+          scope: "org",
+          content: "Regra antiga",
+          staleAfter: new Date(Date.now() + 86_400_000),
+        })
+        .returning(),
+    );
+    const [next] = await withTenant(db, orgA, (tx) =>
+      tx
+        .insert(memoryEntries)
+        .values({
+          organizationId: orgA,
+          type: "decision",
+          scope: "org",
+          content: "Regra nova",
+          status: "canon",
+          staleAfter: new Date(Date.now() + 86_400_000),
+        })
+        .returning(),
+    );
+    await withTenant(db, orgA, (tx) =>
+      tx
+        .update(memoryEntries)
+        .set({ status: "superseded", supersededBy: next!.id })
+        .where(sql`${memoryEntries.id} = ${old!.id}`),
+    );
+    const [reloaded] = await withTenant(db, orgA, (tx) =>
+      tx
+        .select()
+        .from(memoryEntries)
+        .where(sql`${memoryEntries.id} = ${old!.id}`),
+    );
+    expect(reloaded!.status).toBe("superseded");
+    expect(reloaded!.supersededBy).toBe(next!.id);
   });
 });

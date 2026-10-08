@@ -127,6 +127,13 @@
       "when": 1791472230982,
       "tag": "0017_luxuriant_the_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791479719026,
+      "tag": "0018_past_talon",
+      "breakpoints": true
     }
   ]
 }

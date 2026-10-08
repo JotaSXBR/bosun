@@ -2,6 +2,7 @@ export * from "./ai";
 export * from "./audit";
 export * from "./auth";
 export * from "./billing";
+export * from "./brain";
 export * from "./leads";
 export * from "./messaging";
 export * from "./settings";

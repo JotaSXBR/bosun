@@ -86,6 +86,8 @@ export const agents = pgTable(
     memoryTokenCap: integer(),
     toolExecutionLimit: integer(),
     signatureLine: text(),
+    brainAccess: text().notNull().default("off"),
+    brainTypes: jsonb().notNull().default([]),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
@@ -158,6 +160,10 @@ export const agentSuggestions = pgTable(
     }),
     reviewedBy: uuid().references(() => users.id, { onDelete: "set null" }),
     reviewedAt: timestamp({ withTimezone: true }),
+    // Who proposed the change — null means the observer (system). Review
+    // rules: ai:manage may not approve their own proposal (four-eyes);
+    // owner is sovereign and always may.
+    proposedBy: uuid().references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
