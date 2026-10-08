@@ -40,12 +40,23 @@ export function SuggestionsSection({
     });
 
   const targetName = (s: AgentSuggestionRow): string => {
+    if (s.targetType === "memory") {
+      const content = (s.payload as { content?: string }).content ?? "";
+      return content.length > 80 ? `${content.slice(0, 80)}…` : content;
+    }
     if (!s.targetId) return t("targetNew");
     if (s.targetType === "agent") {
       return agents.find((a) => a.id === s.targetId)?.name ?? s.targetId;
     }
     return knowledge.find((k) => k.id === s.targetId)?.title ?? s.targetId;
   };
+
+  const targetLabel = (s: AgentSuggestionRow): string =>
+    s.targetType === "agent"
+      ? t("targetAgent")
+      : s.targetType === "memory"
+        ? t("targetMemory")
+        : t("targetKnowledge");
 
   const pendingList = suggestions.filter((s) => s.status === "pending");
   const reviewed = suggestions.filter((s) => s.status !== "pending");
@@ -66,9 +77,7 @@ export function SuggestionsSection({
             {pendingList.map((s) => (
               <li key={s.id} className="space-y-2 rounded-md border p-3">
                 <div className="flex items-center gap-2 text-sm">
-                  <Badge variant="outline">
-                    {s.targetType === "agent" ? t("targetAgent") : t("targetKnowledge")}
-                  </Badge>
+                  <Badge variant="outline">{targetLabel(s)}</Badge>
                   <span className="font-medium">{targetName(s)}</span>
                 </div>
                 <p className="text-sm">{s.rationale}</p>
@@ -114,8 +123,7 @@ export function SuggestionsSection({
                     {s.status === "approved" ? t("statusApproved") : t("statusRejected")}
                   </Badge>
                   <span className="text-muted-foreground">
-                    {s.targetType === "agent" ? t("targetAgent") : t("targetKnowledge")} ·{" "}
-                    {targetName(s)}
+                    {targetLabel(s)} · {targetName(s)}
                   </span>
                 </li>
               ))}

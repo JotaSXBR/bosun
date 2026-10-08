@@ -8,6 +8,7 @@ export {
 export type {
   ListBrainEntriesInput,
   MemoryConfidence,
+  MemoryEntryType,
   MemoryProposal,
   MemoryScope,
   ProposeEntryInput,

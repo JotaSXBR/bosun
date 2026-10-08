@@ -6,13 +6,15 @@ import type { CreateAgentInput, UpdateAgentInput } from "@crm/core/agents";
 import { createAgent, deleteAgentById, updateAgent } from "@crm/core/agents";
 import type { CreateLlmCredentialInput, UpdateLlmCredentialInput } from "@crm/core/ai";
 import { createLlmCredential, deleteLlmCredential, updateLlmCredential } from "@crm/core/ai";
+import type { ProposeEntryInput, RenewEntryInput } from "@crm/core/brain";
+import { archiveBrainEntry, renewBrainEntry } from "@crm/core/brain";
 import type { CreateKnowledgeEntryInput, UpdateKnowledgeEntryInput } from "@crm/core/knowledge";
 import {
   createKnowledgeEntry,
   deleteKnowledgeEntry,
   updateKnowledgeEntry,
 } from "@crm/core/knowledge";
-import { approveSuggestion, rejectSuggestion } from "@crm/core/suggestions";
+import { approveSuggestion, proposeMemoryEntry, rejectSuggestion } from "@crm/core/suggestions";
 import { getDb } from "@crm/db";
 import { captureException } from "@crm/observability";
 import { revalidatePath } from "next/cache";
@@ -184,5 +186,41 @@ export async function analyzeNowAction(): Promise<AiActionResult> {
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível iniciar a análise.") };
+  }
+}
+
+// --- Second brain (memória operacional) ---------------------------------------
+
+/** Human-curated staging — lands in the suggestion inbox for peer review. */
+export async function proposeMemoryEntryAction(input: ProposeEntryInput): Promise<AiActionResult> {
+  const ctx = await requireTenantContext();
+  try {
+    await proposeMemoryEntry(getDb(), ctx, input);
+    revalidatePath(AI_SETTINGS_PATH);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível propor a memória.") };
+  }
+}
+
+export async function renewBrainEntryAction(input: RenewEntryInput): Promise<AiActionResult> {
+  const ctx = await requireTenantContext();
+  try {
+    await renewBrainEntry(getDb(), ctx, input);
+    revalidatePath(AI_SETTINGS_PATH);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível renovar a memória.") };
+  }
+}
+
+export async function archiveBrainEntryAction(entryId: string): Promise<AiActionResult> {
+  const ctx = await requireTenantContext();
+  try {
+    await archiveBrainEntry(getDb(), ctx, entryId);
+    revalidatePath(AI_SETTINGS_PATH);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível arquivar a memória.") };
   }
 }

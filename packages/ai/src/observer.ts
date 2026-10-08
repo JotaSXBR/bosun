@@ -38,6 +38,7 @@ export const observerMemorySchema = z.object({
   confidence: z.enum(["low", "medium", "high"]),
   staleAfterDays: z.number().int().min(1).max(730).default(90),
   supersedes: z.string().nullish(),
+  rationale: z.string().min(1).max(2000),
 });
 export type ObserverMemory = z.infer<typeof observerMemorySchema>;
 

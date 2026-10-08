@@ -5,14 +5,18 @@ import { getTranslations } from "next-intl/server";
 
 import {
   listOrgAgents,
+  listOrgBrainEntries,
   listOrgKnowledge,
   listOrgLlmCredentials,
+  listOrgStaleBrainEntries,
   listOrgSuggestions,
+  listSectors,
 } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
 
 import { AgentsSection } from "./agents-section";
 import { AnalyzeButton } from "./analyze-button";
+import { BrainSection } from "./brain-section";
 import { CredentialsSection } from "./credentials-section";
 import { KnowledgeSection } from "./knowledge-section";
 import { SuggestionsSection } from "./suggestions-section";
@@ -42,11 +46,14 @@ export default async function AiSettingsPage() {
   }
 
   const canManage = hasPermission(ctx.role, { ai: ["manage"] });
-  const [credentials, agents, knowledge, suggestions] = await Promise.all([
+  const [credentials, agents, knowledge, suggestions, brain, stale, sectors] = await Promise.all([
     listOrgLlmCredentials(ctx),
     listOrgAgents(ctx),
     listOrgKnowledge(ctx),
     listOrgSuggestions(ctx),
+    listOrgBrainEntries(ctx),
+    listOrgStaleBrainEntries(ctx),
+    listSectors(ctx),
   ]);
 
   return (
@@ -70,6 +77,12 @@ export default async function AiSettingsPage() {
       <CredentialsSection credentials={credentials} canManage={canManage} />
       <AgentsSection agents={agents} canManage={canManage} />
       <KnowledgeSection entries={knowledge} canManage={canManage} />
+      <BrainSection
+        entries={brain}
+        stale={stale}
+        teams={sectors.map((s) => ({ id: s.id, name: s.name }))}
+        canManage={canManage}
+      />
     </main>
   );
 }

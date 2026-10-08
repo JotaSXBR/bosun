@@ -7,6 +7,8 @@ import type { LlmCredentialPublic } from "@crm/core/ai";
 import { listLlmCredentials } from "@crm/core/ai";
 import type { AuditLogRow, ListAuditEventsInput } from "@crm/core/audit";
 import { listAuditEvents } from "@crm/core/audit";
+import type { MemoryEntryRow } from "@crm/core/brain";
+import { listBrainEntries, listStaleBrainEntries } from "@crm/core/brain";
 import type { ChannelConnectionRow } from "@crm/core/integrations";
 import { listChannelConnectionsForTenant } from "@crm/core/integrations";
 import type { KnowledgeEntryRow } from "@crm/core/knowledge";
@@ -183,4 +185,12 @@ export async function listOrgKnowledge(ctx: TenantContext): Promise<KnowledgeEnt
 
 export async function listOrgSuggestions(ctx: TenantContext): Promise<AgentSuggestionRow[]> {
   return listAgentSuggestions(getDb(), ctx, { limit: 100 });
+}
+
+export async function listOrgBrainEntries(ctx: TenantContext): Promise<MemoryEntryRow[]> {
+  return listBrainEntries(getDb(), ctx, { limit: 200 });
+}
+
+export async function listOrgStaleBrainEntries(ctx: TenantContext): Promise<MemoryEntryRow[]> {
+  return listStaleBrainEntries(getDb(), ctx);
 }
