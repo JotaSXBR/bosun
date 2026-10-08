@@ -45,19 +45,23 @@ export function resolveLanguageModel(ref: ModelRef, keys: AiProviderKeys): Langu
       return anthropic(ref.modelId);
     }
     case "openrouter": {
-      if (!keys.openrouterApiKey) throw new AiProviderNotConfiguredError("openrouter");
-      const openrouter = createOpenRouter({ apiKey: keys.openrouterApiKey });
-      const extraBody: Record<string, unknown> = {};
-      if (ref.routing?.zdr) {
-        extraBody.provider = { zdr: true, data_collection: "deny" };
-      }
-      if (ref.routing?.fallbacks?.length) {
-        extraBody.models = ref.routing.fallbacks;
-      }
-      if (ref.routing?.sessionId) {
-        extraBody.session_id = ref.routing.sessionId;
-      }
-      return openrouter(ref.modelId, Object.keys(extraBody).length > 0 ? { extraBody } : {});
+      return resolveOpenRouter(ref, keys);
     }
   }
+}
+
+function resolveOpenRouter(ref: ModelRef, keys: AiProviderKeys): LanguageModel {
+  if (!keys.openrouterApiKey) throw new AiProviderNotConfiguredError("openrouter");
+  const openrouter = createOpenRouter({ apiKey: keys.openrouterApiKey });
+  const extraBody: Record<string, unknown> = {};
+  if (ref.routing?.zdr) {
+    extraBody.provider = { zdr: true, data_collection: "deny" };
+  }
+  if (ref.routing?.fallbacks?.length) {
+    extraBody.models = ref.routing.fallbacks;
+  }
+  if (ref.routing?.sessionId) {
+    extraBody.session_id = ref.routing.sessionId;
+  }
+  return openrouter(ref.modelId, Object.keys(extraBody).length > 0 ? { extraBody } : {});
 }

@@ -1,4 +1,4 @@
-export type { ResolveDeps, ResolvedEnqueue } from "./actions";
+export type { ResolvedEnqueue, ResolveDeps } from "./actions";
 export {
   pickupConversation,
   reopenTicket,
