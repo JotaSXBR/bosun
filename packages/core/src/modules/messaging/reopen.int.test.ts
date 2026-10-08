@@ -5,13 +5,23 @@ import { getServerEnv } from "@crm/config";
 import type { Database } from "@crm/db";
 import { createDb, schema, withTenant } from "@crm/db";
 import { and, eq, sql } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { AuthorizationError, NotFoundError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { pickupConversation, reopenTicket, resolveConversation, resumeTicket } from "./actions";
+import type * as repository from "./repository";
+import { findActiveTicket } from "./repository";
 import type { ConnectionRef } from "./service";
 import { ingestChannelEvent } from "./service";
+
+// Spy over the repository so the race-window branch (check passes, then a
+// committed follow-up makes the update hit the unique index) can be staged
+// deterministically. Default calls delegate to the real implementation.
+vi.mock("./repository", async (importOriginal) => {
+  const mod = await importOriginal<typeof repository>();
+  return { ...mod, findActiveTicket: vi.fn(mod.findActiveTicket) };
+});
 
 const { channelConnections, conversations, organizationMembers, organizations, users } = schema;
 
@@ -146,6 +156,26 @@ describe("reopenTicket", () => {
     await expect(
       reopenTicket(db, ctx(orgA, "agent"), { conversationId: ticket.id }),
     ).rejects.toThrowError(/ACTIVE_TICKET_EXISTS|follow-up/i);
+  });
+
+  it("maps a late-arriving unique violation (drizzle-wrapped) to ACTIVE_TICKET_EXISTS", async () => {
+    const ticket = await newTicket("re-3b@c.us", "false_re3b@c.us_1", new Date("2024-04-09"));
+    await resolveConversation(db, ctx(orgA, "agent"), { conversationId: ticket.id });
+    await resumeTicket(db, ctx(orgA, "agent"), { conversationId: ticket.id });
+
+    // Stage the race: the pre-check sees "no active ticket", then the update
+    // hits the partial unique index — the pg error arrives inside
+    // DrizzleQueryError.cause, not on the thrown error itself.
+    vi.mocked(findActiveTicket).mockResolvedValueOnce(undefined);
+
+    await expect(
+      reopenTicket(db, ctx(orgA, "agent"), { conversationId: ticket.id }),
+    ).rejects.toMatchObject({ code: "ACTIVE_TICKET_EXISTS" });
+    // The resolved ticket is untouched — the transaction rolled back.
+    const after = await withTenant(db, orgA, (tx) =>
+      tx.select().from(conversations).where(eq(conversations.id, ticket.id)),
+    );
+    expect(after[0]!.status).toBe("resolved");
   });
 
   it("rejects non-resolved tickets and viewers", async () => {

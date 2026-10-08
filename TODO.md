@@ -229,13 +229,6 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 
 ## Implementação futura (prioridade)
 
-- **P2 — `reopenTicket` nunca casa o catch de unique violation**:
-  `actions.ts` testa `pgError.code === "23505"` no erro direto, mas o
-  drizzle entrega `DrizzleQueryError` com o pg error em `cause` — o guard
-  de `ACTIVE_TICKET_EXISTS` (race com inbound) não dispara e o erro cru
-  chega à action. Extrair o helper `isTeamNameConflict` (teams/service.ts)
-  ou equivalente que verifica `err.code` **e** `err.cause.code`.
-
 - **P2 — Rate limit em Redis** quando houver >1 instância do web. Benefício:
   limites corretos multi-instância. Custo: baixo.
 - **P2 — Sentry sourcemaps/upload wiring**. Benefício: stacks legíveis em

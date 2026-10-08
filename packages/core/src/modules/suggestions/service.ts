@@ -3,6 +3,7 @@ import { emitDomainEvent, withTenant } from "@crm/db";
 import { captureException } from "@crm/observability";
 
 import { DomainError, NotFoundError } from "../../errors";
+import { isPgError } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import { createAgentInput, findAgentById, insertAgent, updateAgentRow } from "../agents";
@@ -287,8 +288,7 @@ async function applyPayload(
       throw new DomainError("SUGGESTION_TARGET_UNSUPPORTED", suggestion.targetType);
     }
   } catch (error) {
-    const pg = error as { code?: string };
-    if (pg.code === "23505" || pg.code === "23503") {
+    if (isPgError(error, "23505") || isPgError(error, "23503")) {
       throw new DomainError(
         "SUGGESTION_APPLY_CONFLICT",
         "Suggestion payload conflicts with an existing record",
