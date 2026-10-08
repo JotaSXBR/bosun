@@ -120,6 +120,13 @@
       "when": 1791389612876,
       "tag": "0016_abandoned_joseph",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791472230982,
+      "tag": "0017_luxuriant_the_fury",
+      "breakpoints": true
     }
   ]
 }

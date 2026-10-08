@@ -13,6 +13,7 @@ const statement = {
   teams: ["read", "manage"],
   leads: ["read", "write", "manage"],
   billing: ["read"],
+  ai: ["read", "manage"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -28,6 +29,7 @@ export const roles = {
     teams: ["read", "manage"],
     leads: ["read", "write", "manage"],
     billing: ["read"],
+    ai: ["read", "manage"],
   }),
   admin: ac.newRole({
     organization: ["update"],
@@ -39,6 +41,7 @@ export const roles = {
     teams: ["read", "manage"],
     leads: ["read", "write", "manage"],
     billing: ["read"],
+    ai: ["read", "manage"],
   }),
   manager: ac.newRole({
     invitation: ["create"],
@@ -47,6 +50,7 @@ export const roles = {
     messaging: ["read", "write"],
     teams: ["read", "manage"],
     leads: ["read", "write", "manage"],
+    ai: ["read", "manage"],
   }),
   agent: ac.newRole({
     integrations: ["read"],
@@ -61,6 +65,7 @@ export const roles = {
     messaging: ["read"],
     teams: ["read"],
     leads: ["read"],
+    ai: ["read"],
   }),
 } as const;
 
