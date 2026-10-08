@@ -1,5 +1,6 @@
 "use server";
 
+import { enqueueObserverAnalyze } from "@crm/automation";
 import { DomainError } from "@crm/core";
 import type {
   ConversationIdInput,
@@ -73,7 +74,9 @@ export async function resolveConversationAction(
 ): Promise<MessagingActionResult> {
   const ctx = await requireTenantContext();
   try {
-    const conv = await resolveConversation(getDb(), ctx, input);
+    const conv = await resolveConversation(getDb(), ctx, input, {
+      enqueue: (executor, payload) => enqueueObserverAnalyze(payload, executor),
+    });
     revalidateInbox();
     return { ok: true, id: conv.id };
   } catch (error) {

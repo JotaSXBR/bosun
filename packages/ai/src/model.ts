@@ -8,10 +8,11 @@ export type ModelRef = {
   provider: "openai" | "anthropic" | "openrouter";
   modelId: string;
   /**
-   * OpenRouter-only routing hints — provider routing (`zdr`, ordering) and
-   * `models` fallback chain. Ignored by direct providers.
+   * OpenRouter-only routing hints — provider routing (`zdr`, ordering),
+   * `models` fallback chain, and `sessionId` for sticky routing/prompt
+   * cache reuse. Ignored by direct providers.
    */
-  routing?: { zdr?: boolean; fallbacks?: string[] };
+  routing?: { zdr?: boolean; fallbacks?: string[]; sessionId?: string };
 };
 
 export class AiProviderNotConfiguredError extends Error {
@@ -52,6 +53,9 @@ export function resolveLanguageModel(ref: ModelRef, keys: AiProviderKeys): Langu
       }
       if (ref.routing?.fallbacks?.length) {
         extraBody.models = ref.routing.fallbacks;
+      }
+      if (ref.routing?.sessionId) {
+        extraBody.session_id = ref.routing.sessionId;
       }
       return openrouter(ref.modelId, Object.keys(extraBody).length > 0 ? { extraBody } : {});
     }

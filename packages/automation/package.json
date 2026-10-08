@@ -13,6 +13,7 @@
     "test:coverage": "vitest run --passWithNoTests --coverage --exclude \"**/*.int.test.ts\" --exclude \"**/node_modules/**\""
   },
   "dependencies": {
+    "@crm/ai": "workspace:*",
     "@crm/channels": "workspace:*",
     "@crm/config": "workspace:*",
     "@crm/core": "workspace:*",

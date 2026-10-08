@@ -44,6 +44,24 @@ export async function findSuggestionById(
   return row ?? null;
 }
 
+/** Pending suggestions emitted for one conversation — the dedupe guard. */
+export async function listPendingForConversation(
+  executor: DbExecutor,
+  organizationId: string,
+  sourceConversationId: string,
+): Promise<AgentSuggestionRow[]> {
+  return executor
+    .select()
+    .from(agentSuggestions)
+    .where(
+      and(
+        eq(agentSuggestions.organizationId, organizationId),
+        eq(agentSuggestions.sourceConversationId, sourceConversationId),
+        eq(agentSuggestions.status, "pending"),
+      ),
+    );
+}
+
 export async function insertSuggestion(
   executor: DbExecutor,
   values: {

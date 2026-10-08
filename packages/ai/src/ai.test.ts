@@ -120,6 +120,47 @@ describe("buildToolSet", () => {
   });
 });
 
+describe("analyzeConversation", () => {
+  const observerModel = new MockLanguageModelV4({
+    doGenerate: {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            suggestions: [
+              {
+                targetType: "knowledge_entry",
+                payload: { title: "FAQ", content: "Resposta" },
+                rationale: "Cliente perguntou duas vezes",
+              },
+            ],
+          }),
+        },
+      ],
+      finishReason: { unified: "stop", raw: "stop" },
+      usage: {
+        inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+        outputTokens: { total: 5, text: 5, reasoning: 0 },
+      },
+      warnings: [],
+    },
+  });
+
+  it("returns parsed suggestions and token usage", async () => {
+    const { analyzeConversation } = await import("./observer");
+    const result = await analyzeConversation({
+      model: observerModel,
+      transcript: [{ direction: "inbound", text: "qual o prazo?" }],
+      agents: [],
+      knowledge: [],
+    });
+    expect(result.suggestions).toHaveLength(1);
+    expect(result.suggestions[0]?.targetType).toBe("knowledge_entry");
+    expect(result.tokensIn).toBe(10);
+    expect(result.tokensOut).toBe(5);
+  });
+});
+
 describe("runAgent", () => {
   const mockModel = new MockLanguageModelV4({
     doGenerate: {

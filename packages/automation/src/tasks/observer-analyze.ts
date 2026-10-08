@@ -1,0 +1,196 @@
+import type { AiProviderKeys, ObserverInput, ObserverResult } from "@crm/ai";
+import { analyzeConversation, resolveLanguageModel } from "@crm/ai";
+import { listAgentRows } from "@crm/core/agents";
+import { llmProviderSchema, recordUsageEvents, resolveOrgLlmCredentials } from "@crm/core/ai";
+import { listKnowledgeRows } from "@crm/core/knowledge";
+import { listConversations, listMessages } from "@crm/core/messaging";
+import { createSystemSuggestions, listPendingForConversation } from "@crm/core/suggestions";
+import type { Database } from "@crm/db";
+import { getDb, withTenant } from "@crm/db";
+import { createLogger } from "@crm/observability";
+import { z } from "zod";
+
+const logger = createLogger({ bindings: { component: "observer" } });
+
+export const observerAnalyzePayload = z.object({
+  organizationId: z.uuid(),
+  /** Resolved conversation to analyze; absent → latest resolved (manual trigger). */
+  conversationId: z.uuid().optional(),
+  /** Who clicked "analyze now" — identity only, never trusted for auth. */
+  actorUserId: z.uuid().optional(),
+});
+
+export type ObserverAnalyzePayload = z.infer<typeof observerAnalyzePayload>;
+
+/** Resolved-conversation transcripts are capped — long history is a cost knob. */
+const TRANSCRIPT_LIMIT = 100;
+const MANUAL_CANDIDATES = 3;
+
+function keysFor(cred: { provider: string; apiKey: string }): AiProviderKeys {
+  return {
+    openaiApiKey: cred.provider === "openai" ? cred.apiKey : undefined,
+    anthropicApiKey: cred.provider === "anthropic" ? cred.apiKey : undefined,
+    openrouterApiKey: cred.provider === "openrouter" ? cred.apiKey : undefined,
+  };
+}
+
+async function pickConversationId(
+  db: Database,
+  organizationId: string,
+  conversationId: string | undefined,
+): Promise<string | null> {
+  if (conversationId) return conversationId;
+  const resolved = await listConversations(db, organizationId, {
+    view: "resolved",
+    limit: MANUAL_CANDIDATES,
+    userId: "",
+  });
+  for (const conv of resolved) {
+    const pending = await withTenant(db, organizationId, (tx) =>
+      listPendingForConversation(tx, organizationId, conv.id),
+    );
+    if (pending.length === 0) return conv.id;
+  }
+  return null;
+}
+
+export type ObserverAnalyzeDeps = {
+  /** LLM call — injectable so tests don't hit a real provider. */
+  analyze?: (input: ObserverInput) => Promise<ObserverResult>;
+};
+
+/**
+ * AI observer v1 — passive analysis of a resolved conversation. Emits
+ * pending `agent_suggestions` only: never sends a customer message, never
+ * drafts a reply. Organizations without an LLM credential are silently
+ * skipped (BYOK is opt-in). Retries re-use the pending-suggestion dedupe,
+ * so a re-run can't duplicate suggestions for the same target.
+ */
+export async function observerAnalyzeHandler(
+  payload: unknown,
+  deps?: ObserverAnalyzeDeps,
+): Promise<{
+  analyzed: boolean;
+  suggestions: number;
+  skipped?: boolean;
+}> {
+  const parsed = observerAnalyzePayload.parse(payload);
+  const db = getDb();
+  const organizationId = parsed.organizationId;
+
+  const conversationId = await pickConversationId(db, organizationId, parsed.conversationId);
+  if (!conversationId) return { analyzed: false, suggestions: 0, skipped: true };
+
+  const prepared = await withTenant(db, organizationId, async (tx) => {
+    const credentials = await resolveOrgLlmCredentials(tx, organizationId);
+    if (credentials.length === 0) return null;
+    const pending = await listPendingForConversation(tx, organizationId, conversationId);
+    if (pending.length > 0) return null;
+    const agents = await listAgentRows(tx, organizationId);
+    const knowledge = await listKnowledgeRows(tx, organizationId);
+    return { credentials, agents, knowledge };
+  });
+  if (!prepared) {
+    return { analyzed: false, suggestions: 0, skipped: true };
+  }
+
+  const messages = await listMessages(db, organizationId, conversationId, TRANSCRIPT_LIMIT);
+  const transcript = messages.map((m) => {
+    const content = m.content as { text?: string; caption?: string; type?: string };
+    return {
+      direction: m.direction as "inbound" | "outbound",
+      text: content.text ?? content.caption ?? `[${content.type ?? "media"}]`,
+      private: m.private,
+    };
+  });
+  const agents = prepared.agents.map((a) => ({
+    id: a.id,
+    name: a.name,
+    specialty: a.specialty,
+    status: a.status,
+    systemPrompt: a.systemPrompt,
+  }));
+  const knowledge = prepared.knowledge
+    .filter((k) => k.status === "active")
+    .map((k) => ({ id: k.id, title: k.title }));
+
+  let lastError: unknown;
+  for (const cred of prepared.credentials) {
+    const attempt = await runCredentialAttempt(
+      { db, organizationId, conversationId, cred },
+      { transcript, agents, knowledge, analyze: deps?.analyze },
+    );
+    if (attempt.ok) return { analyzed: true, suggestions: attempt.suggestions };
+    lastError = attempt.error;
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+type Credential = {
+  id: string;
+  provider: string;
+  apiKey: string;
+  model: string;
+  zdr: boolean;
+};
+
+/** One credential in the fallback chain — records usage on both outcomes. */
+async function runCredentialAttempt(
+  scope: { db: Database; organizationId: string; conversationId: string; cred: Credential },
+  input: Omit<ObserverInput, "model"> & Pick<ObserverAnalyzeDeps, "analyze">,
+): Promise<{ ok: true; suggestions: number } | { ok: false; error: unknown }> {
+  const { db, organizationId, conversationId, cred } = scope;
+  const startedAt = Date.now();
+  const record = (status: "ok" | "error", tokensIn = 0, tokensOut = 0) =>
+    withTenant(db, organizationId, (tx) =>
+      recordUsageEvents(tx, organizationId, [
+        {
+          credentialId: cred.id,
+          callKind: "observer",
+          provider: cred.provider,
+          model: cred.model,
+          tokensIn,
+          tokensOut,
+          latencyMs: Date.now() - startedAt,
+          status,
+        },
+      ]),
+    );
+  try {
+    const model = resolveLanguageModel(
+      {
+        provider: llmProviderSchema.parse(cred.provider),
+        modelId: cred.model,
+        routing: { zdr: cred.zdr, sessionId: conversationId },
+      },
+      keysFor(cred),
+    );
+    const { transcript, agents, knowledge, analyze } = input;
+    const result = await (analyze ?? analyzeConversation)({ model, transcript, agents, knowledge });
+    await record("ok", result.tokensIn, result.tokensOut);
+    const created = await createSystemSuggestions(
+      db,
+      organizationId,
+      result.suggestions.map((s) => ({
+        ...s,
+        targetId: s.targetId ?? null,
+        sourceConversationId: conversationId,
+      })),
+    );
+    return { ok: true, suggestions: created.length };
+  } catch (error) {
+    logger.warn("observer credential attempt failed", {
+      organizationId,
+      provider: cred.provider,
+      model: cred.model,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    await record("error").catch((usageError: unknown) =>
+      logger.warn("observer usage record failed", {
+        organizationId,
+        error: usageError instanceof Error ? usageError.message : String(usageError),
+      }),
+    );
+    return { ok: false, error };
+  }
+}

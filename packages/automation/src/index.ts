@@ -2,6 +2,7 @@ export { getBoss, QUEUES, startJobs } from "./boss";
 export {
   enqueueChannelEventProcessed,
   enqueueChannelReconcile,
+  enqueueObserverAnalyze,
   enqueueOrganizationOnboarding,
 } from "./enqueue";
 export type { ChannelReconcilePayload } from "./tasks/channel-messages-reconcile";
@@ -9,6 +10,8 @@ export {
   channelReconcileHandler,
   channelReconcilePayload,
 } from "./tasks/channel-messages-reconcile";
+export type { ObserverAnalyzePayload } from "./tasks/observer-analyze";
+export { observerAnalyzeHandler, observerAnalyzePayload } from "./tasks/observer-analyze";
 export type { OrganizationOnboardingPayload } from "./tasks/organization-onboarding";
 export {
   organizationOnboardingHandler,

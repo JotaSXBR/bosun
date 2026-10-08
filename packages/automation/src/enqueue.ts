@@ -5,6 +5,7 @@ import { fromDrizzle } from "pg-boss";
 
 import { getBoss, QUEUES, startJobs } from "./boss";
 import type { ChannelReconcilePayload } from "./tasks/channel-messages-reconcile";
+import type { ObserverAnalyzePayload } from "./tasks/observer-analyze";
 import type { OrganizationOnboardingPayload } from "./tasks/organization-onboarding";
 import type { ProcessChannelEventPayload } from "./tasks/process-channel-event";
 
@@ -61,4 +62,16 @@ export async function enqueueOrganizationOnboarding(
   payload: OrganizationOnboardingPayload,
 ): Promise<{ skipped: boolean }> {
   return send(QUEUES.organizationOnboarding, payload);
+}
+
+/**
+ * Enqueues the AI observer after a ticket resolves (pass `tx` so the job row
+ * is atomic with the resolve write) or when a user clicks "analyze now"
+ * (post-commit best-effort, no tx).
+ */
+export async function enqueueObserverAnalyze(
+  payload: ObserverAnalyzePayload,
+  tx?: DbExecutor,
+): Promise<{ skipped: boolean }> {
+  return send(QUEUES.observerAnalyze, payload, tx);
 }

@@ -5,6 +5,7 @@ import { PgBoss } from "pg-boss";
 
 import { channelReconcileHandler } from "./tasks/channel-messages-reconcile";
 import { closeResolvedTicketsHandler } from "./tasks/close-resolved-tickets";
+import { observerAnalyzeHandler } from "./tasks/observer-analyze";
 import { organizationOnboardingHandler } from "./tasks/organization-onboarding";
 import { processChannelEventHandler } from "./tasks/process-channel-event";
 
@@ -15,6 +16,7 @@ export const QUEUES = {
   organizationOnboarding: "organization-onboarding",
   closeResolvedTickets: "close-resolved-tickets",
   channelReconcile: "channel-messages-reconcile",
+  observerAnalyze: "observer-analyze",
 } as const;
 
 let boss: PgBoss | undefined;
@@ -89,6 +91,9 @@ async function start(env: ServerEnv): Promise<PgBoss> {
   // Backfill messages WAHA received while the stack was down — the webhook
   // retry window only covers short outages.
   await instance.schedule(QUEUES.channelReconcile, "*/30 * * * *");
+  await instance.work(QUEUES.observerAnalyze, async (jobs) => {
+    for (const job of jobs) await observerAnalyzeHandler(job.data);
+  });
 
   logger.info("pg-boss started", { queues: Object.values(QUEUES) });
   return (boss = instance);

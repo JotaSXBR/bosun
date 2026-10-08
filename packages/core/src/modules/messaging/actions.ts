@@ -169,24 +169,43 @@ export async function transferConversation(
 }
 
 /**
+ * Job enqueue callback injected by the app layer (`@crm/automation` lives
+ * above core — dependency direction forbids importing it here). Called with
+ * the resolve transaction so the observer job row commits atomically.
+ */
+export type ResolvedEnqueue = (
+  executor: DbExecutor,
+  payload: { organizationId: string; conversationId: string },
+) => Promise<unknown>;
+
+export type ResolveDeps = { enqueue?: ResolvedEnqueue };
+
+/**
  * Requires messaging:write. Closes the ticket — terminal for the customer,
  * reopenable by agents inside the reopen window (reopenTicket).
+ * `deps.enqueue` fires the AI observer on the resolved conversation.
  */
 export async function resolveConversation(
   db: Database,
   ctx: TenantContext,
   input: ConversationIdInput,
+  deps?: ResolveDeps,
 ): Promise<ConversationRow> {
   assertPermission(ctx, { messaging: ["write"] });
   const { conversationId } = conversationIdInput.parse(input);
   return withTenant(db, ctx.organizationId, async (tx) => {
     const conv = await loadActiveTicket(tx, conversationId);
     assertTicketOwner(conv, ctx);
-    return patchTicket(tx, ctx.organizationId, conversationId, {
+    const updated = await patchTicket(tx, ctx.organizationId, conversationId, {
       status: "resolved",
       resolvedAt: new Date(),
       resolvedById: ctx.userId,
     });
+    await deps?.enqueue?.(tx, {
+      organizationId: ctx.organizationId,
+      conversationId,
+    });
+    return updated;
   });
 }
 

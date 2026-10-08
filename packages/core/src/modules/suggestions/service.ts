@@ -12,6 +12,7 @@ import type { AgentSuggestionRow } from "./repository";
 import {
   findSuggestionById,
   insertSuggestion,
+  listPendingForConversation,
   listSuggestions as repoListSuggestions,
   markSuggestionReviewed,
 } from "./repository";
@@ -60,6 +61,56 @@ export async function createSystemSuggestion(
       suggestionId: row.id,
     });
     return row;
+  });
+}
+
+/**
+ * Observer batch insert — one transaction, one SSE event per row.
+ * Idempotent: an input whose (targetType, targetId) already has a pending
+ * suggestion from the same source conversation is skipped, so job retries
+ * and repeated analyze triggers can't pile up duplicates.
+ */
+export async function createSystemSuggestions(
+  db: Database,
+  organizationId: string,
+  inputs: CreateSuggestionInput[],
+): Promise<AgentSuggestionRow[]> {
+  if (inputs.length === 0) return [];
+  const parsed = inputs.map((input) => createSuggestionInput.parse(input));
+  return withTenant(db, organizationId, async (tx) => {
+    const conversationIds = [
+      ...new Set(
+        parsed
+          .map((p) => p.sourceConversationId)
+          .filter((id): id is string => typeof id === "string"),
+      ),
+    ];
+    const existing = new Set(
+      (
+        await Promise.all(
+          conversationIds.map((id) => listPendingForConversation(tx, organizationId, id)),
+        )
+      )
+        .flat()
+        .map((row) => `${row.targetType}:${row.targetId ?? ""}`),
+    );
+    const created: AgentSuggestionRow[] = [];
+    for (const input of parsed) {
+      if (
+        input.sourceConversationId &&
+        existing.has(`${input.targetType}:${input.targetId ?? ""}`)
+      ) {
+        continue;
+      }
+      const row = await insertSuggestion(tx, { organizationId, ...input });
+      created.push(row);
+      await emitDomainEvent(tx, {
+        type: "agent_suggestion.created",
+        organizationId,
+        suggestionId: row.id,
+      });
+    }
+    return created;
   });
 }
 
