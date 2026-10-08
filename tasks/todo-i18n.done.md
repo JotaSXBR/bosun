@@ -10,8 +10,8 @@ no root layout, e extrair `sign-in`/`sign-up` como piloto do padrão
 
 **Acceptance criteria:**
 
-- [ ] App compila e renderiza `/sign-in` idêntico (visual PT-BR)
-- [ ] Strings do piloto vivem no catálogo, não no JSX
+- [x] App compila e renderiza `/sign-in` idêntico (visual PT-BR)
+- [x] Strings do piloto vivem no catálogo, não no JSX
 
 **Verification:** `pnpm build` ou dev + check visual Chrome DevTools.
 
@@ -27,7 +27,7 @@ no root layout, e extrair `sign-in`/`sign-up` como piloto do padrão
 
 **Acceptance criteria:**
 
-- [ ] Páginas renderizam idênticas; strings no catálogo
+- [x] Páginas renderizam idênticas; strings no catálogo
 
 ## Task 3: Inbox/messaging
 
@@ -38,7 +38,7 @@ no root layout, e extrair `sign-in`/`sign-up` como piloto do padrão
 
 **Acceptance criteria:**
 
-- [ ] Thread renderiza idêntica; formatação de data mantém pt-BR
+- [x] Thread renderiza idêntica; formatação de data mantém pt-BR
 
 ## Task 4: Leads/kanban
 
@@ -63,6 +63,6 @@ pendências: error strings de server actions, widget.js) e
 
 **Acceptance criteria:**
 
-- [ ] Zero literais PT user-facing em `apps/web/src` (exceto dados/
+- [x] Zero literais PT user-facing em `apps/web/src` (exceto dados/
       comentários)
-- [ ] Gate verde; e2e passa
+- [x] Gate verde; e2e passa

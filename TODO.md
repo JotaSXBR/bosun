@@ -138,8 +138,13 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   quebra. Fix: declarar uma key de teste fixa (64 hex, não-secreta) no
   `env:` do `ci.yml` (mesmo padrão do `BETTER_AUTH_SECRET`) — bloqueado
   por escopo do brief na época; aprovar e aplicar.
-- **P1 — i18n**: `next-intl` com strings PT-BR centralizadas; extrair
-  strings existentes.
+- **P1 — i18n**: ✅ entregue — `next-intl@4.14.9` com locale pt-BR fixo
+  (sem `[locale]` na rota), catálogo `apps/web/messages/pt-BR.json`,
+  `getTranslations`/`useTranslations` + `getFormatter`/`useFormatter` em
+  todas as páginas/componentes de `apps/web/src`. **Pendências**: erros de
+  `server/actions/*` e `packages/core` seguem PT-BR hardcoded (precisam de
+  error codes → slice próprio); `widget.js` público sem i18n; segundo
+  locale futuro = novo arquivo de mensagens + decisão de rota.
 - **P1 — Design-system lint** (`@shadcn/lint`): ✅ adotado — token rules
   em `error` nos dois pacotes UI-touching; baseline+regras em
   `docs/development/design-system-lint.md`. **Bugs corrigidos**: (a) scan
