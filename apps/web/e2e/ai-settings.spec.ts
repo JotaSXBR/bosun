@@ -57,6 +57,33 @@ test("AI settings: credentials, agents and knowledge CRUD over the observer surf
   await kbDialog.getByRole("button", { name: "Adicionar entrada" }).click();
   await expect(page.getByTestId("knowledge-list")).toContainText("FAQ E2E");
 
+  // Second brain — human proposal stages in the suggestion inbox; the
+  // e2e user is the org owner, so self-approval is allowed (sovereign).
+  await expect(page.getByTestId("brain-empty")).toBeVisible();
+  await page.getByRole("button", { name: "Propor memória" }).click();
+  const brainDialog = page.getByRole("dialog");
+  await brainDialog.getByLabel("Conteúdo").fill("Clientes perguntam prazo antes do preço.");
+  await brainDialog.getByLabel("Justificativa").fill("Padrão visto em várias conversas E2E.");
+  await brainDialog.getByTestId("brain-propose-submit").click();
+  await expect(page.getByText(/aguarda revisão/)).toBeVisible();
+
+  // The staged proposal appears in the suggestions inbox as "memória".
+  const suggestionList = page.getByTestId("suggestion-list");
+  await expect(suggestionList).toContainText("memória");
+  await expect(suggestionList).toContainText("Clientes perguntam prazo");
+  await suggestionList.getByRole("button", { name: "Aprovar" }).first().click();
+  await expect(page.getByText(/aprovada e aplicada/)).toBeVisible();
+
+  // Approval promoted it to canon — the brain section lists it.
+  await expect(page.getByTestId("brain-list")).toContainText(
+    "Clientes perguntam prazo antes do preço.",
+  );
+  await expect(page.getByTestId("brain-list")).toContainText("organização");
+
+  // Archiving removes it from the canon.
+  await page.getByTestId("brain-list").getByRole("button", { name: "Arquivar" }).click();
+  await expect(page.getByTestId("brain-empty")).toBeVisible();
+
   // Delete the credential back to the empty state.
   await page.getByTestId("credential-list").getByRole("button", { name: "Remover" }).click();
   await expect(page.getByTestId("credentials-empty")).toBeVisible();

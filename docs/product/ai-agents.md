@@ -57,11 +57,30 @@ ship. Grouped:
   `google_calendar_create_event`, `gmail_send`
 - `custom_tool` — user-configurable, later
 
-## Memory (roadmap, designed for)
+## Memory
 
-Per-contact memory: on resolution, a summary (contacts data, agreements,
-pending items) replaces raw history for the agent's future context —
-configurable token ceiling (fazer.ai model). v1 stores nothing; the
+**Second brain (delivered)** — `memory_entries` stores internal
+operational learning per org (never customer-facing; `knowledge_entries`
+keeps that role). Two layers: staging = pending `agent_suggestions` with
+`target_type = 'memory'` (proposed by the observer on conversation
+resolve, or by a human via `/app/settings/ai`); canon = approved rows.
+Four-eyes: the proposer can't self-approve, except the owner (sovereign
+in single-person orgs). Entries carry type (8-value taxonomy), scope
+(org/team/contact — contact links the row, never PII in content),
+confidence, `sources` provenance, `stale_after` freshness and a
+`superseded_by` temporal chain (updates retire the old row, nothing is
+edited in place). A daily `brain-stale-sweep` job flags expired canon as
+`stale`; humans renew or archive — the system never kills memory alone.
+The observer reads canon + pending contents into its prompt
+(search-before-write: no re-proposals, `supersedes` to replace facts)
+and may emit up to 3 memory proposals per analysis. Agents get
+`brain_access`/`brain_types` config columns now; runtime consumption
+arrives with active agents. Per-contact conversation summaries (below)
+remain roadmap.
+
+Per-contact memory (roadmap): on resolution, a summary (contacts data,
+agreements, pending items) replaces raw history for the agent's future
+context — configurable token ceiling (fazer.ai model). The
 `ai_usage_events` + suggestion flow exist so this drops in cleanly.
 
 ## Explicitly NOT v1 (roadmap, in priority order)

@@ -181,16 +181,21 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `agent_suggestion.created`. Pendências: second brain (item próprio
   abaixo), drafts/triage/TTS = roadmap do spec. Ver
   `docs/product/ai-agents.md`.
-- **P1 — Second brain (memória do copiloto)**: fatia separada, depois do
-  observer v1. Decisões travadas (2026-10-08): design **somente de fontes
-  externas** (OKF/Google Open Knowledge Format — markdown+frontmatter com
-  provenance/trust/freshness/lifecycle first-class; literatura de agent
-  memory — MemGPT/Letta, Zep, mem0); **duas camadas** — staging draft
-  automático + promoção a canon por aprovação (mesmo gate das
-  suggestions); **coexiste** com `knowledge_entries` (knowledge =
-  conteúdo pro cliente; brain = aprendizado operacional interno que o
-  observer/copiloto usa p/ não re-ler histórico — eficiência de tokens).
-  Objetivo: copiloto configurar/reconfigurar o sistema a partir do brain.
+- **P1 — Second brain (memória do copiloto)**: ✅ entregue — `memory_entries`
+  (RLS, FTS pt-BR, escopo org/team/contact, confidence, `stale_after`,
+  `verified_by/at`, `superseded_by` cadeia temporal), staging via
+  `agent_suggestions` `target_type="memory"` (proposta do observer ou de
+  humano via `proposeMemoryEntry` + `proposed_by`), four-eyes com exceção
+  owner, `@crm/core/brain` (canon list/search, renew/archive, sweep),
+  observer lê canon+pendentes no prompt e propõe `memories[]` (sem PII,
+  ≥medium, sem repropor), job `brain-stale-sweep` diário, seção Brain em
+  `/app/settings/ai` + inbox renderiza memória. Design só de fontes
+  externas (OKF/Google, MemGPT/Letta, Zep, mem0). `knowledge_entries`
+  segue = conteúdo pro cliente; brain = aprendizado operacional interno.
+  **Pendências**: `agents.brain_access`/`brain_types` no schema esperando
+  runtime de agentes; digest de canon adiado (v1 lê relevantes por
+  scope/FTS); embeddings/pgvector fora de escopo; feedback de rejeição no
+  prompt adiado.
 - **P1 — Leads/funil**: ✅ entregue — `funnels`, `funnel_stages`, `deals`,
   `labels` + joins em conversa/deal (RLS ×6, migration `0015`), permissão
   `leads:read/write/manage` (viewer só lê), `@crm/core/leads`
