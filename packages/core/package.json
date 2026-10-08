@@ -18,6 +18,7 @@
     "./messaging": "./src/modules/messaging/index.ts",
     "./organizations": "./src/modules/organizations/index.ts",
     "./platform": "./src/modules/platform/index.ts",
+    "./suggestions": "./src/modules/suggestions/index.ts",
     "./teams": "./src/modules/teams/index.ts"
   },
   "scripts": {
