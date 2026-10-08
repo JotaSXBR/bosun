@@ -9,6 +9,7 @@
     "./agents": "./src/modules/agents/index.ts",
     "./audit": "./src/modules/audit/index.ts",
     "./billing": "./src/modules/billing/index.ts",
+    "./brain": "./src/modules/brain/index.ts",
     "./crypto": "./src/lib/crypto.ts",
     "./integrations": "./src/modules/integrations/index.ts",
     "./knowledge": "./src/modules/knowledge/index.ts",

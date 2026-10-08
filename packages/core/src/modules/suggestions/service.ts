@@ -7,14 +7,23 @@ import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import { createAgentInput, findAgentById, insertAgent, updateAgentRow } from "../agents";
 import { recordAuditEvent } from "../audit";
+import {
+  findMemoryEntryById,
+  insertMemoryEntry,
+  memoryProposalSchema,
+  proposeEntryInput,
+  updateMemoryEntry,
+} from "../brain";
 import { createKnowledgeEntryInput, findEntryById, insertEntry, updateEntry } from "../knowledge";
 import type { AgentSuggestionRow } from "./repository";
 import {
   findSuggestionById,
   insertSuggestion,
+  listPendingByTargetType,
   listPendingForConversation,
   listSuggestions as repoListSuggestions,
   markSuggestionReviewed,
+  scopeRefsExist,
 } from "./repository";
 import type { CreateSuggestionInput, ListSuggestionsInput } from "./schemas";
 import { createSuggestionInput, listSuggestionsInput } from "./schemas";
@@ -65,10 +74,66 @@ export async function createSystemSuggestion(
 }
 
 /**
+ * Human-proposed staging — requires ai:manage; `proposed_by` records who
+ * asked so the four-eyes rule can block self-approval later (owner
+ * excepted — sovereign in single-person orgs).
+ */
+export async function proposeMemoryEntry(
+  db: Database,
+  ctx: TenantContext,
+  input: unknown,
+): Promise<AgentSuggestionRow> {
+  assertPermission(ctx, { ai: ["manage"] });
+  const { rationale, ...proposal } = proposeEntryInput.parse(input);
+  return withTenant(db, ctx.organizationId, async (tx) => {
+    if (!(await scopeRefsExist(tx, ctx.organizationId, proposal))) {
+      throw new DomainError("MEMORY_SCOPE_REF_INVALID", "teamId/contactId not found in org");
+    }
+    const row = await insertSuggestion(tx, {
+      organizationId: ctx.organizationId,
+      targetType: "memory",
+      payload: proposal,
+      rationale,
+      proposedBy: ctx.userId,
+    });
+    await emitDomainEvent(tx, {
+      type: "agent_suggestion.created",
+      organizationId: ctx.organizationId,
+      suggestionId: row.id,
+    });
+    return row;
+  });
+}
+
+/** Pending memory proposal contents — observer dedupe context (normalized). */
+export async function listPendingMemoryContents(
+  db: Database,
+  organizationId: string,
+): Promise<string[]> {
+  return withTenant(db, organizationId, async (tx) =>
+    (await listPendingByTargetType(tx, organizationId, "memory")).map((row) =>
+      normalizeContent((row.payload as { content?: string }).content ?? ""),
+    ),
+  );
+}
+
+function normalizeContent(content: string): string {
+  return content.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+/** Dedupe key — memory proposals match on normalized content; config on target identity. */
+function suggestionKey(targetType: string, targetId: string | null, payload: unknown): string {
+  if (targetType === "memory") {
+    return `memory:${normalizeContent((payload as { content?: string }).content ?? "")}`;
+  }
+  return `${targetType}:${targetId ?? ""}`;
+}
+
+/**
  * Observer batch insert — one transaction, one SSE event per row.
- * Idempotent: an input whose (targetType, targetId) already has a pending
- * suggestion from the same source conversation is skipped, so job retries
- * and repeated analyze triggers can't pile up duplicates.
+ * Idempotent: an input whose dedupe key already has a pending suggestion
+ * from the same source conversation is skipped, so job retries and
+ * repeated analyze triggers can't pile up duplicates.
  */
 export async function createSystemSuggestions(
   db: Database,
@@ -92,13 +157,13 @@ export async function createSystemSuggestions(
         )
       )
         .flat()
-        .map((row) => `${row.targetType}:${row.targetId ?? ""}`),
+        .map((row) => suggestionKey(row.targetType, row.targetId ?? null, row.payload)),
     );
     const created: AgentSuggestionRow[] = [];
     for (const input of parsed) {
       if (
         input.sourceConversationId &&
-        existing.has(`${input.targetType}:${input.targetId ?? ""}`)
+        existing.has(suggestionKey(input.targetType, input.targetId ?? null, input.payload))
       ) {
         continue;
       }
@@ -149,11 +214,62 @@ async function applyKnowledgePayload(
 }
 
 /**
+ * Memory apply — payload describes the canon entry to promote. A
+ * `supersedes` link retires the previous entry in the same transaction
+ * (temporal chain instead of destructive update).
+ */
+async function applyMemoryPayload(
+  executor: DbExecutor,
+  suggestion: AgentSuggestionRow,
+  reviewerId: string,
+): Promise<void> {
+  const proposal = memoryProposalSchema.parse(suggestion.payload);
+  let supersedesId: string | null = null;
+  if (proposal.supersedes) {
+    const old = await findMemoryEntryById(executor, suggestion.organizationId, proposal.supersedes);
+    if (!old) throw new NotFoundError("MemoryEntry", proposal.supersedes);
+    if (old.status !== "canon") {
+      throw new DomainError("MEMORY_ALREADY_SUPERSEDED", old.status);
+    }
+    supersedesId = old.id;
+  }
+  if (!(await scopeRefsExist(executor, suggestion.organizationId, proposal))) {
+    throw new DomainError("MEMORY_SCOPE_REF_INVALID", "teamId/contactId not found in org");
+  }
+  const entry = await insertMemoryEntry(executor, {
+    organizationId: suggestion.organizationId,
+    type: proposal.type,
+    scope: proposal.scope,
+    teamId: proposal.teamId ?? null,
+    contactId: proposal.contactId ?? null,
+    content: proposal.content,
+    confidence: proposal.confidence,
+    staleAfter: new Date(Date.now() + proposal.staleAfterDays * 86_400_000),
+    sources: {
+      conversations: proposal.sourceConversationIds,
+      suggestion: suggestion.id,
+      proposedBy: suggestion.proposedBy,
+    },
+    verifiedBy: reviewerId,
+  });
+  if (supersedesId) {
+    await updateMemoryEntry(executor, supersedesId, {
+      status: "superseded",
+      supersededBy: entry.id,
+    });
+  }
+}
+
+/**
  * Applies the payload diff to the target entity inside the caller's
  * tenant-scoped transaction. `targetId` null means the suggestion creates
  * a new entity (payload must satisfy the full create schema).
  */
-async function applyPayload(executor: DbExecutor, suggestion: AgentSuggestionRow): Promise<void> {
+async function applyPayload(
+  executor: DbExecutor,
+  suggestion: AgentSuggestionRow,
+  reviewerId: string,
+): Promise<void> {
   const targetId = suggestion.targetId ?? null;
   try {
     if (suggestion.targetType === "agent") {
@@ -165,12 +281,14 @@ async function applyPayload(executor: DbExecutor, suggestion: AgentSuggestionRow
         targetId,
         suggestion.payload,
       );
+    } else if (suggestion.targetType === "memory") {
+      await applyMemoryPayload(executor, suggestion, reviewerId);
     } else {
       throw new DomainError("SUGGESTION_TARGET_UNSUPPORTED", suggestion.targetType);
     }
   } catch (error) {
     const pg = error as { code?: string };
-    if (pg.code === "23505") {
+    if (pg.code === "23505" || pg.code === "23503") {
       throw new DomainError(
         "SUGGESTION_APPLY_CONFLICT",
         "Suggestion payload conflicts with an existing record",
@@ -194,7 +312,12 @@ export async function approveSuggestion(
     if (suggestion.status !== "pending") {
       throw new DomainError("SUGGESTION_ALREADY_REVIEWED", suggestion.status);
     }
-    await applyPayload(tx, suggestion);
+    // Four-eyes: the proposer can't approve their own suggestion — except
+    // the owner, who is sovereign (single-person orgs have no reviewer #2).
+    if (suggestion.proposedBy === ctx.userId && ctx.role !== "owner" && !ctx.isPlatformAdmin) {
+      throw new DomainError("SUGGESTION_SELF_APPROVE", "proposer cannot self-approve");
+    }
+    await applyPayload(tx, suggestion, ctx.userId);
     const row = await markSuggestionReviewed(tx, suggestionId, {
       status: "approved",
       reviewedBy: ctx.userId,

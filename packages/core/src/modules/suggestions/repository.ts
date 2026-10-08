@@ -2,7 +2,7 @@ import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
 import { and, desc, eq } from "drizzle-orm";
 
-const { agentSuggestions } = schema;
+const { agentSuggestions, contacts, teams } = schema;
 
 export type AgentSuggestionRow = typeof agentSuggestions.$inferSelect;
 
@@ -62,6 +62,26 @@ export async function listPendingForConversation(
     );
 }
 
+/** Pending suggestions of one target type — observer dedupe context. */
+export async function listPendingByTargetType(
+  executor: DbExecutor,
+  organizationId: string,
+  targetType: string,
+): Promise<AgentSuggestionRow[]> {
+  return executor
+    .select()
+    .from(agentSuggestions)
+    .where(
+      and(
+        eq(agentSuggestions.organizationId, organizationId),
+        eq(agentSuggestions.targetType, targetType),
+        eq(agentSuggestions.status, "pending"),
+      ),
+    )
+    .orderBy(desc(agentSuggestions.createdAt))
+    .limit(200);
+}
+
 export async function insertSuggestion(
   executor: DbExecutor,
   values: {
@@ -71,11 +91,37 @@ export async function insertSuggestion(
     payload: unknown;
     rationale: string;
     sourceConversationId?: string | null;
+    proposedBy?: string | null;
   },
 ): Promise<AgentSuggestionRow> {
   const [row] = await executor.insert(agentSuggestions).values(values).returning();
   if (!row) throw new Error("agent_suggestions insert returned no row");
   return row;
+}
+
+/** Scope references for memory proposals must exist inside the org. */
+export async function scopeRefsExist(
+  executor: DbExecutor,
+  organizationId: string,
+  refs: { teamId?: string | null; contactId?: string | null },
+): Promise<boolean> {
+  if (refs.teamId) {
+    const [row] = await executor
+      .select({ id: teams.id })
+      .from(teams)
+      .where(and(eq(teams.id, refs.teamId), eq(teams.organizationId, organizationId)))
+      .limit(1);
+    if (!row) return false;
+  }
+  if (refs.contactId) {
+    const [row] = await executor
+      .select({ id: contacts.id })
+      .from(contacts)
+      .where(and(eq(contacts.id, refs.contactId), eq(contacts.organizationId, organizationId)))
+      .limit(1);
+    if (!row) return false;
+  }
+  return true;
 }
 
 export async function markSuggestionReviewed(

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const suggestionTargetSchema = z.enum(["agent", "knowledge_entry"]);
+export const suggestionTargetSchema = z.enum(["agent", "knowledge_entry", "memory"]);
 export type SuggestionTarget = z.infer<typeof suggestionTargetSchema>;
 
 export const suggestionStatusSchema = z.enum(["pending", "approved", "rejected"]);
