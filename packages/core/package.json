@@ -6,10 +6,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./ai": "./src/modules/ai/index.ts",
+    "./agents": "./src/modules/agents/index.ts",
     "./audit": "./src/modules/audit/index.ts",
     "./billing": "./src/modules/billing/index.ts",
     "./crypto": "./src/lib/crypto.ts",
     "./integrations": "./src/modules/integrations/index.ts",
+    "./knowledge": "./src/modules/knowledge/index.ts",
     "./leads": "./src/modules/leads/index.ts",
     "./leads/schemas": "./src/modules/leads/schemas.ts",
     "./leads/templates": "./src/modules/leads/templates.ts",

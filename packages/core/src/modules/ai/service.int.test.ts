@@ -6,7 +6,7 @@ import { createDb, schema, withTenant } from "@crm/db";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AuthorizationError, DomainError, NotFoundError } from "../../errors";
+import { AuthorizationError, NotFoundError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import {
   createLlmCredential,
