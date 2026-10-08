@@ -42,6 +42,16 @@ describe("resolveLanguageModel", () => {
         { anthropicApiKey: "k" },
       ),
     ).toBeDefined();
+    expect(
+      resolveLanguageModel(
+        {
+          provider: "openrouter",
+          modelId: "openai/gpt-5-mini",
+          routing: { zdr: true, fallbacks: ["anthropic/claude-sonnet-4.5"] },
+        },
+        { openrouterApiKey: "k" },
+      ),
+    ).toBeDefined();
   });
 
   it("throws AiProviderNotConfiguredError when key is missing", () => {
@@ -50,6 +60,9 @@ describe("resolveLanguageModel", () => {
     );
     expect(() =>
       resolveLanguageModel({ provider: "anthropic", modelId: "m" }, { openaiApiKey: "k" }),
+    ).toThrow(AiProviderNotConfiguredError);
+    expect(() =>
+      resolveLanguageModel({ provider: "openrouter", modelId: "openai/gpt-5-mini" }, {}),
     ).toThrow(AiProviderNotConfiguredError);
   });
 });

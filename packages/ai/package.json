@@ -18,6 +18,7 @@
     "@ai-sdk/openai": "4.0.83",
     "@crm/core": "workspace:*",
     "@crm/permissions": "workspace:*",
+    "@openrouter/ai-sdk-provider": "3.1.0",
     "ai": "7.0.127",
     "zod": "4.6.5"
   },
@@ -25,9 +26,9 @@
     "@crm/eslint-config": "workspace:*",
     "@crm/tsconfig": "workspace:*",
     "@types/node": "^26",
+    "@vitest/coverage-v8": "5.0.3",
     "eslint": "9.39.2",
     "typescript": "6.0.3",
-    "vitest": "5.0.3",
-    "@vitest/coverage-v8": "5.0.3"
+    "vitest": "5.0.3"
   }
 }
