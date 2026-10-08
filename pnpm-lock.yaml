@@ -463,6 +463,9 @@ importers:
 
   packages/automation:
     dependencies:
+      '@crm/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@crm/channels':
         specifier: workspace:*
         version: link:../channels

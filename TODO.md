@@ -169,11 +169,28 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
     retoma a thread); sem autenticação de visitante além do token; v1 texto
     apenas (sem mídia/anexos); sem i18n do widget; SSE fan-out revisitar se
     concorrência de visitantes ficar alta.
-- **P1 — IA observer (v1)**: `org_llm_credentials` (BYOK + prioridade/
-  fallback; OpenAI/Anthropic/Gemini), `ai_usage_events`, `agents`,
-  `agent_suggestions`, `knowledge_entries`, job observer no pg-boss
-  (resolve-hook + botão manual), inbox de sugestões com aprovar/rejeitar +
-  notificação via SSE. Ver `docs/product/ai-agents.md`.
+- **P1 — IA observer (v1)**: ✅ entregue — `org_llm_credentials` (BYOK +
+  prioridade/fallback; OpenAI/Anthropic/OpenRouter — ZDR/session via
+  routing OpenRouter), `ai_usage_events`, `agents`, `agent_suggestions`,
+  `knowledge_entries` (RLS ×5, migration própria), permissão
+  `ai:read/manage`, `@crm/core` módulos `ai`/`agents`/`knowledge`/
+  `suggestions` (approve aplica payload na tx + domain events), job
+  observer no pg-boss (hook no `resolveConversation` via deps injetadas +
+  `observe-org` manual), `/app/settings/ai` completo (credenciais, agents,
+  knowledge, inbox de sugestões, analisar agora) + toast SSE em
+  `agent_suggestion.created`. Pendências: second brain (item próprio
+  abaixo), drafts/triage/TTS = roadmap do spec. Ver
+  `docs/product/ai-agents.md`.
+- **P1 — Second brain (memória do copiloto)**: fatia separada, depois do
+  observer v1. Decisões travadas (2026-10-08): design **somente de fontes
+  externas** (OKF/Google Open Knowledge Format — markdown+frontmatter com
+  provenance/trust/freshness/lifecycle first-class; literatura de agent
+  memory — MemGPT/Letta, Zep, mem0); **duas camadas** — staging draft
+  automático + promoção a canon por aprovação (mesmo gate das
+  suggestions); **coexiste** com `knowledge_entries` (knowledge =
+  conteúdo pro cliente; brain = aprendizado operacional interno que o
+  observer/copiloto usa p/ não re-ler histórico — eficiência de tokens).
+  Objetivo: copiloto configurar/reconfigurar o sistema a partir do brain.
 - **P1 — Leads/funil**: ✅ entregue — `funnels`, `funnel_stages`, `deals`,
   `labels` + joins em conversa/deal (RLS ×6, migration `0015`), permissão
   `leads:read/write/manage` (viewer só lê), `@crm/core/leads`
