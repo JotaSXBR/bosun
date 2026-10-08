@@ -14,20 +14,23 @@ import { Input } from "@crm/ui/components/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
 
-const formSchema = z.object({
-  name: z.string().min(2, "Informe seu nome"),
-  email: z.email("Informe um e-mail válido"),
-  password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres"),
-});
-
 export default function SignUpPage() {
+  const t = useTranslations("auth.signUp");
+  const tVal = useTranslations("validation");
+  const tc = useTranslations("common");
   const router = useRouter();
+  const formSchema = z.object({
+    name: z.string().min(2, tVal("nameMin")),
+    email: z.email(tVal("invalidEmail")),
+    password: z.string().min(8, tVal("passwordMin")),
+  });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", email: "", password: "" },
@@ -40,7 +43,7 @@ export default function SignUpPage() {
       password: values.password,
     });
     if (error) {
-      toast.error(error.message ?? "Falha ao criar conta.");
+      toast.error(error.message ?? t("error"));
       return;
     }
     router.push("/onboarding");
@@ -51,8 +54,8 @@ export default function SignUpPage() {
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Criar conta</CardTitle>
-          <CardDescription>Cadastre-se para começar</CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -62,7 +65,7 @@ export default function SignUpPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome</FormLabel>
+                    <FormLabel>{tc("name")}</FormLabel>
                     <FormControl>
                       <Input autoComplete="name" {...field} />
                     </FormControl>
@@ -75,7 +78,7 @@ export default function SignUpPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>E-mail</FormLabel>
+                    <FormLabel>{tc("email")}</FormLabel>
                     <FormControl>
                       <Input type="email" autoComplete="email" {...field} />
                     </FormControl>
@@ -88,7 +91,7 @@ export default function SignUpPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Senha</FormLabel>
+                    <FormLabel>{tc("password")}</FormLabel>
                     <FormControl>
                       <Input type="password" autoComplete="new-password" {...field} />
                     </FormControl>
@@ -97,12 +100,12 @@ export default function SignUpPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                Cadastrar
+                {t("submit")}
               </Button>
               <p className="text-muted-foreground text-center text-sm">
-                Já tem conta?{" "}
+                {t("hasAccount")}{" "}
                 <Link href="/sign-in" className="underline">
-                  Entrar
+                  {t("signInLink")}
                 </Link>
               </p>
             </form>

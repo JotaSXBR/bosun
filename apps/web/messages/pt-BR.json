@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "title": "Bosun",
+    "description": "Plataforma multi-tenant de operações de atendimento"
+  },
+  "common": {
+    "email": "E-mail",
+    "password": "Senha",
+    "name": "Nome"
+  },
+  "validation": {
+    "invalidEmail": "Informe um e-mail válido",
+    "passwordMin": "A senha deve ter pelo menos 8 caracteres",
+    "nameMin": "Informe seu nome"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Entrar",
+      "description": "Acesse sua conta",
+      "submit": "Entrar",
+      "error": "Falha ao entrar. Verifique suas credenciais.",
+      "noAccount": "Não tem conta?",
+      "signUpLink": "Cadastre-se"
+    },
+    "signUp": {
+      "title": "Criar conta",
+      "description": "Cadastre-se para começar",
+      "submit": "Cadastrar",
+      "error": "Falha ao criar conta.",
+      "hasAccount": "Já tem conta?",
+      "signInLink": "Entrar"
+    }
+  }
+}

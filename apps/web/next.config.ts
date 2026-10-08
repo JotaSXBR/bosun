@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 
 import { loadEnvConfig } from "@next/env";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // Single env source: the repository root .env (Next only reads apps/web/.env*
 // by default, so we load the root here explicitly).
@@ -36,4 +37,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+export default withNextIntl(nextConfig);

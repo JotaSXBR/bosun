@@ -14,19 +14,22 @@ import { Input } from "@crm/ui/components/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
 
-const formSchema = z.object({
-  email: z.email("Informe um e-mail válido"),
-  password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres"),
-});
-
 export default function SignInPage() {
+  const t = useTranslations("auth.signIn");
+  const tVal = useTranslations("validation");
+  const tc = useTranslations("common");
   const router = useRouter();
+  const formSchema = z.object({
+    email: z.email(tVal("invalidEmail")),
+    password: z.string().min(8, tVal("passwordMin")),
+  });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "", password: "" },
@@ -38,7 +41,7 @@ export default function SignInPage() {
       password: values.password,
     });
     if (error) {
-      toast.error(error.message ?? "Falha ao entrar. Verifique suas credenciais.");
+      toast.error(error.message ?? t("error"));
       return;
     }
     router.push("/app");
@@ -49,8 +52,8 @@ export default function SignInPage() {
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Entrar</CardTitle>
-          <CardDescription>Acesse sua conta</CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -60,7 +63,7 @@ export default function SignInPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>E-mail</FormLabel>
+                    <FormLabel>{tc("email")}</FormLabel>
                     <FormControl>
                       <Input type="email" autoComplete="email" {...field} />
                     </FormControl>
@@ -73,7 +76,7 @@ export default function SignInPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Senha</FormLabel>
+                    <FormLabel>{tc("password")}</FormLabel>
                     <FormControl>
                       <Input type="password" autoComplete="current-password" {...field} />
                     </FormControl>
@@ -82,12 +85,12 @@ export default function SignInPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                Entrar
+                {t("submit")}
               </Button>
               <p className="text-muted-foreground text-center text-sm">
-                Não tem conta?{" "}
+                {t("noAccount")}{" "}
                 <Link href="/sign-up" className="underline">
-                  Cadastre-se
+                  {t("signUpLink")}
                 </Link>
               </p>
             </form>

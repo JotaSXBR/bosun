@@ -32,3 +32,9 @@ allowBuilds:
   unrs-resolver: true
   "@depot/cli": true
   lefthook: true
+  # next-intl 4.x declares these for its optional SWC message extractor,
+  # which we don't use — the runtime is plain JS and both ship platform
+  # binaries via optionalDependencies anyway. Explicit deny (approved by
+  # repo owner, i18n slice).
+  "@swc/core": false
+  "@parcel/watcher": false
