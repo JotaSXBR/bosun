@@ -1,5 +1,6 @@
 import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { listMembers, listSectors } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
@@ -10,6 +11,7 @@ import { TeamsManager } from "./teams-manager";
 export const dynamic = "force-dynamic";
 
 export default async function TeamsSettingsPage() {
+  const t = await getTranslations("settings");
   const ctx = await requireTenantContext();
   const [teams, members] = await Promise.all([listSectors(ctx), listMembers(ctx)]);
   // teams:manage — owner/admin/manager; agents and viewers read only.
@@ -18,9 +20,9 @@ export default async function TeamsSettingsPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Equipes</h1>
+        <h1 className="text-2xl font-semibold">{t("teams")}</h1>
         <Link href="/app/settings" className="text-muted-foreground text-sm underline">
-          Voltar
+          {t("back")}
         </Link>
       </div>
 

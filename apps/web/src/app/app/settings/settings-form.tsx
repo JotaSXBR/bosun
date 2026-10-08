@@ -16,25 +16,27 @@ import { Input } from "@crm/ui/components/input";
 import { Textarea } from "@crm/ui/components/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { updateOrgSettingsAction } from "@/server/actions/settings";
 
-const formSchema = z.object({
-  ticketReopenWindowHours: z
-    .string()
-    .trim()
-    .refine((v) => /^\d+$/.test(v), "Informe um número inteiro")
-    .refine((v) => Number(v) >= 1, "Mínimo de 1 hora")
-    .refine((v) => Number(v) <= 168, "Máximo de 168 horas"),
-  offHoursMessage: z.string().trim().max(500, "Máximo de 500 caracteres"),
-  timezone: z.string().trim().min(1, "Informe o fuso horário").max(64),
-  locale: z.string().trim().min(2).max(16),
-});
+const formSchema = (t: ReturnType<typeof useTranslations>) =>
+  z.object({
+    ticketReopenWindowHours: z
+      .string()
+      .trim()
+      .refine((v) => /^\d+$/.test(v), t("org.integerRequired"))
+      .refine((v) => Number(v) >= 1, t("org.minHour"))
+      .refine((v) => Number(v) <= 168, t("org.maxHours")),
+    offHoursMessage: z.string().trim().max(500, t("org.offHoursMax")),
+    timezone: z.string().trim().min(1, t("org.timezoneRequired")).max(64),
+    locale: z.string().trim().min(2).max(16),
+  });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<ReturnType<typeof formSchema>>;
 
 export function SettingsForm({
   settings,
@@ -43,9 +45,10 @@ export function SettingsForm({
   settings: OrganizationSettingsRow;
   canEdit: boolean;
 }) {
+  const t = useTranslations("settings");
   const router = useRouter();
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema(t)),
     defaultValues: {
       ticketReopenWindowHours: String(settings.ticketReopenWindowHours),
       offHoursMessage: settings.offHoursMessage ?? "",
@@ -66,17 +69,15 @@ export function SettingsForm({
       toast.error(result.error);
       return;
     }
-    toast.success("Configurações salvas.");
+    toast.success(t("org.saved"));
     router.refresh();
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Organização</CardTitle>
-        <CardDescription>
-          Preferências de atendimento aplicadas a toda a organização.
-        </CardDescription>
+        <CardTitle>{t("org.title")}</CardTitle>
+        <CardDescription>{t("org.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -87,13 +88,11 @@ export function SettingsForm({
                 name="ticketReopenWindowHours"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Janela de reabertura (horas)</FormLabel>
+                    <FormLabel>{t("org.reopenWindow")}</FormLabel>
                     <FormControl>
                       <Input type="number" min={1} max={168} disabled={!canEdit} {...field} />
                     </FormControl>
-                    <FormDescription>
-                      Tempo em que um ticket resolvido pode ser reaberto (1–168).
-                    </FormDescription>
+                    <FormDescription>{t("org.reopenWindowHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -103,7 +102,7 @@ export function SettingsForm({
                 name="timezone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fuso horário</FormLabel>
+                    <FormLabel>{t("org.timezone")}</FormLabel>
                     <FormControl>
                       <Input placeholder="America/Sao_Paulo" disabled={!canEdit} {...field} />
                     </FormControl>
@@ -118,7 +117,7 @@ export function SettingsForm({
                 name="locale"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Idioma</FormLabel>
+                    <FormLabel>{t("org.locale")}</FormLabel>
                     <FormControl>
                       <Input placeholder="pt-BR" disabled={!canEdit} {...field} />
                     </FormControl>
@@ -132,16 +131,18 @@ export function SettingsForm({
               name="offHoursMessage"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mensagem fora do horário</FormLabel>
+                  <FormLabel>{t("org.offHours")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Estamos fora do horário de atendimento. Voltamos {proximo_atendimento}."
+                      placeholder={t("org.offHoursPlaceholder", {
+                        proximo_atendimento: "{proximo_atendimento}",
+                      })}
                       disabled={!canEdit}
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    Use {"{proximo_atendimento}"} para indicar o próximo horário de atendimento.
+                    {t("org.offHoursHint", { proximo_atendimento: "{proximo_atendimento}" })}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -149,7 +150,7 @@ export function SettingsForm({
             />
             {canEdit && (
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                Salvar configurações
+                {t("org.submit")}
               </Button>
             )}
           </form>

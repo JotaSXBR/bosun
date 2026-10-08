@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@crm/ui/components/card";
 import { headers } from "next/headers";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { listChannelConnections } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
@@ -14,14 +15,6 @@ import { WidgetPanel } from "./widget-panel";
 // Reads the session + database → must never be prerendered at build time.
 export const dynamic = "force-dynamic";
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: "pendente",
-  connected: "conectado",
-  connecting: "conectando",
-  disconnected: "desconectado",
-  error: "erro",
-};
-
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
   connected: "bg-emerald-100 text-emerald-800",
@@ -31,6 +24,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default async function IntegrationsPage() {
+  const t = await getTranslations("integrations");
   const ctx = await requireTenantContext();
   const connections = await listChannelConnections(ctx);
   const canManage = ctx.isPlatformAdmin || ctx.role !== "agent";
@@ -43,9 +37,9 @@ export default async function IntegrationsPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Integrações</h1>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
         <Link href="/app" className="text-muted-foreground text-sm underline">
-          Voltar
+          {t("back")}
         </Link>
       </div>
 
@@ -53,11 +47,11 @@ export default async function IntegrationsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Conexões de canal</CardTitle>
+          <CardTitle>{t("connections")}</CardTitle>
         </CardHeader>
         <CardContent>
           {connections.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Nenhuma conexão configurada.</p>
+            <p className="text-muted-foreground text-sm">{t("noConnections")}</p>
           ) : (
             <ul className="space-y-4" data-testid="connection-list">
               {connections.map((conn) => {
@@ -72,7 +66,9 @@ export default async function IntegrationsPage() {
                           className={`rounded-full px-2 py-0.5 text-xs ${STATUS_STYLES[conn.status] ?? "bg-muted text-muted-foreground"}`}
                           data-testid={`status-${conn.id}`}
                         >
-                          {STATUS_LABELS[conn.status] ?? conn.status}
+                          {t.has(`status.${conn.status}`)
+                            ? t(`status.${conn.status}`)
+                            : conn.status}
                         </span>
                         {conn.externalRef && (
                           <span className="text-muted-foreground text-xs">{conn.externalRef}</span>

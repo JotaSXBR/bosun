@@ -1,6 +1,7 @@
 import { hasPermission } from "@crm/permissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { getOrgSettings, getPlatformSettings } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
@@ -12,6 +13,7 @@ import { SettingsForm } from "./settings-form";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  const t = await getTranslations("settings");
   const ctx = await requireTenantContext();
   const settings = await getOrgSettings(ctx);
   // Product settings live in platform_settings — platform_admin only.
@@ -23,9 +25,9 @@ export default async function SettingsPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Configurações</h1>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
         <Link href="/app" className="text-muted-foreground text-sm underline">
-          Voltar
+          {t("back")}
         </Link>
       </div>
 
@@ -33,12 +35,12 @@ export default async function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Equipes</CardTitle>
-          <CardDescription>Setores de atendimento e seus membros.</CardDescription>
+          <CardTitle>{t("teams")}</CardTitle>
+          <CardDescription>{t("teamsDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Link href="/app/settings/teams" className="text-sm underline">
-            Gerenciar equipes
+            {t("manageTeams")}
           </Link>
         </CardContent>
       </Card>

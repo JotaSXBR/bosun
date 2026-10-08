@@ -206,6 +206,8 @@
     "submit": "Criar organização"
   },
   "setup": {
+    "pageTitle": "Configuração inicial",
+    "pageDescription": "O Bosun precisa de um provider de e-mail para verificação de conta e reset de senha. Escolha e salve para liberar o acesso.",
     "title": "E-mail",
     "provider": "Provider",
     "consoleOption": "console (só loga — desenvolvimento)",
@@ -233,6 +235,182 @@
     "fakeContent": "Conteúdo do site do cliente…",
     "tokenLabel": "token: {token}…",
     "noToken": "Informe <code>?token=&lt;webhookToken-da-conexão-site_chat&gt;</code> na URL — o token aparece em <code>/app/integrations</code> no snippet do widget."
+  },
+  "integrations": {
+    "title": "Integrações",
+    "back": "Voltar",
+    "connections": "Conexões de canal",
+    "noConnections": "Nenhuma conexão configurada.",
+    "status": {
+      "pending": "pendente",
+      "connected": "conectado",
+      "connecting": "conectando",
+      "disconnected": "desconectado",
+      "error": "erro"
+    },
+    "warnings": {
+      "reachout_timelock": "Timelock de contato ativo (anti-ban)",
+      "message_capping": "Limite de mensagens atingido (anti-ban)"
+    },
+    "health": {
+      "number": "Número: {phone}",
+      "account": "Conta: {pushName}"
+    },
+    "actions": {
+      "connected": "WhatsApp conectado",
+      "statusInfo": "Status: {status}",
+      "sessionRestarted": "Sessão reiniciada",
+      "sessionRestartedQr": "Sessão reiniciada — clique em Conectar para o QR",
+      "sessionStopped": "Sessão parada",
+      "deviceUnpaired": "Aparelho despareado",
+      "deleted": "Conexão excluída",
+      "reconnect": "Reconectar",
+      "connect": "Conectar",
+      "restart": "Reiniciar sessão",
+      "stop": "Parar",
+      "unpair": "Desparear",
+      "delete": "Excluir"
+    },
+    "copy": {
+      "copied": "URL copiada",
+      "failed": "Não foi possível copiar.",
+      "button": "Copiar"
+    },
+    "form": {
+      "title": "Nova conexão",
+      "description": "Conecte uma conta WAHA ou Meta Cloud",
+      "channel": "Canal",
+      "kindWaha": "WAHA (WhatsApp)",
+      "kindMeta": "Meta Cloud API",
+      "kindSiteChat": "Chat do site (widget)",
+      "name": "Nome",
+      "namePlaceholder": "WhatsApp principal",
+      "submit": "Criar conexão",
+      "nameRequired": "Informe um nome",
+      "required": "Obrigatório",
+      "graphApiVersion": "Graph API version (opcional)",
+      "widgetCreated": "Widget criado — configure e copie o snippet na lista.",
+      "connectedValidated": "Conexão criada e validada.",
+      "created": "Conexão criada."
+    },
+    "pairing": {
+      "qrAlt": "QR code do WhatsApp",
+      "generatingQr": "Gerando QR…",
+      "qrUnavailable": "QR indisponível — use o código",
+      "qrTitle": "Conectar pelo QR",
+      "qrHelp": "WhatsApp → Aparelhos conectados → Conectar aparelho. O código se atualiza sozinho.",
+      "phoneTitle": "Ou conecte com número de telefone",
+      "generateCode": "Gerar código",
+      "typeCode": "Digite no WhatsApp (Conectar com número):"
+    },
+    "widget": {
+      "saved": "Widget salvo",
+      "demoLink": "Abrir página de demonstração",
+      "welcome": "Mensagem de boas-vindas",
+      "welcomePlaceholder": "Olá! Como podemos ajudar?",
+      "accentColor": "Cor de destaque",
+      "position": "Posição",
+      "right": "Direita",
+      "left": "Esquerda",
+      "save": "Salvar widget"
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "back": "Voltar",
+    "teams": "Equipes",
+    "teamsDescription": "Setores de atendimento e seus membros.",
+    "manageTeams": "Gerenciar equipes",
+    "org": {
+      "title": "Organização",
+      "description": "Preferências de atendimento aplicadas a toda a organização.",
+      "reopenWindow": "Janela de reabertura (horas)",
+      "reopenWindowHint": "Tempo em que um ticket resolvido pode ser reaberto (1–168).",
+      "timezone": "Fuso horário",
+      "locale": "Idioma",
+      "offHours": "Mensagem fora do horário",
+      "offHoursPlaceholder": "Estamos fora do horário de atendimento. Voltamos {proximo_atendimento}.",
+      "offHoursHint": "Use {proximo_atendimento} para indicar o próximo horário de atendimento.",
+      "submit": "Salvar configurações",
+      "saved": "Configurações salvas.",
+      "integerRequired": "Informe um número inteiro",
+      "minHour": "Mínimo de 1 hora",
+      "maxHours": "Máximo de 168 horas",
+      "offHoursMax": "Máximo de 500 caracteres",
+      "timezoneRequired": "Informe o fuso horário"
+    },
+    "platform": {
+      "title": "Plataforma",
+      "configured": "configurado",
+      "notConfigured": "não configurado",
+      "saved": "{group} salvo.",
+      "fromDb": "(banco)",
+      "secretSet": "•••••••• (configurado)",
+      "saveGroup": "Salvar {group}",
+      "groups": {
+        "email": {
+          "title": "E-mail",
+          "description": "Provider de envio (verificação de conta, reset de senha)."
+        },
+        "billing": {
+          "title": "Cobrança (Asaas)",
+          "description": "Conta Asaas da plataforma — cobrança das organizações."
+        },
+        "meta": {
+          "title": "Meta Cloud (WhatsApp oficial)",
+          "description": "Defaults de plataforma — campos deixados em branco na conexão caem nestes valores."
+        },
+        "ai": {
+          "title": "IA (plataforma)",
+          "description": "Chaves de LLM da instância (fallback antes do BYOK por org)."
+        }
+      },
+      "fields": {
+        "provider": "Provider",
+        "consoleOption": "console (só loga)",
+        "from": "Remetente (From)",
+        "resendApiKey": "Resend API key",
+        "smtpHost": "SMTP host",
+        "smtpPort": "SMTP port",
+        "smtpUser": "SMTP user",
+        "smtpPassword": "SMTP password",
+        "smtpSecure": "SMTP TLS/SSL",
+        "asaasApiKey": "API key",
+        "environment": "Ambiente",
+        "asaasWebhookToken": "Webhook token",
+        "phoneNumberId": "Phone number ID",
+        "graphApiVersion": "Graph API version",
+        "appSecret": "App secret",
+        "verifyToken": "Verify token",
+        "accessToken": "Access token",
+        "openaiApiKey": "OpenAI API key",
+        "anthropicApiKey": "Anthropic API key"
+      }
+    },
+    "teamsManager": {
+      "newTeam": "Nova equipe",
+      "newTeamDescription": "Setores de atendimento (Vendas, Suporte…).",
+      "name": "Nome",
+      "namePlaceholder": "Vendas",
+      "color": "Cor",
+      "create": "Criar equipe",
+      "created": "Equipe criada.",
+      "saved": "Equipe salva.",
+      "deleted": "Equipe excluída.",
+      "deleteConfirm": "Excluir a equipe \"{name}\"? Conversas atribuídas a ela ficam sem setor.",
+      "list": "Equipes",
+      "empty": "Nenhuma equipe ainda.",
+      "teamColor": "Cor da equipe",
+      "teamName": "Nome da equipe",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "noMembers": "Sem membros.",
+      "removedUser": "Usuário removido",
+      "removeMember": "Remover {name}",
+      "addMemberTo": "Adicionar membro em {team}",
+      "addMemberPlaceholder": "Adicionar membro…",
+      "add": "Adicionar"
+    }
   },
   "validation": {
     "invalidEmail": "Informe um e-mail válido",

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { productConfigured } from "@/server/services";
 import { requireSession } from "@/server/tenant";
@@ -14,17 +15,15 @@ export const dynamic = "force-dynamic";
  */
 export default async function SetupPage() {
   const session = await requireSession();
+  const t = await getTranslations("setup");
   if (session.user.role !== "platform_admin") redirect("/app");
   if (await productConfigured("email")) redirect("/app");
 
   return (
     <main className="mx-auto max-w-xl space-y-6 p-8">
       <div>
-        <h1 className="text-2xl font-semibold">Configuração inicial</h1>
-        <p className="text-muted-foreground mt-2 text-sm">
-          O Bosun precisa de um provider de e-mail para verificação de conta e reset de senha.
-          Escolha e salve para liberar o acesso.
-        </p>
+        <h1 className="text-2xl font-semibold">{t("pageTitle")}</h1>
+        <p className="text-muted-foreground mt-2 text-sm">{t("pageDescription")}</p>
       </div>
       <SetupForm />
     </main>

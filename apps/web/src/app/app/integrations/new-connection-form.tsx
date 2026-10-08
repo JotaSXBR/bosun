@@ -12,6 +12,7 @@ import {
 } from "@crm/ui/components/form";
 import { Input } from "@crm/ui/components/input";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
@@ -23,43 +24,48 @@ import { PairingPanel } from "./pairing-panel";
 
 type QrCode = { mimeType: string; data: string };
 
-const nameField = z.string().trim().min(1, "Informe um nome").max(120);
+type T = ReturnType<typeof useTranslations>;
 
 // WAHA creds are platform-owned (env) — creating one needs only a name and
 // the QR opens right away. Meta credentials stay per-connection.
-const formSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("waha"),
-    name: nameField,
-  }),
-  z.object({
-    kind: z.literal("meta_cloud"),
-    name: nameField,
-    phoneNumberId: z.string().min(1, "Obrigatório"),
-    accessToken: z.string().min(1, "Obrigatório"),
-    appSecret: z.string().min(1, "Obrigatório"),
-    verifyToken: z.string().min(1, "Obrigatório"),
-    graphApiVersion: z.string().optional(),
-  }),
-  z.object({
-    kind: z.literal("site_chat"),
-    name: nameField,
-  }),
-]);
+const formSchema = (t: T) => {
+  const nameField = z.string().trim().min(1, t("form.nameRequired")).max(120);
+  const required = () => z.string().min(1, t("form.required"));
+  return z.discriminatedUnion("kind", [
+    z.object({
+      kind: z.literal("waha"),
+      name: nameField,
+    }),
+    z.object({
+      kind: z.literal("meta_cloud"),
+      name: nameField,
+      phoneNumberId: required(),
+      accessToken: required(),
+      appSecret: required(),
+      verifyToken: required(),
+      graphApiVersion: z.string().optional(),
+    }),
+    z.object({
+      kind: z.literal("site_chat"),
+      name: nameField,
+    }),
+  ]);
+};
 
-type FormValues = z.input<typeof formSchema>;
+type FormValues = z.input<ReturnType<typeof formSchema>>;
 
 const META_FIELDS = [
   { name: "phoneNumberId", label: "Phone number ID", placeholder: "" },
   { name: "accessToken", label: "Access token", placeholder: "" },
   { name: "appSecret", label: "App secret", placeholder: "" },
   { name: "verifyToken", label: "Verify token", placeholder: "" },
-  { name: "graphApiVersion", label: "Graph API version (opcional)", placeholder: "v26.0" },
+  { name: "graphApiVersion", label: "", placeholder: "v26.0" },
 ] as const;
 
 export function NewConnectionForm() {
+  const t = useTranslations("integrations");
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema(t)),
     defaultValues: { kind: "waha", name: "" },
   });
   const kind = useWatch({ control: form.control, name: "kind" });
@@ -89,16 +95,16 @@ export function NewConnectionForm() {
     );
     if (result.warning) toast.warning(result.warning);
     if (kind === "site_chat") {
-      toast.success("Widget criado — configure e copie o snippet na lista.");
+      toast.success(t("form.widgetCreated"));
     } else if (kind === "waha") {
       if (result.status === "connected") {
-        toast.success("WhatsApp conectado");
+        toast.success(t("actions.connected"));
       } else {
         setPairing({ id: result.connectionId, qr: result.qrCode });
       }
     } else {
       toast.success(
-        result.status === "connected" ? "Conexão criada e validada." : "Conexão criada.",
+        result.status === "connected" ? t("form.connectedValidated") : t("form.created"),
       );
     }
   }
@@ -106,8 +112,8 @@ export function NewConnectionForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Nova conexão</CardTitle>
-        <CardDescription>Conecte uma conta WAHA ou Meta Cloud</CardDescription>
+        <CardTitle>{t("form.title")}</CardTitle>
+        <CardDescription>{t("form.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -118,15 +124,15 @@ export function NewConnectionForm() {
                 name="kind"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Canal</FormLabel>
+                    <FormLabel>{t("form.channel")}</FormLabel>
                     <FormControl>
                       <select
                         className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
                         {...field}
                       >
-                        <option value="waha">WAHA (WhatsApp)</option>
-                        <option value="meta_cloud">Meta Cloud API</option>
-                        <option value="site_chat">Chat do site (widget)</option>
+                        <option value="waha">{t("form.kindWaha")}</option>
+                        <option value="meta_cloud">{t("form.kindMeta")}</option>
+                        <option value="site_chat">{t("form.kindSiteChat")}</option>
                       </select>
                     </FormControl>
                     <FormMessage />
@@ -138,9 +144,9 @@ export function NewConnectionForm() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome</FormLabel>
+                    <FormLabel>{t("form.name")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="WhatsApp principal" {...field} />
+                      <Input placeholder={t("form.namePlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -156,7 +162,9 @@ export function NewConnectionForm() {
                     name={item.name}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{item.label}</FormLabel>
+                        <FormLabel>
+                          {item.name === "graphApiVersion" ? t("form.graphApiVersion") : item.label}
+                        </FormLabel>
                         <FormControl>
                           <Input placeholder={item.placeholder} {...field} />
                         </FormControl>
@@ -168,7 +176,7 @@ export function NewConnectionForm() {
               </div>
             )}
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              Criar conexão
+              {t("form.submit")}
             </Button>
           </form>
         </Form>

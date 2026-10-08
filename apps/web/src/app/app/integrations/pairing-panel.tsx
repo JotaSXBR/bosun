@@ -2,6 +2,7 @@
 
 import { Button } from "@crm/ui/components/button";
 import { Input } from "@crm/ui/components/input";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -29,6 +30,7 @@ export function PairingPanel({
   initialQr?: QrCode;
   onDone: () => void;
 }) {
+  const t = useTranslations("integrations");
   const [qr, setQr] = useState<QrCode | undefined>(initialQr);
   const [status, setStatus] = useState("connecting");
   const [phone, setPhone] = useState("");
@@ -47,7 +49,7 @@ export function PairingPanel({
       setStatus(result.status);
       if (result.qrCode) setQr(result.qrCode);
       if (result.status === "connected") {
-        toast.success("WhatsApp conectado");
+        toast.success(t("actions.connected"));
         done.current();
       }
     };
@@ -56,7 +58,7 @@ export function PairingPanel({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [id]);
+  }, [id, t]);
 
   async function requestCode() {
     setPending(true);
@@ -77,25 +79,23 @@ export function PairingPanel({
             // eslint-disable-next-line @next/next/no-img-element -- data URL, not a remote image
             <img
               src={`data:${qr.mimeType};base64,${qr.data}`}
-              alt="QR code do WhatsApp"
+              alt={t("pairing.qrAlt")}
               className="h-44 w-44"
             />
           ) : (
             <span className="text-muted-foreground px-4 text-center text-xs">
-              {status === "connecting" ? "Gerando QR…" : "QR indisponível — use o código"}
+              {status === "connecting" ? t("pairing.generatingQr") : t("pairing.qrUnavailable")}
             </span>
           )}
         </div>
         <div className="space-y-1 text-sm">
-          <p className="font-medium">Conectar pelo QR</p>
-          <p className="text-muted-foreground">
-            WhatsApp → Aparelhos conectados → Conectar aparelho. O código se atualiza sozinho.
-          </p>
+          <p className="font-medium">{t("pairing.qrTitle")}</p>
+          <p className="text-muted-foreground">{t("pairing.qrHelp")}</p>
         </div>
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium">Ou conecte com número de telefone</p>
+        <p className="text-sm font-medium">{t("pairing.phoneTitle")}</p>
         <div className="flex gap-2">
           <Input
             value={phone}
@@ -111,12 +111,12 @@ export function PairingPanel({
             disabled={pending || !phone}
             onClick={requestCode}
           >
-            Gerar código
+            {t("pairing.generateCode")}
           </Button>
         </div>
         {code && (
           <p className="text-sm">
-            Digite no WhatsApp (Conectar com número):{" "}
+            {t("pairing.typeCode")}{" "}
             <span className="font-mono text-lg font-semibold tracking-wider">{code}</span>
           </p>
         )}

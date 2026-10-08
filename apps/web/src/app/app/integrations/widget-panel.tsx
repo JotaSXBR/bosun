@@ -3,6 +3,7 @@
 import { Button } from "@crm/ui/components/button";
 import { Input } from "@crm/ui/components/input";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -30,6 +31,7 @@ export function WidgetPanel({
   config: WidgetConfigShape;
   canManage: boolean;
 }) {
+  const t = useTranslations("integrations");
   const [pending, startTransition] = useTransition();
   const [welcomeText, setWelcomeText] = useState(config.welcomeText ?? "");
   const [accentColor, setAccentColor] = useState(config.accentColor ?? "");
@@ -44,7 +46,7 @@ export function WidgetPanel({
         accentColor: accentColor || undefined,
         position,
       });
-      if (result.ok) toast.success("Widget salvo");
+      if (result.ok) toast.success(t("widget.saved"));
       else toast.error(result.error);
     });
   }
@@ -57,22 +59,22 @@ export function WidgetPanel({
       </div>
       <div className="text-muted-foreground flex items-center gap-3 text-xs">
         <Link href={`/widget-demo?token=${webhookToken}`} className="underline" target="_blank">
-          Abrir página de demonstração
+          {t("widget.demoLink")}
         </Link>
       </div>
       {canManage && (
         <div className="grid gap-3 sm:grid-cols-5 sm:items-end">
           <label className="space-y-1 text-sm sm:col-span-2">
-            <span className="text-muted-foreground text-xs">Mensagem de boas-vindas</span>
+            <span className="text-muted-foreground text-xs">{t("widget.welcome")}</span>
             <Input
               value={welcomeText}
               onChange={(e) => setWelcomeText(e.target.value)}
-              placeholder="Olá! Como podemos ajudar?"
+              placeholder={t("widget.welcomePlaceholder")}
               maxLength={200}
             />
           </label>
           <label className="space-y-1 text-sm">
-            <span className="text-muted-foreground text-xs">Cor de destaque</span>
+            <span className="text-muted-foreground text-xs">{t("widget.accentColor")}</span>
             <Input
               value={accentColor}
               onChange={(e) => setAccentColor(e.target.value)}
@@ -81,18 +83,18 @@ export function WidgetPanel({
             />
           </label>
           <label className="space-y-1 text-sm">
-            <span className="text-muted-foreground text-xs">Posição</span>
+            <span className="text-muted-foreground text-xs">{t("widget.position")}</span>
             <select
               className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
               value={position}
               onChange={(e) => setPosition(e.target.value as "left" | "right")}
             >
-              <option value="right">Direita</option>
-              <option value="left">Esquerda</option>
+              <option value="right">{t("widget.right")}</option>
+              <option value="left">{t("widget.left")}</option>
             </select>
           </label>
           <Button type="button" size="sm" disabled={pending} onClick={save}>
-            Salvar widget
+            {t("widget.save")}
           </Button>
         </div>
       )}

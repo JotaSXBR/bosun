@@ -5,6 +5,7 @@ import { Button } from "@crm/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
 import { Input } from "@crm/ui/components/input";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type { FormEvent } from "react";
 import { toast } from "sonner";
 
@@ -19,71 +20,84 @@ type FieldDef = {
   secret?: boolean;
 };
 
-const GROUP_DEFS: Record<
-  PlatformSettingGroup,
-  { title: string; description: string; fields: FieldDef[] }
-> = {
+type T = ReturnType<typeof useTranslations>;
+
+const groupDefs = (
+  t: T,
+): Record<PlatformSettingGroup, { title: string; description: string; fields: FieldDef[] }> => ({
   email: {
-    title: "E-mail",
-    description: "Provider de envio (verificação de conta, reset de senha).",
+    title: t("platform.groups.email.title"),
+    description: t("platform.groups.email.description"),
     fields: [
       {
         path: "provider",
-        label: "Provider",
+        label: t("platform.fields.provider"),
         kind: "select",
         options: [
-          { value: "console", label: "console (só loga)" },
+          { value: "console", label: t("platform.fields.consoleOption") },
           { value: "resend", label: "resend" },
           { value: "smtp", label: "smtp" },
         ],
       },
-      { path: "from", label: "Remetente (From)", placeholder: "Bosun <noreply@exemplo.com>" },
-      { path: "resendApiKey", label: "Resend API key", secret: true },
-      { path: "smtp.host", label: "SMTP host" },
-      { path: "smtp.port", label: "SMTP port", kind: "number", placeholder: "587" },
-      { path: "smtp.user", label: "SMTP user" },
-      { path: "smtp.password", label: "SMTP password", secret: true },
-      { path: "smtp.secure", label: "SMTP TLS/SSL", kind: "checkbox" },
+      {
+        path: "from",
+        label: t("platform.fields.from"),
+        placeholder: "Bosun <noreply@exemplo.com>",
+      },
+      { path: "resendApiKey", label: t("platform.fields.resendApiKey"), secret: true },
+      { path: "smtp.host", label: t("platform.fields.smtpHost") },
+      {
+        path: "smtp.port",
+        label: t("platform.fields.smtpPort"),
+        kind: "number",
+        placeholder: "587",
+      },
+      { path: "smtp.user", label: t("platform.fields.smtpUser") },
+      { path: "smtp.password", label: t("platform.fields.smtpPassword"), secret: true },
+      { path: "smtp.secure", label: t("platform.fields.smtpSecure"), kind: "checkbox" },
     ],
   },
   billing: {
-    title: "Cobrança (Asaas)",
-    description: "Conta Asaas da plataforma — cobrança das organizações.",
+    title: t("platform.groups.billing.title"),
+    description: t("platform.groups.billing.description"),
     fields: [
-      { path: "asaasApiKey", label: "API key", secret: true },
+      { path: "asaasApiKey", label: t("platform.fields.asaasApiKey"), secret: true },
       {
         path: "asaasEnvironment",
-        label: "Ambiente",
+        label: t("platform.fields.environment"),
         kind: "select",
         options: [
           { value: "sandbox", label: "sandbox" },
           { value: "production", label: "production" },
         ],
       },
-      { path: "asaasWebhookToken", label: "Webhook token", secret: true },
+      { path: "asaasWebhookToken", label: t("platform.fields.asaasWebhookToken"), secret: true },
     ],
   },
   meta: {
-    title: "Meta Cloud (WhatsApp oficial)",
-    description:
-      "Defaults de plataforma — campos deixados em branco na conexão caem nestes valores.",
+    title: t("platform.groups.meta.title"),
+    description: t("platform.groups.meta.description"),
     fields: [
-      { path: "phoneNumberId", label: "Phone number ID" },
-      { path: "graphApiVersion", label: "Graph API version", placeholder: "v26.0" },
-      { path: "appSecret", label: "App secret", secret: true },
-      { path: "verifyToken", label: "Verify token", secret: true },
-      { path: "accessToken", label: "Access token", secret: true },
+      { path: "phoneNumberId", label: t("platform.fields.phoneNumberId") },
+      {
+        path: "graphApiVersion",
+        label: t("platform.fields.graphApiVersion"),
+        placeholder: "v26.0",
+      },
+      { path: "appSecret", label: t("platform.fields.appSecret"), secret: true },
+      { path: "verifyToken", label: t("platform.fields.verifyToken"), secret: true },
+      { path: "accessToken", label: t("platform.fields.accessToken"), secret: true },
     ],
   },
   ai: {
-    title: "IA (plataforma)",
-    description: "Chaves de LLM da instância (fallback antes do BYOK por org).",
+    title: t("platform.groups.ai.title"),
+    description: t("platform.groups.ai.description"),
     fields: [
-      { path: "openaiApiKey", label: "OpenAI API key", secret: true },
-      { path: "anthropicApiKey", label: "Anthropic API key", secret: true },
+      { path: "openaiApiKey", label: t("platform.fields.openaiApiKey"), secret: true },
+      { path: "anthropicApiKey", label: t("platform.fields.anthropicApiKey"), secret: true },
     ],
   },
-};
+});
 
 function fdString(fd: FormData, key: string): string {
   const value = fd.get(key);
@@ -133,10 +147,12 @@ function FieldInput({
   group,
   field,
   summary,
+  t,
 }: {
   group: string;
   field: FieldDef;
   summary: PlatformSettingSummary;
+  t: T;
 }) {
   const current = getPath(summary.values, field.path);
   const isSecretSet = field.secret === true && summary.secretsSet[field.path] === true;
@@ -165,7 +181,7 @@ function FieldInput({
         type={field.secret ? "password" : field.kind === "number" ? "number" : "text"}
         autoComplete={field.secret ? "new-password" : "off"}
         defaultValue={field.secret ? "" : shownValue}
-        placeholder={isSecretSet ? "•••••••• (configurado)" : field.placeholder}
+        placeholder={isSecretSet ? t("platform.secretSet") : field.placeholder}
       />
     );
   }
@@ -175,7 +191,7 @@ function FieldInput({
       <label className="text-sm font-medium" htmlFor={id}>
         {field.label}
         {summary.dbFields.includes(field.path) && (
-          <span className="text-muted-foreground ml-1 text-xs">(banco)</span>
+          <span className="text-muted-foreground ml-1 text-xs">{t("platform.fromDb")}</span>
         )}
       </label>
       {control}
@@ -184,8 +200,9 @@ function FieldInput({
 }
 
 function GroupCard({ summary }: { summary: PlatformSettingSummary }) {
+  const t = useTranslations("settings");
   const router = useRouter();
-  const def = GROUP_DEFS[summary.group];
+  const def = groupDefs(t)[summary.group];
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -203,7 +220,7 @@ function GroupCard({ summary }: { summary: PlatformSettingSummary }) {
     }
     const result = await updatePlatformSettingAction({ group: summary.group, values });
     if (result.ok) {
-      toast.success(`${def.title} salvo.`);
+      toast.success(t("platform.saved", { group: def.title }));
       router.refresh();
     } else {
       toast.error(result.error);
@@ -216,9 +233,11 @@ function GroupCard({ summary }: { summary: PlatformSettingSummary }) {
         <CardTitle className="flex items-center gap-2">
           {def.title}
           {summary.configured ? (
-            <span className="text-success text-xs font-normal">configurado</span>
+            <span className="text-success text-xs font-normal">{t("platform.configured")}</span>
           ) : (
-            <span className="text-muted-foreground text-xs font-normal">não configurado</span>
+            <span className="text-muted-foreground text-xs font-normal">
+              {t("platform.notConfigured")}
+            </span>
           )}
         </CardTitle>
         <CardDescription>{def.description}</CardDescription>
@@ -226,10 +245,16 @@ function GroupCard({ summary }: { summary: PlatformSettingSummary }) {
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
           {def.fields.map((field) => (
-            <FieldInput key={field.path} group={summary.group} field={field} summary={summary} />
+            <FieldInput
+              key={field.path}
+              group={summary.group}
+              field={field}
+              summary={summary}
+              t={t}
+            />
           ))}
           <div className="sm:col-span-2">
-            <Button type="submit">Salvar {def.title}</Button>
+            <Button type="submit">{t("platform.saveGroup", { group: def.title })}</Button>
           </div>
         </form>
       </CardContent>
@@ -239,9 +264,10 @@ function GroupCard({ summary }: { summary: PlatformSettingSummary }) {
 
 /** Product settings groups — visible only to platform_admin (server-gated). */
 export function PlatformSettings({ summaries }: { summaries: PlatformSettingSummary[] }) {
+  const t = useTranslations("settings");
   return (
     <section className="space-y-4">
-      <h2 className="text-lg font-semibold">Plataforma</h2>
+      <h2 className="text-lg font-semibold">{t("platform.title")}</h2>
       {summaries.map((summary) => (
         <GroupCard key={summary.group} summary={summary} />
       ))}

@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@crm/ui/components/select";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -36,6 +37,8 @@ export function TeamsManager({
   members: OrgMember[];
   canManage: boolean;
 }) {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
@@ -56,7 +59,7 @@ export function TeamsManager({
   const submitNew = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    run(createTeamAction({ name: trimmed, color }), "Equipe criada.", () => setName(""));
+    run(createTeamAction({ name: trimmed, color }), t("teamsManager.created"), () => setName(""));
   };
 
   return (
@@ -64,26 +67,26 @@ export function TeamsManager({
       {canManage && (
         <Card>
           <CardHeader>
-            <CardTitle>Nova equipe</CardTitle>
-            <CardDescription>Setores de atendimento (Vendas, Suporte…).</CardDescription>
+            <CardTitle>{t("teamsManager.newTeam")}</CardTitle>
+            <CardDescription>{t("teamsManager.newTeamDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-end gap-2">
               <div className="flex-1 space-y-1">
                 <label htmlFor="new-team-name" className="text-sm font-medium">
-                  Nome
+                  {t("teamsManager.name")}
                 </label>
                 <Input
                   id="new-team-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Vendas"
+                  placeholder={t("teamsManager.namePlaceholder")}
                   maxLength={100}
                 />
               </div>
               <div className="space-y-1">
                 <label htmlFor="new-team-color" className="text-sm font-medium">
-                  Cor
+                  {t("teamsManager.color")}
                 </label>
                 <input
                   id="new-team-color"
@@ -94,7 +97,7 @@ export function TeamsManager({
                 />
               </div>
               <Button disabled={pending || !name.trim()} onClick={submitNew}>
-                Criar equipe
+                {t("teamsManager.create")}
               </Button>
             </div>
           </CardContent>
@@ -103,11 +106,11 @@ export function TeamsManager({
 
       <Card>
         <CardHeader>
-          <CardTitle>Equipes</CardTitle>
+          <CardTitle>{t("teamsManager.list")}</CardTitle>
         </CardHeader>
         <CardContent>
           {teams.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Nenhuma equipe ainda.</p>
+            <p className="text-muted-foreground text-sm">{t("teamsManager.empty")}</p>
           ) : (
             <ul className="space-y-4" data-testid="team-list">
               {teams.map((team) => (
@@ -118,6 +121,8 @@ export function TeamsManager({
                   canManage={canManage}
                   pending={pending}
                   run={run}
+                  t={t}
+                  tc={tc}
                 />
               ))}
             </ul>
@@ -128,18 +133,24 @@ export function TeamsManager({
   );
 }
 
+type T = ReturnType<typeof useTranslations>;
+
 function TeamRow({
   team,
   members,
   canManage,
   pending,
   run,
+  t,
+  tc,
 }: {
   team: TeamWithMembers;
   members: OrgMember[];
   canManage: boolean;
   pending: boolean;
   run: Run;
+  t: T;
+  tc: T;
 }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(team.name);
@@ -150,20 +161,16 @@ function TeamRow({
     if (!trimmed) return;
     run(
       updateTeamAction({ teamId: team.id, name: trimmed, color: editColor }),
-      "Equipe salva.",
+      t("teamsManager.saved"),
       () => setEditing(false),
     );
   };
 
   const remove = () => {
-    if (
-      !window.confirm(
-        `Excluir a equipe "${team.name}"? Conversas atribuídas a ela ficam sem setor.`,
-      )
-    ) {
+    if (!window.confirm(t("teamsManager.deleteConfirm", { name: team.name }))) {
       return;
     }
-    run(deleteTeamAction(team.id), "Equipe excluída.");
+    run(deleteTeamAction(team.id), t("teamsManager.deleted"));
   };
 
   return (
@@ -175,14 +182,14 @@ function TeamRow({
               type="color"
               value={editColor}
               onChange={(e) => setEditColor(e.target.value)}
-              aria-label="Cor da equipe"
+              aria-label={t("teamsManager.teamColor")}
               className="border-input block h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1"
             />
             <Input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               maxLength={100}
-              aria-label="Nome da equipe"
+              aria-label={t("teamsManager.teamName")}
             />
           </div>
         ) : (
@@ -200,7 +207,7 @@ function TeamRow({
             {editing ? (
               <>
                 <Button size="sm" disabled={pending || !editName.trim()} onClick={saveEdit}>
-                  Salvar
+                  {tc("save")}
                 </Button>
                 <Button
                   size="sm"
@@ -208,7 +215,7 @@ function TeamRow({
                   disabled={pending}
                   onClick={() => setEditing(false)}
                 >
-                  Cancelar
+                  {tc("cancel")}
                 </Button>
               </>
             ) : (
@@ -222,11 +229,11 @@ function TeamRow({
                   setEditing(true);
                 }}
               >
-                Editar
+                {t("teamsManager.edit")}
               </Button>
             )}
             <Button size="sm" variant="destructive" disabled={pending} onClick={remove}>
-              Excluir
+              {t("teamsManager.delete")}
             </Button>
           </div>
         )}
@@ -238,6 +245,7 @@ function TeamRow({
         canManage={canManage}
         pending={pending}
         run={run}
+        t={t}
       />
     </li>
   );
@@ -249,12 +257,14 @@ function TeamMembers({
   canManage,
   pending,
   run,
+  t,
 }: {
   team: TeamWithMembers;
   members: OrgMember[];
   canManage: boolean;
   pending: boolean;
   run: Run;
+  t: T;
 }) {
   const [newMember, setNewMember] = useState("");
   // Viewers can never work a ticket — no point offering them as members.
@@ -262,7 +272,7 @@ function TeamMembers({
     (m) => m.role !== "viewer" && !team.memberUserIds.includes(m.userId),
   );
   const nameOf = (userId: string) =>
-    members.find((m) => m.userId === userId)?.name ?? "Usuário removido";
+    members.find((m) => m.userId === userId)?.name ?? t("teamsManager.removedUser");
 
   const addMember = () => {
     if (!newMember) return;
@@ -274,7 +284,7 @@ function TeamMembers({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {team.memberUserIds.length === 0 && (
-        <span className="text-muted-foreground text-sm">Sem membros.</span>
+        <span className="text-muted-foreground text-sm">{t("teamsManager.noMembers")}</span>
       )}
       {team.memberUserIds.map((userId) => (
         <span
@@ -285,7 +295,7 @@ function TeamMembers({
           {canManage && (
             <button
               type="button"
-              aria-label={`Remover ${nameOf(userId)}`}
+              aria-label={t("teamsManager.removeMember", { name: nameOf(userId) })}
               className="hover:text-destructive"
               disabled={pending}
               onClick={() => run(removeTeamMemberAction({ teamId: team.id, userId }))}
@@ -298,8 +308,11 @@ function TeamMembers({
       {canManage && candidates.length > 0 && (
         <div className="flex items-center gap-1">
           <Select value={newMember} onValueChange={setNewMember} disabled={pending}>
-            <SelectTrigger className="h-8 w-44" aria-label={`Adicionar membro em ${team.name}`}>
-              <SelectValue placeholder="Adicionar membro…" />
+            <SelectTrigger
+              className="h-8 w-44"
+              aria-label={t("teamsManager.addMemberTo", { team: team.name })}
+            >
+              <SelectValue placeholder={t("teamsManager.addMemberPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {candidates.map((m) => (
@@ -310,7 +323,7 @@ function TeamMembers({
             </SelectContent>
           </Select>
           <Button size="sm" variant="outline" disabled={pending || !newMember} onClick={addMember}>
-            Adicionar
+            {t("teamsManager.add")}
           </Button>
         </div>
       )}

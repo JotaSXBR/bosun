@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@crm/ui/components/button";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ export function ConnectionActions({
   kind: string;
   status: string;
 }) {
+  const t = useTranslations("integrations");
   const [pending, startTransition] = useTransition();
   const [pairing, setPairing] = useState<{ qr?: QrCode } | null>(null);
 
@@ -35,12 +37,12 @@ export function ConnectionActions({
       }
       if (result.status === "connected") {
         setPairing(null);
-        toast.success("WhatsApp conectado");
+        toast.success(t("actions.connected"));
       } else if (kind === "waha") {
         // Connecting/pending → open the pairing panel (QR + phone code).
         setPairing({ qr: result.qrCode });
       } else {
-        toast.info(`Status: ${result.status}`);
+        toast.info(t("actions.statusInfo", { status: result.status }));
       }
     });
   }
@@ -61,7 +63,7 @@ export function ConnectionActions({
     startTransition(async () => {
       const result = await deleteChannelConnectionAction(id);
       if (!result.ok) toast.error(result.error);
-      else toast.success("Conexão excluída");
+      else toast.success(t("actions.deleted"));
     });
   }
 
@@ -70,7 +72,7 @@ export function ConnectionActions({
       <div className="flex flex-wrap gap-2">
         {kind !== "site_chat" && (
           <Button type="button" size="sm" disabled={pending} onClick={connect}>
-            {status === "connected" ? "Reconectar" : "Conectar"}
+            {status === "connected" ? t("actions.reconnect") : t("actions.connect")}
           </Button>
         )}
         {kind === "waha" && status === "connected" && (
@@ -80,27 +82,27 @@ export function ConnectionActions({
               variant="outline"
               size="sm"
               disabled={pending}
-              onClick={() => lifecycle("restart", "Sessão reiniciada")}
+              onClick={() => lifecycle("restart", t("actions.sessionRestarted"))}
             >
-              Reiniciar sessão
+              {t("actions.restart")}
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
               disabled={pending}
-              onClick={() => lifecycle("stop", "Sessão parada")}
+              onClick={() => lifecycle("stop", t("actions.sessionStopped"))}
             >
-              Parar
+              {t("actions.stop")}
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
               disabled={pending}
-              onClick={() => lifecycle("logout", "Aparelho despareado")}
+              onClick={() => lifecycle("logout", t("actions.deviceUnpaired"))}
             >
-              Desparear
+              {t("actions.unpair")}
             </Button>
           </>
         )}
@@ -111,25 +113,23 @@ export function ConnectionActions({
               variant="outline"
               size="sm"
               disabled={pending}
-              onClick={() =>
-                lifecycle("restart", "Sessão reiniciada — clique em Conectar para o QR")
-              }
+              onClick={() => lifecycle("restart", t("actions.sessionRestartedQr"))}
             >
-              Reiniciar sessão
+              {t("actions.restart")}
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
               disabled={pending}
-              onClick={() => lifecycle("logout", "Aparelho despareado")}
+              onClick={() => lifecycle("logout", t("actions.deviceUnpaired"))}
             >
-              Desparear
+              {t("actions.unpair")}
             </Button>
           </>
         )}
         <Button type="button" variant="destructive" size="sm" disabled={pending} onClick={remove}>
-          Excluir
+          {t("actions.delete")}
         </Button>
       </div>
       {pairing && <PairingPanel id={id} initialQr={pairing.qr} onDone={() => setPairing(null)} />}

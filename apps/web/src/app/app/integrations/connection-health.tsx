@@ -1,14 +1,10 @@
 "use client";
 
 import type { ConnectionHealth } from "@crm/core/integrations";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { connectionHealthAction } from "@/server/actions/integrations";
-
-const WARNING_LABELS: Record<string, string> = {
-  reachout_timelock: "Timelock de contato ativo (anti-ban)",
-  message_capping: "Limite de mensagens atingido (anti-ban)",
-};
 
 /**
  * Live health strip under each connection row — paired number, WAHA
@@ -17,6 +13,7 @@ const WARNING_LABELS: Record<string, string> = {
  * communicates trouble).
  */
 export function ConnectionHealth({ id, kind }: { id: string; kind: string }) {
+  const t = useTranslations("integrations");
   const [health, setHealth] = useState<ConnectionHealth | null>(null);
 
   useEffect(() => {
@@ -34,8 +31,10 @@ export function ConnectionHealth({ id, kind }: { id: string; kind: string }) {
 
   return (
     <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-      {health.session?.phone && <span>Número: {health.session.phone}</span>}
-      {health.session?.pushName && <span>Conta: {health.session.pushName}</span>}
+      {health.session?.phone && <span>{t("health.number", { phone: health.session.phone })}</span>}
+      {health.session?.pushName && (
+        <span>{t("health.account", { pushName: health.session.pushName })}</span>
+      )}
       {health.server && (
         <span>
           WAHA {health.server.version} ({health.server.engine})
@@ -43,7 +42,7 @@ export function ConnectionHealth({ id, kind }: { id: string; kind: string }) {
       )}
       {health.session?.warnings.map((warning) => (
         <span key={warning} className="text-warning">
-          {WARNING_LABELS[warning] ?? warning}
+          {t.has(`warnings.${warning}`) ? t(`warnings.${warning}`) : warning}
         </span>
       ))}
     </div>
