@@ -12,17 +12,18 @@ import {
 } from "@crm/ui/components/form";
 import { Input } from "@crm/ui/components/input";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { createOrganization } from "@/server/actions/organization";
 
-const formSchema = z.object({
-  name: z.string().trim().min(2, "Informe o nome da organização").max(80),
-});
-
 export default function OnboardingPage() {
+  const t = useTranslations("onboarding");
+  const formSchema = z.object({
+    name: z.string().trim().min(2, t("orgNameMin")).max(80),
+  });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "" },
@@ -40,8 +41,8 @@ export default function OnboardingPage() {
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Crie sua organização</CardTitle>
-          <CardDescription>Sua organização é o espaço de trabalho do seu time</CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -51,16 +52,16 @@ export default function OnboardingPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome da organização</FormLabel>
+                    <FormLabel>{t("orgName")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Minha empresa" {...field} />
+                      <Input placeholder={t("orgNamePlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                Criar organização
+                {t("submit")}
               </Button>
             </form>
           </Form>

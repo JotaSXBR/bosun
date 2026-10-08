@@ -6,7 +6,52 @@
   "common": {
     "email": "E-mail",
     "password": "Senha",
-    "name": "Nome"
+    "name": "Nome",
+    "user": "Usuário",
+    "saving": "Salvando…"
+  },
+  "nav": {
+    "inbox": "Inbox",
+    "integrations": "Integrações",
+    "settings": "Configurações",
+    "signOut": "Sair"
+  },
+  "onboarding": {
+    "title": "Crie sua organização",
+    "description": "Sua organização é o espaço de trabalho do seu time",
+    "orgName": "Nome da organização",
+    "orgNamePlaceholder": "Minha empresa",
+    "orgNameMin": "Informe o nome da organização",
+    "submit": "Criar organização"
+  },
+  "setup": {
+    "title": "E-mail",
+    "provider": "Provider",
+    "consoleOption": "console (só loga — desenvolvimento)",
+    "from": "Remetente (From)",
+    "fromPlaceholder": "Bosun <noreply@exemplo.com>",
+    "resendKey": "Resend API key",
+    "host": "Host",
+    "port": "Porta",
+    "user": "Usuário",
+    "tls": "TLS/SSL (porta 465)",
+    "submit": "Salvar e continuar"
+  },
+  "dashboard": {
+    "orgFallback": "Organização",
+    "account": "Conta",
+    "user": "Usuário:",
+    "role": "Papel:",
+    "platformAdminSuffix": "(platform admin)",
+    "recentActivity": "Atividade recente",
+    "noEvents": "Nenhum evento registrado."
+  },
+  "widgetDemo": {
+    "title": "Widget demo",
+    "description": "Página simulando o site do cliente — o balão no canto carrega o widget embarcável com a conexão informada.",
+    "fakeContent": "Conteúdo do site do cliente…",
+    "tokenLabel": "token: {token}…",
+    "noToken": "Informe <code>?token=&lt;webhookToken-da-conexão-site_chat&gt;</code> na URL — o token aparece em <code>/app/integrations</code> no snippet do widget."
   },
   "validation": {
     "invalidEmail": "Informe um e-mail válido",

@@ -4,6 +4,7 @@ import { Button } from "@crm/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm/ui/components/card";
 import { Input } from "@crm/ui/components/input";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +16,8 @@ import { saveSetupEmailAction } from "@/server/actions/setup";
  * raw (first save — nothing to preserve); the server stores them encrypted.
  */
 export function SetupForm() {
+  const t = useTranslations("setup");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [provider, setProvider] = useState("resend");
   const [pending, setPending] = useState(false);
@@ -53,13 +56,13 @@ export function SetupForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>E-mail</CardTitle>
+        <CardTitle>{t("title")}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-1">
             <label className="text-sm font-medium" htmlFor="setup-provider">
-              Provider
+              {t("provider")}
             </label>
             <select
               id="setup-provider"
@@ -67,7 +70,7 @@ export function SetupForm() {
               onChange={(e) => setProvider(e.target.value)}
               className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
             >
-              <option value="console">console (só loga — desenvolvimento)</option>
+              <option value="console">{t("consoleOption")}</option>
               <option value="resend">resend</option>
               <option value="smtp">smtp</option>
             </select>
@@ -75,15 +78,15 @@ export function SetupForm() {
 
           <div className="space-y-1">
             <label className="text-sm font-medium" htmlFor="setup-from">
-              Remetente (From)
+              {t("from")}
             </label>
-            <Input id="setup-from" name="from" placeholder="Bosun <noreply@exemplo.com>" />
+            <Input id="setup-from" name="from" placeholder={t("fromPlaceholder")} />
           </div>
 
           {provider === "resend" && (
             <div className="space-y-1">
               <label className="text-sm font-medium" htmlFor="setup-resend-key">
-                Resend API key
+                {t("resendKey")}
               </label>
               <Input
                 id="setup-resend-key"
@@ -99,25 +102,25 @@ export function SetupForm() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <label className="text-sm font-medium" htmlFor="setup-smtp-host">
-                  Host
+                  {t("host")}
                 </label>
                 <Input id="setup-smtp-host" name="smtpHost" placeholder="smtp.exemplo.com" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium" htmlFor="setup-smtp-port">
-                  Porta
+                  {t("port")}
                 </label>
                 <Input id="setup-smtp-port" name="smtpPort" type="number" placeholder="587" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium" htmlFor="setup-smtp-user">
-                  Usuário
+                  {t("user")}
                 </label>
                 <Input id="setup-smtp-user" name="smtpUser" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium" htmlFor="setup-smtp-password">
-                  Senha
+                  {tc("password")}
                 </label>
                 <Input
                   id="setup-smtp-password"
@@ -132,13 +135,13 @@ export function SetupForm() {
                   type="checkbox"
                   className="border-input h-4 w-4 rounded border"
                 />
-                TLS/SSL (porta 465)
+                {t("tls")}
               </label>
             </div>
           )}
 
           <Button type="submit" disabled={pending}>
-            {pending ? "Salvando…" : "Salvar e continuar"}
+            {pending ? tc("saving") : t("submit")}
           </Button>
         </form>
       </CardContent>

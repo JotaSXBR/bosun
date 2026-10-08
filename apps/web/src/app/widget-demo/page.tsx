@@ -2,22 +2,23 @@
 
 import { useSearchParams } from "next/navigation";
 import Script from "next/script";
+import { useTranslations } from "next-intl";
 import { Suspense } from "react";
 
 function Demo() {
+  const t = useTranslations("widgetDemo");
   const token = useSearchParams().get("token");
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-10">
-      <h1 className="text-2xl font-semibold">Widget demo</h1>
+      <h1 className="text-2xl font-semibold">{t("title")}</h1>
       {token ? (
         <>
-          <p className="text-muted-foreground text-sm">
-            Página simulando o site do cliente — o balão no canto carrega o widget embarcável com a
-            conexão informada.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("description")}</p>
           <div className="border-border space-y-2 border p-6">
-            <p className="text-sm">Conteúdo do site do cliente…</p>
-            <p className="text-muted-foreground text-xs">token: {token.slice(0, 12)}…</p>
+            <p className="text-sm">{t("fakeContent")}</p>
+            <p className="text-muted-foreground text-xs">
+              {t("tokenLabel", { token: token.slice(0, 12) })}
+            </p>
           </div>
           <Script
             src="/widget.js"
@@ -28,8 +29,7 @@ function Demo() {
         </>
       ) : (
         <p className="text-muted-foreground text-sm">
-          Informe <code>?token=&lt;webhookToken-da-conexão-site_chat&gt;</code> na URL — o token
-          aparece em <code>/app/integrations</code> no snippet do widget.
+          {t.rich("noToken", { code: (chunks) => <code>{chunks}</code> })}
         </p>
       )}
     </main>

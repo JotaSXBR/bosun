@@ -2,10 +2,12 @@
 
 import { Button } from "@crm/ui/components/button";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { authClient } from "@/lib/auth-client";
 
 export function SignOutButton() {
+  const t = useTranslations("nav");
   const router = useRouter();
   return (
     <Button
@@ -16,7 +18,7 @@ export function SignOutButton() {
         router.refresh();
       }}
     >
-      Sair
+      {t("signOut")}
     </Button>
   );
 }
