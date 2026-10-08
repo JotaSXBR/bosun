@@ -134,6 +134,15 @@ describe("analyzeConversation", () => {
                 rationale: "Cliente perguntou duas vezes",
               },
             ],
+            memories: [
+              {
+                type: "pattern",
+                scope: "org",
+                content: "Clientes perguntam prazo antes do preço.",
+                confidence: "medium",
+                staleAfterDays: 90,
+              },
+            ],
           }),
         },
       ],
@@ -156,8 +165,33 @@ describe("analyzeConversation", () => {
     });
     expect(result.suggestions).toHaveLength(1);
     expect(result.suggestions[0]?.targetType).toBe("knowledge_entry");
+    expect(result.memories).toHaveLength(1);
+    expect(result.memories[0]?.type).toBe("pattern");
     expect(result.tokensIn).toBe(10);
     expect(result.tokensOut).toBe(5);
+  });
+
+  it("defaults memories to an empty list when the model omits it", async () => {
+    const { analyzeConversation } = await import("./observer");
+    const model = new MockLanguageModelV4({
+      doGenerate: {
+        content: [{ type: "text", text: JSON.stringify({ suggestions: [] }) }],
+        finishReason: { unified: "stop", raw: "stop" },
+        usage: {
+          inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+          outputTokens: { total: 1, text: 1, reasoning: 0 },
+        },
+        warnings: [],
+      },
+    });
+    const result = await analyzeConversation({
+      model,
+      transcript: [{ direction: "inbound", text: "ok" }],
+      agents: [],
+      knowledge: [],
+      brain: { canon: [], pendingContents: [] },
+    });
+    expect(result.memories).toEqual([]);
   });
 });
 

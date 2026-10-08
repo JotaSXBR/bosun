@@ -3,7 +3,9 @@ export type { AiProviderKeys, ModelRef } from "./model";
 export { AiProviderNotConfiguredError, resolveLanguageModel } from "./model";
 export type {
   ObserverAgentSummary,
+  ObserverBrainContext,
   ObserverInput,
+  ObserverMemory,
   ObserverResult,
   ObserverSuggestion,
   ObserverTranscriptEntry,

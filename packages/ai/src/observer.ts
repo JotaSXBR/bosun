@@ -15,8 +15,35 @@ export const observerSuggestionSchema = z.object({
   payload: z.record(z.string(), z.unknown()),
   rationale: z.string().min(1).max(2000),
 });
+/**
+ * A proposed second-brain memory entry — internal operational learning,
+ * never customer-facing content. Stages as an `agent_suggestions` row with
+ * `target_type = 'memory'`; a canon `memory_entries` row only exists after
+ * human approval. `supersedes` points at a canon entry id (shown in
+ * context) when the new fact replaces it.
+ */
+export const observerMemorySchema = z.object({
+  type: z.enum([
+    "pattern",
+    "procedure",
+    "faq_gap",
+    "decision",
+    "preference",
+    "escalation",
+    "persona",
+    "metric",
+  ]),
+  scope: z.enum(["org", "team", "contact"]).default("org"),
+  content: z.string().min(1).max(2000),
+  confidence: z.enum(["low", "medium", "high"]),
+  staleAfterDays: z.number().int().min(1).max(730).default(90),
+  supersedes: z.string().nullish(),
+});
+export type ObserverMemory = z.infer<typeof observerMemorySchema>;
+
 export const observerResultSchema = z.object({
   suggestions: z.array(observerSuggestionSchema).max(5),
+  memories: z.array(observerMemorySchema).max(3).default([]),
 });
 export type ObserverSuggestion = z.infer<typeof observerSuggestionSchema>;
 
@@ -35,15 +62,33 @@ export type ObserverAgentSummary = {
   systemPrompt: string;
 };
 
+/**
+ * Second-brain context — canon entries the org already trusts (the only
+ * ids `supersedes` may reference) and contents of pending proposals, so
+ * the model doesn't re-propose what a human is already reviewing.
+ */
+export type ObserverBrainContext = {
+  canon: Array<{
+    id: string;
+    type: string;
+    scope: string;
+    content: string;
+    confidence: string;
+  }>;
+  pendingContents: string[];
+};
+
 export type ObserverInput = {
   model: LanguageModel;
   transcript: ObserverTranscriptEntry[];
   agents: ObserverAgentSummary[];
   knowledge: Array<{ id: string; title: string }>;
+  brain?: ObserverBrainContext;
 };
 
 export type ObserverResult = {
   suggestions: ObserverSuggestion[];
+  memories: ObserverMemory[];
   tokensIn: number;
   tokensOut: number;
 };
@@ -55,7 +100,15 @@ Regras:
 - targetType "knowledge_entry": use targetId = id de uma entrada existente e payload com os campos a alterar (title, content, status); ou omita targetId para uma NOVA entrada (payload exige title e content).
 - rationale: 1-2 frases em português citando a evidência na conversa.
 - Máximo 5 sugestões; se a conversa não sugere melhoria, retorne uma lista vazia.
-- Mensagens marcadas como [nota interna] são privadas — use como contexto, nunca como conteúdo sugerido ao cliente.`;
+- Mensagens marcadas como [nota interna] são privadas — use como contexto, nunca como conteúdo sugerido ao cliente.
+
+Memórias (campo "memories") — aprendizado operacional interno da organização, distinto de knowledge_entry (que é conteúdo para o cliente):
+- Proponha apenas aprendizados com evidência real na conversa: padrões de atendimento, procedimentos, decisões, preferências, regras de escalação, persona, métricas conhecidas ou lacunas de FAQ.
+- NUNCA inclua dados pessoais identificáveis (nomes, telefones, documentos, e-mails). scope "contact" descreve COMO atender aquele contato — nunca fatos pessoais sobre ele.
+- Não reproponha o que já está na memória canônica ou nas propostas pendentes listadas. Quando um fato novo SUBSTITUI uma entrada canônica, use "supersedes" com o id dela.
+- confidence deve refletir a generalização: "high" só com evidência forte/repetida; evite "low" — memórias fracas viram ruído de revisão.
+- staleAfterDays: quanto tempo a informação permanece confiável sem re-verificação (padrão 90).
+- Máximo 3 memórias por análise.`;
 
 /**
  * One observer pass over a resolved conversation. Pure function of
@@ -79,15 +132,29 @@ export async function analyzeConversation(input: ObserverInput): Promise<Observe
 
   const knowledge = input.knowledge.map((k) => `- id=${k.id} title="${k.title}"`).join("\n");
 
+  const brain = input.brain
+    ? `\n\n## Memória operacional canônica\n${
+        input.brain.canon
+          .map(
+            (e) =>
+              `- id=${e.id} type=${e.type} scope=${e.scope} confidence=${e.confidence} "${e.content}"`,
+          )
+          .join("\n") || "(vazia)"
+      }\n\n## Propostas de memória pendentes (não repropor)\n${
+        input.brain.pendingContents.map((c) => `- "${c}"`).join("\n") || "(nenhuma)"
+      }`
+    : "";
+
   const result = await generateObject({
     model: input.model,
     schema: observerResultSchema,
     system: SYSTEM_PROMPT,
-    prompt: `## Conversa resolvida\n${transcript || "(vazia)"}\n\n## Agentes atuais\n${agents || "(nenhum)"}\n\n## Conhecimento atual\n${knowledge || "(nenhum)"}`,
+    prompt: `## Conversa resolvida\n${transcript || "(vazia)"}\n\n## Agentes atuais\n${agents || "(nenhum)"}\n\n## Conhecimento atual\n${knowledge || "(nenhum)"}${brain}`,
   });
 
   return {
     suggestions: result.object.suggestions,
+    memories: result.object.memories,
     tokensIn: result.usage.inputTokens ?? 0,
     tokensOut: result.usage.outputTokens ?? 0,
   };
