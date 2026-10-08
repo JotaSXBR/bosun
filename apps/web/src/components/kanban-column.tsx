@@ -12,6 +12,7 @@ import { cn } from "@crm/ui/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { SortableDealCard } from "@/components/deal-card";
 import { paletteStyle } from "@/components/palette";
@@ -36,6 +37,7 @@ function StageHeader({
   onEditStage: () => void;
   onDeleteStage: () => void;
 }) {
+  const t = useTranslations("leads");
   return (
     <div className="flex items-center justify-between px-1 py-0.5">
       <div className="flex min-w-0 items-center gap-1.5">
@@ -50,15 +52,15 @@ function StageHeader({
               variant="ghost"
               size="sm"
               className="size-6 p-0"
-              aria-label={`Ações da etapa ${stage.name}`}
+              aria-label={t("stageActions", { name: stage.name })}
             >
               <MoreHorizontalIcon className="size-3.5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={onEditStage}>Editar etapa</DropdownMenuItem>
+            <DropdownMenuItem onSelect={onEditStage}>{t("editStage")}</DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onSelect={onDeleteStage}>
-              Excluir etapa
+              {t("deleteStage")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -89,6 +91,7 @@ export function KanbanStageColumn({
   onDeleteStage: () => void;
   onAddDeal: () => void;
 }) {
+  const t = useTranslations("leads");
   const { setNodeRef, isOver } = useDroppable({ id: stage.id, data: { type: "stage" } });
   return (
     <div
@@ -127,7 +130,7 @@ export function KanbanStageColumn({
           className="text-muted-foreground justify-start"
           onClick={onAddDeal}
         >
-          <PlusIcon className="size-3.5" /> Deal
+          <PlusIcon className="size-3.5" /> {t("addDeal")}
         </Button>
       )}
     </div>

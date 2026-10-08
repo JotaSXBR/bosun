@@ -13,6 +13,7 @@ import {
 import { Input } from "@crm/ui/components/input";
 import { cn } from "@crm/ui/lib/utils";
 import { CheckIcon, PlusIcon, TagIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -37,8 +38,9 @@ export function LabelPicker({
   selectedIds,
   canCreate,
   onSave,
-  triggerLabel = "Etiquetas",
+  triggerLabel,
 }: LabelPickerProps) {
+  const t = useTranslations("leads");
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState<PaletteColor>("gray");
@@ -52,7 +54,7 @@ export function LabelPicker({
       const result = await onSave(next);
       if (!result.ok) {
         setSelected(selected);
-        toast.error(result.error ?? "Falha ao atualizar etiquetas");
+        toast.error(result.error ?? t("labelsUpdateFailed"));
       }
     });
   }
@@ -80,7 +82,7 @@ export function LabelPicker({
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="outline" size="sm" disabled={pending}>
           <TagIcon className="size-3.5" />
-          {triggerLabel}
+          {triggerLabel ?? t("labels")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
@@ -99,7 +101,7 @@ export function LabelPicker({
           );
         })}
         {allLabels.length === 0 && !canCreate && (
-          <p className="text-muted-foreground px-2 py-1.5 text-xs">Nenhuma etiqueta ainda.</p>
+          <p className="text-muted-foreground px-2 py-1.5 text-xs">{t("noLabels")}</p>
         )}
         {canCreate && (
           <>
@@ -108,7 +110,7 @@ export function LabelPicker({
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Nova etiqueta…"
+                placeholder={t("newLabelPlaceholder")}
                 className="h-8 text-sm"
                 maxLength={40}
               />
@@ -136,7 +138,7 @@ export function LabelPicker({
                 disabled={!newName.trim() || pending}
                 onClick={createLabel}
               >
-                <PlusIcon className="size-3.5" /> Criar
+                <PlusIcon className="size-3.5" /> {t("createLabel")}
               </Button>
             </div>
           </>

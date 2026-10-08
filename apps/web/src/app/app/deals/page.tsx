@@ -3,6 +3,7 @@ import type { FunnelRow } from "@crm/core/leads";
 import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { KanbanBoard } from "@/components/kanban-board";
 import { NewFunnelButton } from "@/components/new-funnel-button";
@@ -21,6 +22,7 @@ export default async function DealsPage({
 }: {
   searchParams: Promise<{ funnel?: string }>;
 }) {
+  const t = await getTranslations("leads");
   const ctx = await requireTenantContext();
   const { funnel: requested } = await searchParams;
   const [funnels, labels] = await Promise.all([listOrgFunnels(ctx), listOrgLabels(ctx)]);
@@ -32,18 +34,16 @@ export default async function DealsPage({
     return (
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Funil</h1>
+          <h1 className="text-2xl font-semibold">{t("funnel")}</h1>
           <Link href="/app/inbox" className="text-muted-foreground text-sm underline">
-            ← Inbox
+            {t("backToInbox")}
           </Link>
         </div>
         <div
           className="rounded-lg border border-dashed p-12 text-center"
           data-testid="empty-funnel"
         >
-          <p className="text-muted-foreground text-sm">
-            Nenhum funil ainda. Crie o primeiro — pode partir de um modelo de nicho.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("emptyFunnel")}</p>
           {canManage && (
             <div className="mt-4">
               <NewFunnelButton />
@@ -65,9 +65,9 @@ export default async function DealsPage({
   return (
     <main className="space-y-4 p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Funil</h1>
+        <h1 className="text-2xl font-semibold">{t("funnel")}</h1>
         <Link href="/app/inbox" className="text-muted-foreground text-sm underline">
-          ← Inbox
+          {t("backToInbox")}
         </Link>
       </div>
       <KanbanBoard

@@ -11,6 +11,7 @@ import {
 } from "@crm/ui/components/select";
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export function KanbanToolbar({
   board,
@@ -27,6 +28,7 @@ export function KanbanToolbar({
   onNewStage: () => void;
   onDeleteFunnel: () => void;
 }) {
+  const t = useTranslations("leads");
   const router = useRouter();
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -34,7 +36,7 @@ export function KanbanToolbar({
         value={board.funnel.id}
         onValueChange={(funnelId) => router.push(`/app/deals?funnel=${funnelId}`)}
       >
-        <SelectTrigger className="w-56" aria-label="Funil">
+        <SelectTrigger className="w-56" aria-label={t("funnel")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -48,13 +50,13 @@ export function KanbanToolbar({
       {canManage && (
         <>
           <Button variant="outline" size="sm" onClick={onNewFunnel}>
-            <PlusIcon className="size-3.5" /> Funil
+            <PlusIcon className="size-3.5" /> {t("funnel")}
           </Button>
           <Button variant="outline" size="sm" onClick={onNewStage}>
-            <PlusIcon className="size-3.5" /> Etapa
+            <PlusIcon className="size-3.5" /> {t("newStage")}
           </Button>
           <Button variant="ghost" size="sm" className="text-destructive" onClick={onDeleteFunnel}>
-            Excluir funil
+            {t("deleteFunnel")}
           </Button>
         </>
       )}

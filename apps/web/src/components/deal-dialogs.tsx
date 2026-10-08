@@ -5,7 +5,6 @@ import { Button } from "@crm/ui/components/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -21,18 +20,15 @@ import {
 } from "@crm/ui/components/select";
 import { PlusIcon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import {
-  createDealAction,
-  deleteDealAction,
-  searchContactsAction,
-  updateDealAction,
-} from "@/server/actions/leads";
+import { createDealAction, searchContactsAction, updateDealAction } from "@/server/actions/leads";
 import type { ContactPickRow } from "@/server/services";
 
 function ContactSelect({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const t = useTranslations("leads");
   const [query, setQuery] = useState("");
   const [contacts, setContacts] = useState<ContactPickRow[]>([]);
 
@@ -50,12 +46,12 @@ function ContactSelect({ value, onChange }: { value: string; onChange: (id: stri
       <Input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar contato…"
-        aria-label="Buscar contato"
+        placeholder={t("dealForm.searchContact")}
+        aria-label={t("dealForm.searchContact")}
       />
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger aria-label="Contato">
-          <SelectValue placeholder="Selecione o contato" />
+        <SelectTrigger aria-label={t("dealForm.contactAria")}>
+          <SelectValue placeholder={t("dealForm.selectContact")} />
         </SelectTrigger>
         <SelectContent>
           {contacts.map((c) => (
@@ -65,7 +61,7 @@ function ContactSelect({ value, onChange }: { value: string; onChange: (id: stri
           ))}
           {contacts.length === 0 && (
             <div className="text-muted-foreground px-2 py-1.5 text-xs">
-              Nenhum contato encontrado.
+              {t("dealForm.noContacts")}
             </div>
           )}
         </SelectContent>
@@ -109,9 +105,10 @@ function CustomAttrsFields({
   attrs: AttrRow[];
   setAttrs: (a: AttrRow[]) => void;
 }) {
+  const t = useTranslations("leads");
   return (
     <div className="space-y-1.5">
-      <Label>Campos personalizados</Label>
+      <Label>{t("dealForm.customAttrs")}</Label>
       {attrs.map((row, index) => (
         <div key={index} className="flex gap-2">
           <Input
@@ -119,7 +116,7 @@ function CustomAttrsFields({
             onChange={(e) =>
               setAttrs(attrs.map((r, i) => (i === index ? { ...r, key: e.target.value } : r)))
             }
-            placeholder="campo"
+            placeholder={t("dealForm.attrKey")}
             className="w-2/5"
             maxLength={100}
           />
@@ -128,7 +125,7 @@ function CustomAttrsFields({
             onChange={(e) =>
               setAttrs(attrs.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)))
             }
-            placeholder="valor"
+            placeholder={t("dealForm.attrValue")}
             className="flex-1"
             maxLength={500}
           />
@@ -137,7 +134,7 @@ function CustomAttrsFields({
             variant="ghost"
             size="sm"
             className="size-9 p-0"
-            aria-label="Remover campo"
+            aria-label={t("dealForm.removeField")}
             onClick={() => setAttrs(attrs.filter((_, i) => i !== index))}
           >
             <XIcon className="size-4" />
@@ -150,7 +147,7 @@ function CustomAttrsFields({
         size="sm"
         onClick={() => setAttrs([...attrs, { key: "", value: "" }])}
       >
-        <PlusIcon className="size-3.5" /> Campo
+        <PlusIcon className="size-3.5" /> {t("dealForm.addField")}
       </Button>
     </div>
   );
@@ -183,10 +180,11 @@ function DealFormFields({
   form: DealFormState;
   setForm: (patch: Partial<DealFormState>) => void;
 }) {
+  const t = useTranslations("leads");
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="deal-title">Título</Label>
+        <Label htmlFor="deal-title">{t("dealForm.title")}</Label>
         <Input
           id="deal-title"
           value={form.title}
@@ -196,13 +194,13 @@ function DealFormFields({
       </div>
       {!editing && (
         <div className="space-y-1.5">
-          <Label>Contato</Label>
+          <Label>{t("dealForm.contact")}</Label>
           <ContactSelect value={form.contactId} onChange={(contactId) => setForm({ contactId })} />
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="deal-stage">Etapa</Label>
+          <Label htmlFor="deal-stage">{t("dealForm.stage")}</Label>
           <Select
             value={form.stageId}
             onValueChange={(stageId) => setForm({ stageId })}
@@ -221,7 +219,7 @@ function DealFormFields({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="deal-value">Valor (R$)</Label>
+          <Label htmlFor="deal-value">{t("dealForm.value")}</Label>
           <Input
             id="deal-value"
             value={form.value}
@@ -251,6 +249,8 @@ export function DealFormDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("leads");
+  const tc = useTranslations("common");
   const router = useRouter();
   const editing = Boolean(deal);
   const initialForm = (): DealFormState => ({
@@ -291,7 +291,7 @@ export function DealFormDialog({
             customAttributes: rowsToAttrs(attrs),
           });
       if (result.ok) {
-        toast.success(editing ? "Deal atualizado" : "Deal criado");
+        toast.success(editing ? t("dealForm.updated") : t("dealForm.created"));
         onOpenChange(false);
         router.refresh();
       } else {
@@ -306,58 +306,12 @@ export function DealFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{editing ? "Editar deal" : "Novo deal"}</DialogTitle>
+          <DialogTitle>{editing ? t("dealForm.editTitle") : t("dealForm.newTitle")}</DialogTitle>
         </DialogHeader>
         <DealFormFields editing={editing} stages={stages} form={form} setForm={setForm} />
         <DialogFooter>
           <Button onClick={submit} disabled={!canSubmit}>
-            {editing ? "Salvar" : "Criar deal"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function DeleteDealDialog({
-  deal,
-  open,
-  onOpenChange,
-}: {
-  deal: DealCardRow;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Excluir deal</DialogTitle>
-          <DialogDescription>
-            Excluir &quot;{deal.title}&quot;? A conversa vinculada não é afetada.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await deleteDealAction(deal.id, deal.conversationId ?? undefined);
-                if (result.ok) {
-                  toast.success("Deal excluído");
-                  onOpenChange(false);
-                  router.refresh();
-                } else {
-                  toast.error(result.error);
-                }
-              })
-            }
-          >
-            Excluir deal
+            {editing ? tc("save") : t("dealForm.createSubmit")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -15,6 +15,7 @@ import { cn } from "@crm/ui/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { MoreHorizontalIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
 
 import { formatValueCents, paletteStyle } from "@/components/palette";
@@ -29,6 +30,7 @@ function DealCardMenu({
   onDelete,
   onMove,
 }: DealCardProps) {
+  const t = useTranslations("leads");
   if (!canWrite && !canManage) return null;
   return (
     <DropdownMenu>
@@ -38,16 +40,16 @@ function DealCardMenu({
           variant="ghost"
           size="sm"
           className="size-6 p-0 opacity-0 group-hover:opacity-100 focus:opacity-100"
-          aria-label={`Ações do deal ${deal.title}`}
+          aria-label={t("dealActions", { title: deal.title })}
         >
           <MoreHorizontalIcon className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {canWrite && <DropdownMenuItem onSelect={() => onEdit(deal)}>Editar</DropdownMenuItem>}
+        {canWrite && <DropdownMenuItem onSelect={() => onEdit(deal)}>{t("edit")}</DropdownMenuItem>}
         {canWrite && (
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Mover para</DropdownMenuSubTrigger>
+            <DropdownMenuSubTrigger>{t("moveTo")}</DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               {stages
                 .filter((s) => s.id !== deal.stageId)
@@ -59,10 +61,12 @@ function DealCardMenu({
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )}
-        {canWrite && <DropdownMenuItem onSelect={() => onLabels(deal)}>Etiquetas</DropdownMenuItem>}
+        {canWrite && (
+          <DropdownMenuItem onSelect={() => onLabels(deal)}>{t("labels")}</DropdownMenuItem>
+        )}
         {canManage && (
           <DropdownMenuItem variant="destructive" onSelect={() => onDelete(deal)}>
-            Excluir
+            {t("delete")}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
@@ -101,6 +105,7 @@ export function DealCardView({
   dragging?: boolean;
   style?: CSSProperties;
 }) {
+  const t = useTranslations("leads");
   return (
     <div
       ref={containerRef}
@@ -118,7 +123,7 @@ export function DealCardView({
             "min-w-0 flex-1 cursor-grab text-left active:cursor-grabbing",
             !canWrite && "cursor-default",
           )}
-          aria-label={`Deal ${deal.title}`}
+          aria-label={t("dealAria", { title: deal.title })}
           {...(canWrite ? dragHandleProps : {})}
         >
           <p className="truncate text-sm font-medium">{deal.title}</p>

@@ -25,6 +25,7 @@ import { cn } from "@crm/ui/lib/utils";
 import { SparklesIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -50,6 +51,7 @@ function ConvertToDealDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("leads");
   const router = useRouter();
   const [funnelId, setFunnelId] = useState(funnels[0]?.funnel.id ?? "");
   const funnel = funnels.find((f) => f.funnel.id === funnelId) ?? funnels[0];
@@ -67,14 +69,12 @@ function ConvertToDealDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Virar lead</DialogTitle>
-          <DialogDescription>
-            Cria um deal vinculado a esta conversa e ao contato — a conversa segue na inbox.
-          </DialogDescription>
+          <DialogTitle>{t("panel.convertTitle")}</DialogTitle>
+          <DialogDescription>{t("panel.convertDescription")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="lead-title">Título do deal</Label>
+            <Label htmlFor="lead-title">{t("panel.dealTitle")}</Label>
             <Input
               id="lead-title"
               value={title}
@@ -84,7 +84,7 @@ function ConvertToDealDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="lead-funnel">Funil</Label>
+              <Label htmlFor="lead-funnel">{t("funnel")}</Label>
               <Select value={funnelId} onValueChange={selectFunnel}>
                 <SelectTrigger id="lead-funnel">
                   <SelectValue />
@@ -99,7 +99,7 @@ function ConvertToDealDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="lead-stage">Etapa</Label>
+              <Label htmlFor="lead-stage">{t("panel.stage")}</Label>
               <Select value={stageId} onValueChange={setStageId}>
                 <SelectTrigger id="lead-stage">
                   <SelectValue />
@@ -127,7 +127,7 @@ function ConvertToDealDialog({
                   title: title.trim(),
                 });
                 if (result.ok) {
-                  toast.success("Conversa virou lead");
+                  toast.success(t("panel.converted"));
                   onOpenChange(false);
                   router.refresh();
                 } else {
@@ -136,7 +136,7 @@ function ConvertToDealDialog({
               })
             }
           >
-            Criar deal
+            {t("dealForm.createSubmit")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -163,6 +163,7 @@ export function ConversationLeadPanel({
   canWrite: boolean;
   canManage: boolean;
 }) {
+  const t = useTranslations("leads");
   const router = useRouter();
   const [convertOpen, setConvertOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -188,7 +189,7 @@ export function ConversationLeadPanel({
     <aside className="w-full shrink-0 space-y-4 lg:w-72" data-testid="lead-panel">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Lead</CardTitle>
+          <CardTitle className="text-sm">{t("panel.lead")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {deal ? (
@@ -202,7 +203,7 @@ export function ConversationLeadPanel({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="deal-stage-select" className="text-xs">
-                  Etapa
+                  {t("panel.stage")}
                 </Label>
                 <Select
                   value={deal.stageId}
@@ -225,23 +226,19 @@ export function ConversationLeadPanel({
                 href={`/app/deals?funnel=${deal.funnelId}`}
                 className="text-muted-foreground text-xs underline"
               >
-                Ver no kanban →
+                {t("panel.viewKanban")}
               </Link>
             </>
           ) : canWrite && readyFunnels.length > 0 ? (
             <>
-              <p className="text-muted-foreground text-xs">
-                Esta conversa ainda não é um lead no funil.
-              </p>
+              <p className="text-muted-foreground text-xs">{t("panel.notLead")}</p>
               <Button size="sm" onClick={() => setConvertOpen(true)} className="w-full">
-                <SparklesIcon className="size-3.5" /> Virar lead
+                <SparklesIcon className="size-3.5" /> {t("panel.convertTitle")}
               </Button>
             </>
           ) : (
             <p className="text-muted-foreground text-xs">
-              {readyFunnels.length === 0
-                ? "Crie um funil em Funil para converter."
-                : "Sem deal vinculado."}
+              {readyFunnels.length === 0 ? t("panel.noFunnelHint") : t("panel.noDeal")}
             </p>
           )}
         </CardContent>
@@ -249,7 +246,7 @@ export function ConversationLeadPanel({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Etiquetas</CardTitle>
+          <CardTitle className="text-sm">{t("labels")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <div className="flex flex-wrap gap-1">
@@ -263,7 +260,7 @@ export function ConversationLeadPanel({
               </Badge>
             ))}
             {conversationLabels.length === 0 && (
-              <span className="text-muted-foreground text-xs">Nenhuma.</span>
+              <span className="text-muted-foreground text-xs">{t("panel.noLabelsShort")}</span>
             )}
           </div>
           {canWrite && (

@@ -3,8 +3,10 @@
 import type { DealCardRow, LabelRow, StageRow } from "@crm/core/leads";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@crm/ui/components/dialog";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
-import { DealFormDialog, DeleteDealDialog } from "@/components/deal-dialogs";
+import { DealFormDialog } from "@/components/deal-dialogs";
+import { DeleteDealDialog } from "@/components/delete-deal-dialog";
 import {
   DeleteFunnelDialog,
   DeleteStageDialog,
@@ -25,18 +27,19 @@ function DealLabelsDialog({
   canManage: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations("leads");
   const router = useRouter();
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Etiquetas — {deal.title}</DialogTitle>
+          <DialogTitle>{t("labelsDialogTitle", { title: deal.title })}</DialogTitle>
         </DialogHeader>
         <LabelPicker
           allLabels={labels}
           selectedIds={deal.labels.map((l) => l.id)}
           canCreate={canManage}
-          triggerLabel="Selecionar etiquetas"
+          triggerLabel={t("selectLabels")}
           onSave={async (labelIds) => {
             const result = await setDealLabelsAction({ dealId: deal.id, labelIds });
             if (result.ok) router.refresh();
