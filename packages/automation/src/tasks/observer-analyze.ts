@@ -2,9 +2,14 @@ import type { AiProviderKeys, ObserverInput, ObserverResult } from "@crm/ai";
 import { analyzeConversation, resolveLanguageModel } from "@crm/ai";
 import { listAgentRows } from "@crm/core/agents";
 import { llmProviderSchema, recordUsageEvents, resolveOrgLlmCredentials } from "@crm/core/ai";
+import { listCanonEntries, memoryProposalSchema } from "@crm/core/brain";
 import { listKnowledgeRows } from "@crm/core/knowledge";
-import { listConversations, listMessages } from "@crm/core/messaging";
-import { createSystemSuggestions, listPendingForConversation } from "@crm/core/suggestions";
+import { getConversationRow, listConversations, listMessages } from "@crm/core/messaging";
+import {
+  createSystemSuggestions,
+  listPendingByTargetType,
+  listPendingForConversation,
+} from "@crm/core/suggestions";
 import type { Database } from "@crm/db";
 import { getDb, withTenant } from "@crm/db";
 import { createLogger } from "@crm/observability";
@@ -88,7 +93,34 @@ export async function observerAnalyzeHandler(
     if (pending.length > 0) return null;
     const agents = await listAgentRows(tx, organizationId);
     const knowledge = await listKnowledgeRows(tx, organizationId);
-    return { credentials, agents, knowledge };
+    const conversation = await getConversationRow(tx, conversationId);
+    // Brain context: canon entries relevant to this conversation (org-wide +
+    // its team/contact scope) + pending memory proposals for dedupe.
+    const canon = await listCanonEntries(tx, organizationId, {
+      teamId: conversation?.sectorId ?? undefined,
+      contactId: conversation?.contactId,
+      limit: 15,
+    });
+    const pendingMemory = await listPendingByTargetType(tx, organizationId, "memory");
+    return {
+      credentials,
+      agents,
+      knowledge,
+      teamId: conversation?.sectorId ?? null,
+      contactId: conversation?.contactId ?? null,
+      brain: {
+        canon: canon.map((e) => ({
+          id: e.id,
+          type: e.type,
+          scope: e.scope,
+          content: e.content,
+          confidence: e.confidence,
+        })),
+        pendingContents: pendingMemory
+          .map((row) => (row.payload as { content?: string }).content ?? "")
+          .filter((c) => c.length > 0),
+      },
+    };
   });
   if (!prepared) {
     return { analyzed: false, suggestions: 0, skipped: true };
@@ -117,8 +149,15 @@ export async function observerAnalyzeHandler(
   let lastError: unknown;
   for (const cred of prepared.credentials) {
     const attempt = await runCredentialAttempt(
-      { db, organizationId, conversationId, cred },
-      { transcript, agents, knowledge, analyze: deps?.analyze },
+      {
+        db,
+        organizationId,
+        conversationId,
+        cred,
+        teamId: prepared.teamId,
+        contactId: prepared.contactId,
+      },
+      { transcript, agents, knowledge, brain: prepared.brain, analyze: deps?.analyze },
     );
     if (attempt.ok) return { analyzed: true, suggestions: attempt.suggestions };
     lastError = attempt.error;
@@ -136,10 +175,17 @@ type Credential = {
 
 /** One credential in the fallback chain — records usage on both outcomes. */
 async function runCredentialAttempt(
-  scope: { db: Database; organizationId: string; conversationId: string; cred: Credential },
+  scope: {
+    db: Database;
+    organizationId: string;
+    conversationId: string;
+    cred: Credential;
+    teamId: string | null;
+    contactId: string | null;
+  },
   input: Omit<ObserverInput, "model"> & Pick<ObserverAnalyzeDeps, "analyze">,
 ): Promise<{ ok: true; suggestions: number } | { ok: false; error: unknown }> {
-  const { db, organizationId, conversationId, cred } = scope;
+  const { db, organizationId, conversationId, cred, teamId, contactId } = scope;
   const startedAt = Date.now();
   const record = (status: "ok" | "error", tokensIn = 0, tokensOut = 0) =>
     withTenant(db, organizationId, (tx) =>
@@ -165,18 +211,23 @@ async function runCredentialAttempt(
       },
       keysFor(cred),
     );
-    const { transcript, agents, knowledge, analyze } = input;
-    const result = await (analyze ?? analyzeConversation)({ model, transcript, agents, knowledge });
+    const { transcript, agents, knowledge, brain, analyze } = input;
+    const result = await (analyze ?? analyzeConversation)({
+      model,
+      transcript,
+      agents,
+      knowledge,
+      brain,
+    });
     await record("ok", result.tokensIn, result.tokensOut);
-    const created = await createSystemSuggestions(
-      db,
-      organizationId,
-      result.suggestions.map((s) => ({
+    const created = await createSystemSuggestions(db, organizationId, [
+      ...result.suggestions.map((s) => ({
         ...s,
         targetId: s.targetId ?? null,
         sourceConversationId: conversationId,
       })),
-    );
+      ...memorySuggestionInputs(result, { conversationId, teamId, contactId }, organizationId),
+    ]);
     return { ok: true, suggestions: created.length };
   } catch (error) {
     logger.warn("observer credential attempt failed", {
@@ -193,4 +244,55 @@ async function runCredentialAttempt(
     );
     return { ok: false, error };
   }
+}
+
+/**
+ * Memory proposals → suggestion inputs. Scope refs come from the
+ * conversation (never from the model): team scope binds `sectorId`,
+ * contact scope binds `contactId`. Proposals that can't satisfy their
+ * scope (e.g. team on a teamless conversation) or carry `low` confidence
+ * are dropped — review-inbox hygiene beats recall here.
+ */
+function memorySuggestionInputs(
+  result: ObserverResult,
+  refs: { conversationId: string; teamId: string | null; contactId: string | null },
+  organizationId: string,
+): Array<{
+  targetType: "memory";
+  payload: Record<string, unknown>;
+  rationale: string;
+  sourceConversationId: string;
+}> {
+  return result.memories
+    .filter((m) => m.confidence !== "low")
+    .flatMap((m) => {
+      const candidate = memoryProposalSchema.safeParse({
+        type: m.type,
+        scope: m.scope,
+        teamId: m.scope === "team" ? refs.teamId : null,
+        contactId: m.scope === "contact" ? refs.contactId : null,
+        content: m.content,
+        confidence: m.confidence,
+        staleAfterDays: m.staleAfterDays,
+        supersedes: m.supersedes ?? null,
+        sourceConversationIds: [refs.conversationId],
+      });
+      if (!candidate.success) {
+        logger.warn("observer memory proposal dropped", {
+          organizationId,
+          conversationId: refs.conversationId,
+          scope: m.scope,
+          reason: candidate.error.issues[0]?.message ?? "invalid payload",
+        });
+        return [];
+      }
+      return [
+        {
+          targetType: "memory" as const,
+          payload: candidate.data,
+          rationale: m.rationale,
+          sourceConversationId: refs.conversationId,
+        },
+      ];
+    });
 }

@@ -120,8 +120,44 @@ const fakeAnalyze = () =>
         rationale: "Cliente perguntou prazo",
       },
     ],
+    memories: [],
     tokensIn: 42,
     tokensOut: 7,
+  });
+
+const fakeAnalyzeWithMemories = () =>
+  Promise.resolve({
+    suggestions: [],
+    memories: [
+      {
+        type: "pattern" as const,
+        scope: "contact" as const,
+        content: "Este contato prefere respostas curtas.",
+        confidence: "medium" as const,
+        staleAfterDays: 90,
+        rationale: "Contato pediu objetividade duas vezes",
+      },
+      {
+        // Dropped — low confidence never reaches the inbox.
+        type: "metric" as const,
+        scope: "org" as const,
+        content: "Talvez ticket médio alto.",
+        confidence: "low" as const,
+        staleAfterDays: 30,
+        rationale: "evidência fraca",
+      },
+      {
+        // Dropped — team scope but the conversation has no sector.
+        type: "procedure" as const,
+        scope: "team" as const,
+        content: "Procedimento de equipe.",
+        confidence: "high" as const,
+        staleAfterDays: 90,
+        rationale: "sem setor para vincular",
+      },
+    ],
+    tokensIn: 10,
+    tokensOut: 5,
   });
 
 describe("observerAnalyzeHandler", () => {
@@ -164,5 +200,40 @@ describe("observerAnalyzeHandler", () => {
       { analyze: fakeAnalyze },
     );
     expect(again.skipped).toBe(true);
+  });
+
+  it("stages memory proposals bound to the conversation's scope refs", async () => {
+    const convId = await resolvedConversation(orgA, connA, "memory@c.us");
+    await createLlmCredential(db, ctx(orgA, "admin"), {
+      provider: "openrouter",
+      apiKey: "sk-or-test-2",
+      model: "openai/gpt-5-mini",
+      priority: 0,
+      label: "test",
+      zdr: true,
+    });
+
+    const result = await observerAnalyzeHandler(
+      { organizationId: orgA, conversationId: convId },
+      { analyze: fakeAnalyzeWithMemories },
+    );
+    expect(result.analyzed).toBe(true);
+    // Only the contact-scoped medium-confidence memory survives filtering.
+    expect(result.suggestions).toBe(1);
+
+    const pending = await listAgentSuggestions(db, ctx(orgA, "admin"), { status: "pending" });
+    const memory = pending.find((s) => s.targetType === "memory");
+    expect(memory).toBeDefined();
+    const payload = memory!.payload as { scope: string; contactId?: string; content: string };
+    expect(payload.scope).toBe("contact");
+    // contactId was bound from the conversation, not invented by the model.
+    const [conv] = await withTenant(db, orgA, (tx) =>
+      tx
+        .select({ contactId: conversations.contactId })
+        .from(conversations)
+        .where(sql`${conversations.id} = ${convId}`),
+    );
+    expect(payload.contactId).toBe(conv!.contactId);
+    expect(memory!.sourceConversationId).toBe(convId);
   });
 });

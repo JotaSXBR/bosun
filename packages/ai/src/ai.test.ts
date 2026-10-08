@@ -141,6 +141,7 @@ describe("analyzeConversation", () => {
                 content: "Clientes perguntam prazo antes do preço.",
                 confidence: "medium",
                 staleAfterDays: 90,
+                rationale: "Pergunta recorrente no transcript",
               },
             ],
           }),

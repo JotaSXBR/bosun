@@ -3,6 +3,7 @@ import { getServerEnv } from "@crm/config";
 import { createLogger } from "@crm/observability";
 import { PgBoss } from "pg-boss";
 
+import { brainStaleSweepHandler } from "./tasks/brain-stale-sweep";
 import { channelReconcileHandler } from "./tasks/channel-messages-reconcile";
 import { closeResolvedTicketsHandler } from "./tasks/close-resolved-tickets";
 import { observerAnalyzeHandler } from "./tasks/observer-analyze";
@@ -17,6 +18,7 @@ export const QUEUES = {
   closeResolvedTickets: "close-resolved-tickets",
   channelReconcile: "channel-messages-reconcile",
   observerAnalyze: "observer-analyze",
+  brainStaleSweep: "brain-stale-sweep",
 } as const;
 
 let boss: PgBoss | undefined;
@@ -94,6 +96,11 @@ async function start(env: ServerEnv): Promise<PgBoss> {
   await instance.work(QUEUES.observerAnalyze, async (jobs) => {
     for (const job of jobs) await observerAnalyzeHandler(job.data);
   });
+  await instance.work(QUEUES.brainStaleSweep, async (jobs) => {
+    for (const job of jobs) await brainStaleSweepHandler(job.data);
+  });
+  // Flag expired canon memory entries for human review once a day.
+  await instance.schedule(QUEUES.brainStaleSweep, "15 3 * * *");
 
   logger.info("pg-boss started", { queues: Object.values(QUEUES) });
   return (boss = instance);
