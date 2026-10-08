@@ -3,6 +3,7 @@ import { withTenant } from "@crm/db";
 import { captureException } from "@crm/observability";
 
 import { DomainError, NotFoundError } from "../../errors";
+import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import { recordAuditEvent } from "../audit";
@@ -16,17 +17,6 @@ import {
 } from "./repository";
 import type { CreateAgentInput, UpdateAgentInput } from "./schemas";
 import { createAgentInput, updateAgentInput } from "./schemas";
-
-/** postgres.js unique violations surface on `cause` — check both levels. */
-function isNameConflict(error: unknown): boolean {
-  let current: unknown = error;
-  for (let depth = 0; depth < 2 && current; depth += 1) {
-    const pg = current as { code?: string; constraint_name?: string; cause?: unknown };
-    if (pg.code === "23505" && pg.constraint_name === "agents_org_name_idx") return true;
-    current = pg.cause;
-  }
-  return false;
-}
 
 function nameTaken(): never {
   throw new DomainError("AGENT_NAME_TAKEN", "An agent with this name already exists");
@@ -60,7 +50,7 @@ export async function createAgent(
     try {
       return await insertAgent(tx, { organizationId: ctx.organizationId, ...parsed });
     } catch (error) {
-      if (isNameConflict(error)) nameTaken();
+      if (isUniqueViolation(error, "agents_org_name_idx")) nameTaken();
       throw error;
     }
   });
@@ -84,7 +74,7 @@ export async function updateAgent(
     try {
       updated = await repoUpdateAgent(tx, existing.id, fields);
     } catch (error) {
-      if (isNameConflict(error)) nameTaken();
+      if (isUniqueViolation(error, "agents_org_name_idx")) nameTaken();
       throw error;
     }
     if (!updated) throw new NotFoundError("Agent", parsed.agentId);

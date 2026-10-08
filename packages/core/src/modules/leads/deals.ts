@@ -2,6 +2,7 @@ import type { Database } from "@crm/db";
 import { withTenant } from "@crm/db";
 
 import { DomainError, NotFoundError } from "../../errors";
+import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import type { DealRow } from "./repository";
@@ -18,7 +19,7 @@ import {
   moveDealInput,
   updateDealInput,
 } from "./schemas";
-import { audit, isUniqueViolation } from "./shared";
+import { audit } from "./shared";
 
 // ---------- deals ----------
 

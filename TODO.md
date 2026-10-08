@@ -229,6 +229,11 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 
 ## Implementação futura (prioridade)
 
+- **P2 — Tradução global de erros pg no `withTenant`**: hoje
+  `translatePgErrors` (`@crm/core` `lib/pg-error.ts`) é opt-in por chamada;
+  mover a tradução pro `@crm/db` faria todo caller receber `PgError` tipado
+  sem wrapper. Esperar o opt-in provar demanda — avaliar blast radius nos
+  catchs existentes.
 - **P2 — Rate limit em Redis** quando houver >1 instância do web. Benefício:
   limites corretos multi-instância. Custo: baixo.
 - **P2 — Sentry sourcemaps/upload wiring**. Benefício: stacks legíveis em

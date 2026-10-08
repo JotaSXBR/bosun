@@ -83,6 +83,11 @@ staged files) — skipped automatically under `CI=true`.
 - Server Actions return `{ ok: true, ... } | { ok: false, error: string }`;
   never throw raw errors to the client.
 - Explicit, readable code; imports only via each module's index exports.
+- Postgres error inspection goes through `@crm/core` `src/lib/pg-error.ts`
+  (`isUniqueViolation`/`isForeignKeyViolation`/`isPgError`,
+  `translatePgErrors`, typed `PgError`s) — drizzle wraps driver errors on
+  `cause`, so never read `.code`/`.constraint_name`/cause-chains at call
+  sites (lint-enforced in `packages/core`).
 
 ## Database & migrations
 

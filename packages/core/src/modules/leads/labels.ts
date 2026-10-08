@@ -2,6 +2,7 @@ import type { Database, DbExecutor } from "@crm/db";
 import { withTenant } from "@crm/db";
 
 import { DomainError, NotFoundError } from "../../errors";
+import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import * as repo from "./repository";
@@ -19,7 +20,6 @@ import {
   setDealLabelsInput,
   updateLabelInput,
 } from "./schemas";
-import { isUniqueViolation } from "./shared";
 
 // ---------- labels ----------
 

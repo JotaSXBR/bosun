@@ -9,7 +9,7 @@ import { emitDomainEvent, withTenant } from "@crm/db";
 import { captureException } from "@crm/observability";
 
 import { DomainError, NotFoundError } from "../../errors";
-import { isPgError } from "../../lib/pg-error";
+import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import { findSettings } from "../organizations";
@@ -265,7 +265,7 @@ export async function reopenTicket(
       // A concurrent inbound may have committed a follow-up between the
       // check above and this update — the partial unique index still blocks
       // two active tickets; surface it as the same domain error.
-      if (isPgError(error, "23505", "conversations_connection_external_idx")) {
+      if (isUniqueViolation(error, "conversations_connection_external_idx")) {
         throw new DomainError(
           "ACTIVE_TICKET_EXISTS",
           "This chat already has an active follow-up ticket — work that one instead",
@@ -352,7 +352,7 @@ export async function resumeTicket(
     } catch (error) {
       // Same race as reopenTicket — an inbound may have committed a
       // follow-up between the check above and this insert.
-      if (isPgError(error, "23505", "conversations_connection_external_idx")) {
+      if (isUniqueViolation(error, "conversations_connection_external_idx")) {
         throw new DomainError(
           "ACTIVE_TICKET_EXISTS",
           "This chat already has an active follow-up ticket — work that one instead",

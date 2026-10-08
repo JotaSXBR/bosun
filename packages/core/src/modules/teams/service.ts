@@ -2,6 +2,7 @@ import type { Database } from "@crm/db";
 import { withTenant } from "@crm/db";
 
 import { DomainError, NotFoundError } from "../../errors";
+import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import type { TeamRow, TeamWithMembers } from "./repository";
@@ -17,22 +18,6 @@ import {
 } from "./repository";
 import type { CreateTeamInput, TeamMemberInput, UpdateTeamInput } from "./schemas";
 import { createTeamInput, teamMemberInput, updateTeamInput } from "./schemas";
-
-/**
- * postgres.js raises unique violations with `code`/`constraint_name` —
- * drizzle wraps the driver error on `cause`, so check both levels.
- */
-function isTeamNameConflict(error: unknown): boolean {
-  let current: unknown = error;
-  for (let depth = 0; depth < 2 && current; depth += 1) {
-    const pgError = current as { code?: string; constraint_name?: string; cause?: unknown };
-    if (pgError.code === "23505" && pgError.constraint_name === "teams_org_name_idx") {
-      return true;
-    }
-    current = pgError.cause;
-  }
-  return false;
-}
 
 function teamNameTaken(): never {
   throw new DomainError("TEAM_NAME_TAKEN", "A team with this name already exists");
@@ -60,7 +45,7 @@ export async function createTeam(
         color: parsed.color,
       });
     } catch (error) {
-      if (isTeamNameConflict(error)) teamNameTaken();
+      if (isUniqueViolation(error, "teams_org_name_idx")) teamNameTaken();
       throw error;
     }
   });
@@ -84,7 +69,7 @@ export async function updateTeam(
         color: parsed.color,
       });
     } catch (error) {
-      if (isTeamNameConflict(error)) teamNameTaken();
+      if (isUniqueViolation(error, "teams_org_name_idx")) teamNameTaken();
       throw error;
     }
     if (!updated) throw new NotFoundError("Team", parsed.teamId);

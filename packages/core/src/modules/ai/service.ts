@@ -3,6 +3,7 @@ import { withTenant } from "@crm/db";
 
 import { DomainError, NotFoundError } from "../../errors";
 import { decryptJson, encryptJson } from "../../lib/crypto";
+import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import type { LlmCredentialPublic, OrgLlmCredentialRow, UsageEventInsert } from "./repository";
@@ -18,24 +19,7 @@ import {
 import type { CreateLlmCredentialInput, UpdateLlmCredentialInput } from "./schemas";
 import { createLlmCredentialInput, updateLlmCredentialInput } from "./schemas";
 
-/**
- * postgres.js raises unique violations with `code`/`constraint_name` —
- * drizzle wraps the driver error on `cause`, so check both levels.
- */
-function isPriorityConflict(error: unknown): boolean {
-  let current: unknown = error;
-  for (let depth = 0; depth < 2 && current; depth += 1) {
-    const pgError = current as { code?: string; constraint_name?: string; cause?: unknown };
-    if (
-      pgError.code === "23505" &&
-      pgError.constraint_name === "org_llm_credentials_org_provider_priority_idx"
-    ) {
-      return true;
-    }
-    current = pgError.cause;
-  }
-  return false;
-}
+const PRIORITY_CONSTRAINT = "org_llm_credentials_org_provider_priority_idx";
 
 function priorityTaken(): never {
   throw new DomainError(
@@ -74,7 +58,7 @@ export async function createLlmCredential(
         zdr: parsed.zdr,
       });
     } catch (error) {
-      if (isPriorityConflict(error)) priorityTaken();
+      if (isUniqueViolation(error, PRIORITY_CONSTRAINT)) priorityTaken();
       throw error;
     }
   });
@@ -99,7 +83,7 @@ export async function updateLlmCredential(
         ...(apiKey ? { apiKeyEncrypted: encryptJson({ apiKey }) } : {}),
       });
     } catch (error) {
-      if (isPriorityConflict(error)) priorityTaken();
+      if (isUniqueViolation(error, PRIORITY_CONSTRAINT)) priorityTaken();
       throw error;
     }
     if (!updated) throw new NotFoundError("LlmCredential", parsed.credentialId);
