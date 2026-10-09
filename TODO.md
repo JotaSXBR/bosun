@@ -180,7 +180,10 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `observe-org` manual), `/app/settings/ai` completo (credenciais, agents,
   knowledge, inbox de sugestões, analisar agora) + toast SSE em
   `agent_suggestion.created`. Pendências: second brain (item próprio
-  abaixo), drafts/triage/TTS = roadmap do spec. Ver
+  abaixo), triage/TTS = roadmap do spec. **Specced (aguardando build)**:
+  AI drafts + observer modes — drafter dedicado, card no thread
+  (aprovar/edita/rejeita), botões no composer, `ai_observer_mode`
+  off/on_close/interval/realtime, observer configurável owner-only. Ver
   `docs/product/ai-agents.md`.
 - **P1 — Second brain (memória do copiloto)**: ✅ entregue — `memory_entries`
   (RLS, FTS pt-BR, escopo org/team/contact, confidence, `stale_after`,
