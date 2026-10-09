@@ -1,5 +1,6 @@
 "use client";
 
+import { isWhatsAppChatId } from "@crm/core/contacts/phone";
 import { Button } from "@crm/design-system/components/button";
 import { Input } from "@crm/design-system/components/input";
 import { Select } from "@crm/design-system/components/select";
@@ -19,21 +20,26 @@ export function ContactSelect({
   onChange,
   onCreateClick,
   refreshKey = 0,
+  onlyWhatsApp = false,
 }: {
   value: string;
   onChange: (id: string, contact?: ContactPickRow) => void;
   onCreateClick?: (query: string) => void;
   /** Bump to refetch (e.g. after an inline contact creation). */
   refreshKey?: number;
+  /** Restrict the options to contacts with a WhatsApp identity (outbound-first). */
+  onlyWhatsApp?: boolean;
 }) {
   const t = useTranslations("contacts");
   const [query, setQuery] = useState("");
   const [contacts, setContacts] = useState<ContactPickRow[]>([]);
+  const [searched, setSearched] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       void searchContactsAction(query || undefined).then((r) => {
         if (r.ok) setContacts(r.data);
+        setSearched(true);
       });
     }, 200);
     return () => clearTimeout(timer);
@@ -48,7 +54,10 @@ export function ContactSelect({
         aria-label={t("searchContact")}
       />
       <Select
-        options={contacts.map((c) => ({
+        options={(onlyWhatsApp
+          ? contacts.filter((c) => isWhatsAppChatId(c.channelUserId))
+          : contacts
+        ).map((c) => ({
           value: c.id,
           label: c.displayName ?? c.channelUserId,
         }))}
@@ -62,7 +71,9 @@ export function ContactSelect({
         placeholder={t("selectContact")}
         aria-label={t("contactAria")}
       />
-      {contacts.length === 0 && <p className="text-ink-muted text-xs">{t("noContacts")}</p>}
+      {searched && contacts.length === 0 && (
+        <p className="text-ink-muted text-xs">{t("noContacts")}</p>
+      )}
       {onCreateClick && (
         <Button
           type="button"

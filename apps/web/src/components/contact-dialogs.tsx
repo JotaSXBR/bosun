@@ -203,6 +203,7 @@ export function NewConversationDialog({
                 value={contactId}
                 onChange={(id) => setContactId(id)}
                 refreshKey={contactBump}
+                onlyWhatsApp
                 onCreateClick={(query) => {
                   setCreateName(query);
                   setCreateOpen(true);

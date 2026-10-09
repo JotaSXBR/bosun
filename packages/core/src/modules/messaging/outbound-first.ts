@@ -9,7 +9,7 @@ import { emitDomainEvent, withTenant } from "@crm/db";
 import { DomainError, NotFoundError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
-import type { ContactRow, ConversationRow } from "./repository";
+import type { ConversationRow } from "./repository";
 import { findConnectionById, findContactForTicket, findOrCreateTicket } from "./repository";
 import type { StartOutboundConversationInput } from "./schemas";
 import { startOutboundConversationInput } from "./schemas";
@@ -76,5 +76,3 @@ export async function startOutboundConversation(
     return { conversation, created };
   });
 }
-
-export type { ContactRow };

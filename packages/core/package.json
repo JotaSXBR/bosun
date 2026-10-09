@@ -11,6 +11,7 @@
     "./billing": "./src/modules/billing/index.ts",
     "./brain": "./src/modules/brain/index.ts",
     "./contacts": "./src/modules/contacts/index.ts",
+    "./contacts/phone": "./src/modules/contacts/phone.ts",
     "./crypto": "./src/lib/crypto.ts",
     "./integrations": "./src/modules/integrations/index.ts",
     "./knowledge": "./src/modules/knowledge/index.ts",
