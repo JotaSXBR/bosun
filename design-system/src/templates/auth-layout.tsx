@@ -53,12 +53,12 @@ export function AuthLayout({
         {NODES.map(([x, y, color], i) => (
           <div
             key={i}
-            className="absolute flex -translate-x-2 -translate-y-1/2 items-center gap-2.5"
-            style={{ left: `${x}%`, top: `${y}%` }}
+            className="absolute top-(--node-y) left-(--node-x) flex -translate-x-2 -translate-y-1/2 items-center gap-2.5"
+            style={{ "--node-x": `${x}%`, "--node-y": `${y}%` } as React.CSSProperties}
           >
             <span
-              className="shadow-halo size-4 rounded-full"
-              style={{ background: color }}
+              className="shadow-halo size-4 rounded-full bg-(--node-c)"
+              style={{ "--node-c": color } as React.CSSProperties}
               aria-hidden
             />
             <span className="bg-raised text-ink-strong rounded-pill px-3 py-1.5 text-sm font-medium">

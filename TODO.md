@@ -151,7 +151,10 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   animações mortas) — fix `@source "../"`; (b) `tw-animate-css` importado;
   (c) tokens `success`/`warning`/`info` + troca das ~23 raw colors.
   **Pendente**: `no-restyle` (contratos por componente) adiado até o DS
-  assentar.
+  assentar. **2026-10-09**: 44 warnings `no-inline-styles` zerados
+  (CSS vars + classes `-(--var)`; 3 disables justificados em passthrough
+  de `style` de API pública); `react`/`react-dom` movidos para
+  `peerDependencies` (formato correto de lib).
 - **P1 — Site chat**: ✅ entregue — provider `site_chat` first-party
   (adapter em `packages/channels`, `sendMessage` no-op: entrega é SSE),
   `site_chat_sessions` (RLS, migration `0016`), `POST /api/widget/session`

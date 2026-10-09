@@ -1,4 +1,5 @@
 import { cn } from "@crm/design-system/lib/utils";
+import type * as React from "react";
 
 import { Icon, iconNames } from "../components/icon";
 import { Wordmark } from "../components/wordmark";
@@ -143,8 +144,8 @@ export function Fundamentos() {
               {g.tokens.map((t) => (
                 <Labeled key={t} label={`--${t}`}>
                   <span
-                    className="ring-line-subtle inline-block size-10 rounded-xs ring-1 ring-inset"
-                    style={{ background: `var(--${t})` }}
+                    className="ring-line-subtle inline-block size-10 rounded-xs bg-(--swatch) ring-1 ring-inset"
+                    style={{ "--swatch": `var(--${t})` } as React.CSSProperties}
                   />
                 </Labeled>
               ))}
@@ -169,8 +170,8 @@ export function Fundamentos() {
           {RADIUS_ROWS.map((r) => (
             <Labeled key={r} label={r}>
               <span
-                className="bg-raised-2 inline-block size-14"
-                style={{ borderRadius: `var(--radius-${r})` }}
+                className="bg-raised-2 inline-block size-14 rounded-(--r)"
+                style={{ "--r": `var(--radius-${r})` } as React.CSSProperties}
               />
             </Labeled>
           ))}
@@ -182,8 +183,8 @@ export function Fundamentos() {
           {SHADOW_ROWS.map((s) => (
             <Labeled key={s} label={s}>
               <span
-                className="bg-surface inline-block size-14 rounded-md"
-                style={{ boxShadow: `var(--shadow-${s})` }}
+                className="bg-surface inline-block size-14 rounded-md shadow-(--s)"
+                style={{ "--s": `var(--shadow-${s})` } as React.CSSProperties}
               />
             </Labeled>
           ))}

@@ -52,8 +52,17 @@ function CardHead({
       {icon}
       {title && (
         <div
-          className="bx-card-title font-display tracking-card text-lg font-medium text-balance"
-          style={titleSize === undefined ? undefined : { fontSize: titleSize }}
+          className={cn(
+            "bx-card-title font-display tracking-card font-medium text-balance",
+            titleSize === undefined
+              ? "text-lg"
+              : "text-(length:--card-title-fs) leading-(--text-lg--line-height)",
+          )}
+          style={
+            titleSize === undefined
+              ? undefined
+              : ({ "--card-title-fs": `${titleSize}px` } as React.CSSProperties)
+          }
         >
           {title}
         </div>
@@ -122,17 +131,23 @@ export function Card({
         {...rootProps}
         className={cn(
           rootProps.className,
-          "bx-card-part bx-card-shadow rounded-card p-card-pad gap-4",
+          "bx-card-part bx-card-shadow gap-4 rounded-(--card-radius) p-(--card-pad)",
         )}
-        style={{
-          ...(radius !== undefined && { borderRadius: radius }),
-          ...(padding !== undefined && { padding }),
-          ...style,
-        }}
+        style={
+          {
+            "--card-radius": radius === undefined ? "var(--radius-card)" : `${radius}px`,
+            "--card-pad": padding === undefined ? undefined : `${padding}px`,
+            ...style,
+          } as React.CSSProperties
+        }
       >
         {head}
         {children != null && (
-          <div className={cn("flex min-w-0 flex-1 flex-col", bodyClassName)} style={bodyStyle}>
+          <div
+            className={cn("flex min-w-0 flex-1 flex-col", bodyClassName)}
+            // eslint-disable-next-line shadcn/no-inline-styles -- caller-provided style passthrough; not statically checkable
+            style={bodyStyle}
+          >
             {children}
           </div>
         )}
@@ -192,46 +207,34 @@ function NotchedCard({
     <section
       ref={ref}
       {...rootProps}
-      style={{
-        ...(fillet !== undefined &&
-          ({ "--card-notch-fillet": `${fillet}px` } as React.CSSProperties)),
-        ...style,
-      }}
+      style={
+        {
+          "--card-radius": radius === undefined ? "var(--radius-card)" : `${radius}px`,
+          "--card-notch-fillet": fillet === undefined ? undefined : `${fillet}px`,
+          "--card-pad": `${padN}px`,
+          "--card-tab-pt": `${padN - 4}px`,
+          "--card-notch-gap": `${gapN}px`,
+          "--card-body-pt": `${gapN + 4}px`,
+          ...style,
+        } as React.CSSProperties
+      }
     >
       <div className="flex items-stretch">
-        <div
-          className="bx-card-part bx-card-shadow rounded-t-card px-card-pad relative min-w-0 flex-1 pt-5"
-          style={{
-            ...(radius !== undefined && {
-              borderRadius: `${radius}px ${radius}px 0 0`,
-            }),
-            ...(padding !== undefined && { padding: `${padN - 4}px ${padN}px 0` }),
-          }}
-        >
+        <div className="bx-card-part bx-card-shadow relative min-w-0 flex-1 rounded-t-(--card-radius) px-(--card-pad) pt-(--card-tab-pt)">
           {head}
           <span aria-hidden="true" className="card-fillet" />
         </div>
-        <div
-          className="flex items-start gap-2 pb-2 pl-2"
-          style={notchGap !== undefined ? { padding: `0 0 ${gapN}px ${gapN}px` } : undefined}
-        >
+        <div className="flex items-start gap-2 pb-(--card-notch-gap) pl-(--card-notch-gap)">
           {actions}
         </div>
       </div>
       <div
         className={cn(
-          "bx-card-part rounded-b-card rounded-tr-card px-card-pad pb-card-pad flex min-w-0 flex-1 flex-col pt-3",
+          "bx-card-part flex min-w-0 flex-1 flex-col rounded-tr-(--card-radius) rounded-b-(--card-radius) px-(--card-pad) pt-(--card-body-pt) pb-(--card-pad)",
           bodyClassName,
         )}
-        style={{
-          ...(radius !== undefined && {
-            borderRadius: `0 ${radius}px ${radius}px ${radius}px`,
-          }),
-          ...((padding !== undefined || notchGap !== undefined) && {
-            padding: `${gapN + 4}px ${padN}px ${padN}px`,
-          }),
-          ...bodyStyle,
-        }}
+        // eslint-disable-next-line shadcn/no-inline-styles -- caller-provided style passthrough; not statically checkable
+        style={bodyStyle}
       >
         {children}
       </div>

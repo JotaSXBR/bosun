@@ -50,9 +50,13 @@ export function BarChart({
   const hi = highlight ?? inner;
   const max = Math.max(1, ...data.map((d) => Math.max(d.value, d.target ?? 0)));
   const usable = height - 44;
+  const barMaxW = { "--bar-w": `${maxBarWidth}px` } as React.CSSProperties;
   return (
     <div ref={ref} className={cn("flex min-w-0 flex-col gap-3", className)} {...props}>
-      <div className="flex items-end gap-2.5" style={{ height }}>
+      <div
+        className="flex h-(--chart-h) items-end gap-2.5"
+        style={{ "--chart-h": `${height}px` } as React.CSSProperties}
+      >
         {data.map((d, i) => {
           const on = i === hi;
           const vh = Math.max(18, (d.value / max) * usable);
@@ -67,8 +71,8 @@ export function BarChart({
                 setInner(i);
                 onHighlight?.(i);
               }}
-              className="relative flex h-full flex-1 cursor-default flex-col justify-end gap-1"
-              style={{ maxWidth: maxBarWidth }}
+              className="relative flex h-full max-w-(--bar-w) flex-1 cursor-default flex-col justify-end gap-1"
+              style={barMaxW}
             >
               {on && (
                 <div className="mb-0.5 flex justify-center">
@@ -79,16 +83,19 @@ export function BarChart({
               )}
               {th > 0 && (
                 <div
-                  className={cn("bx-hatch bg-raised-2/45 rounded-lg", !on && "opacity-85")}
-                  style={{ height: th }}
+                  className={cn(
+                    "bx-hatch bg-raised-2/45 h-(--bar-h) rounded-lg",
+                    !on && "opacity-85",
+                  )}
+                  style={{ "--bar-h": `${th}px` } as React.CSSProperties}
                 />
               )}
               <div
                 className={cn(
-                  "duration-chart ease-standard rounded-lg transition-all",
+                  "duration-chart ease-standard h-(--bar-h) rounded-lg transition-all",
                   on ? "bx-dots bx-on-accent bg-data-1" : "bg-raised-2",
                 )}
-                style={{ height: vh }}
+                style={{ "--bar-h": `${vh}px` } as React.CSSProperties}
               />
             </div>
           );
@@ -96,7 +103,7 @@ export function BarChart({
       </div>
       <div className="flex gap-2.5">
         {data.map((d, i) => (
-          <div key={i} className="flex flex-1 justify-center" style={{ maxWidth: maxBarWidth }}>
+          <div key={i} className="flex max-w-(--bar-w) flex-1 justify-center" style={barMaxW}>
             <span
               className={cn(
                 "inline-flex h-6 items-center rounded-full px-2 text-xs",

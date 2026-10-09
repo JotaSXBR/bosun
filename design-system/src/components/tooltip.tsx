@@ -41,7 +41,10 @@ export function TooltipBubble({
     </span>
   );
   const pin = stem ? (
-    <span className={cn("w-0.5", TONES[tone].split(" ")[0])} style={{ height: stem }} />
+    <span
+      className={cn("h-(--stem-h) w-0.5", TONES[tone].split(" ")[0])}
+      style={{ "--stem-h": `${stem}px` } as React.CSSProperties}
+    />
   ) : null;
   return (
     <span
