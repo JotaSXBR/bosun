@@ -81,7 +81,7 @@ export function createAuth({ db, env, sendEmail = defaultSendEmail }: AuthOption
         });
       },
     },
-    rateLimit: { enabled: true },
+    rateLimit: { enabled: env.nodeEnv === "production" },
     plugins: [
       organization({
         ac,
