@@ -55,14 +55,15 @@ kind is each package's `create*Provider`.
 
 ## Development workflow
 
-Lifecycle: `docs/product/*` (spec) → `/brief` (`.task-brief.md` scope
-contract) → `/plan` → `/build` → `/test` → `/review` → `/ship`. Skill
-pack lives in `.devin/skills/` (addyosmani/agent-skills + project skills).
+Lifecycle: `/spec` (`docs/product/*`) → `/plan` → `/build` → `/test` →
+`/review` → `/ship`. Skill pack lives in `.devin/skills/`
+(addyosmani/agent-skills + project skills). `/plan` writes
+`tasks/plan.md`, which doubles as the scope contract (`## Escopo` globs).
 
 Hooks (`.devin/hooks.v1.json` → `.devin/hooks/workflow.mjs`): block edits
-outside the brief's `## Escopo` globs (docs/markdown always free) and
+outside the plan's `## Escopo` globs (docs/markdown always free) and
 require the verification gate before a session with edits can stop.
-One active brief at a time; expand scope by editing the brief with user
+One active plan at a time; expand scope by editing the plan with user
 approval. Non-trivial work starts with clarifying questions — never guess
 scope-affecting decisions (see `docs/development/workflow.md`).
 

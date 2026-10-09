@@ -1,8 +1,8 @@
-# WAHA — setup e pairing (pesquisa pré-brief)
+# WAHA — setup e pairing (pesquisa pré-plan)
 
 Pesquisa feita em 2026-10-06 sobre a documentação oficial
 (`waha.devlike.pro`, engine **GOWS**) + estado atual do repo. Alimenta o
-brief do slice "WAHA go-live". Fontes no fim do arquivo.
+plan do slice "WAHA go-live". Fontes no fim do arquivo.
 
 ## Estado atual
 
@@ -571,13 +571,13 @@ questionários"), star (não tem no GOWS), forward (não tem no GOWS).
   anteriores e a timeline mostra badge "editada" + "ver edições".
   Edições remotas do cliente seguem o mesmo modelo.
 
-## Ainda em aberto (para o brief)
+## Ainda em aberto (para o plan)
 
 - Avaliar no teste real se `sendSeen`/`stopTyping` manuais precisam vir
   acompanhados de `offline` (com `AUTO_ONLINE=False` provavelmente não —
   mas validar que o celular segue notificando no cenário real).
 
-Todas as decisões de produto estão tomadas — pronto para o `/brief` do
+Todas as decisões de produto estão tomadas — pronto para o `/plan` do
 slice "WAHA go-live + chat features".
 
 ## Fontes

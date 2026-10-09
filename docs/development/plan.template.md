@@ -1,12 +1,17 @@
-# Task brief — <nome do item>
+# Plan — <nome do item>
 
 - **Origem**: `TODO.md` → <item> · `docs/product/<doc>.md`
-- **Lifecycle**: /brief → /plan → /build → /test → /review → /ship
+- **Lifecycle**: /spec → /plan → /build → /test → /review → /ship
 - **Data**:
 
 ## Objetivo
 
 <uma frase — o que esta entrega faz existir>
+
+## Contexto
+
+<decisões tomadas no gate de esclarecimento — o porquê, não só o quê;
+provisórias ficam marcadas como tal>
 
 ## Escopo
 
@@ -18,7 +23,12 @@ apps/web/src/app/app/<rota>/**
 
 ## Fora de escopo
 
-<o que NÃO tocar mesmo parecendo relacionado — fica para outro brief>
+<o que NÃO tocar mesmo parecendo relacionado — fica para outro plan>
+
+## Tarefas
+
+<slices finos ordenados por dependência — espelhados em tasks/todo.md
+com acceptance + verify por task>
 
 ## Critérios de pronto
 

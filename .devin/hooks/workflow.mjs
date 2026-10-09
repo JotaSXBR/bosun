@@ -3,7 +3,7 @@
 //
 //   SessionStart      → injects the workflow summary into context
 //   UserPromptSubmit  → injects a one-line reminder when a task brief is active
-//   PreToolUse        → blocks edits to files outside `.task-brief.md`'s ## Escopo globs
+//   PreToolUse        → blocks edits to files outside `tasks/plan.md`'s ## Escopo globs
 //   PostToolUse       → marks the session as "files were edited"
 //   Stop              → blocks once (per session) if files were edited, forcing a
 //                       verification pass before the agent declares the work done
@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 
 const ROOT = process.cwd();
-const BRIEF = join(ROOT, ".task-brief.md");
+const BRIEF = join(ROOT, "tasks", "plan.md");
 
 const input = JSON.parse(await readStdin());
 const event = input.hook_event_name;
@@ -25,8 +25,8 @@ switch (event) {
       hookSpecificOutput: {
         hookEventName: "SessionStart",
         additionalContext: [
-          "WORKFLOW (docs/development/workflow.md): spec in docs/product/* → task brief .task-brief.md (## Escopo globs) → /plan → /build → /test → /review → /ship.",
-          "A PreToolUse hook BLOCKS edits to source/config files outside the brief's Escopo. No brief yet → invoke the `brief` skill or confirm scope with the user before editing code. Docs/markdown are always editable.",
+          "WORKFLOW (docs/development/workflow.md): spec in docs/product/* → /plan writes tasks/plan.md (## Escopo globs = the scope contract) → /build → /test → /review → /ship.",
+          "A PreToolUse hook BLOCKS edits to source/config files outside the plan's Escopo. No plan yet → run /plan or confirm scope with the user before editing code. Docs/markdown are always editable.",
           "A Stop hook requires the minimal verification gate (typecheck + lint + relevant tests) after any edit session.",
           "Backlog source of truth: TODO.md → 'Produto — backlog' + docs/product/.",
         ].join("\n"),
@@ -40,7 +40,7 @@ switch (event) {
       emit({
         hookSpecificOutput: {
           hookEventName: "UserPromptSubmit",
-          additionalContext: `Active task brief .task-brief.md (${scope.length} escopo glob(s)). Stay inside it; expand only by editing the brief (ask the user first).`,
+          additionalContext: `Active plan tasks/plan.md (${scope.length} escopo glob(s)). Stay inside it; expand only by editing the plan's Escopo (ask the user first).`,
         },
       });
     } else {
@@ -62,7 +62,7 @@ switch (event) {
             hookSpecificOutput: {
               hookEventName: "PreToolUse",
               additionalContext:
-                "No .task-brief.md with an ## Escopo section found. For feature work, create one first (skill `brief`) — it is the contract that keeps work in scope.",
+                "No tasks/plan.md with an ## Escopo section found. For feature work, run /plan first — the plan is the contract that keeps work in scope.",
             },
           });
         } else if (scope.some((g) => globMatch(g, rel))) {
@@ -70,7 +70,7 @@ switch (event) {
         } else {
           emit({
             decision: "block",
-            reason: `Blocked by workflow hook: "${rel}" is outside the task brief's Escopo (${scope.join(", ")}). Either revert, or ask the user to expand the Escopo in .task-brief.md.`,
+            reason: `Blocked by workflow hook: "${rel}" is outside the plan's Escopo (${scope.join(", ")}). Either revert, or ask the user to expand the Escopo in tasks/plan.md.`,
           });
         }
       }
@@ -134,7 +134,7 @@ function markEdited(sessionId) {
   }
 }
 
-/** Scope globs from `.task-brief.md`'s "## Escopo" section, or null. */
+/** Scope globs from `tasks/plan.md`'s "## Escopo" section, or null. */
 function readScope() {
   try {
     if (!existsSync(BRIEF)) return null;
@@ -169,14 +169,7 @@ function toRel(p) {
 
 // Docs/meta are always editable — the trava only governs source & config.
 function alwaysAllowed(rel) {
-  const allowed = [
-    "**/*.md",
-    "TODO.md",
-    ".devin/**",
-    ".task-brief*",
-    "research/**",
-    "**/migrations/meta/**",
-  ];
+  const allowed = ["**/*.md", "TODO.md", ".devin/**", "research/**", "**/migrations/meta/**"];
   return allowed.some((g) => globMatch(g, rel));
 }
 
