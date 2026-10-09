@@ -131,6 +131,7 @@ export function Input({
               "text-ink-strong placeholder:text-ink-subtle h-full min-w-0 flex-1 border-0 bg-transparent outline-none focus-visible:shadow-none",
               size === "sm" ? "text-ui" : "text-sm",
             )}
+            // eslint-disable-next-line shadcn/no-inline-styles -- caller-provided style passthrough; not statically checkable
             style={inputStyle}
             {...props}
           />

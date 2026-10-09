@@ -45,18 +45,18 @@ export function Avatar({
   return (
     <span
       ref={ref}
-      className={cn("relative inline-flex shrink-0", className)}
-      style={{ width: d, height: d, ...style }}
+      className={cn("relative inline-flex size-(--avatar-d) shrink-0", className)}
+      style={{ "--avatar-d": `${d}px`, ...style } as React.CSSProperties}
       {...props}
     >
       <span
         className={cn(
-          "font-display tracking-card inline-flex size-full items-center justify-center overflow-hidden rounded-full font-semibold",
+          "font-display tracking-card inline-flex size-full items-center justify-center overflow-hidden rounded-full text-(length:--avatar-fs) font-semibold",
           ring
             ? "bg-signal-400 text-abyss-900 ring-signal-400 ring-offset-page ring-2 ring-offset-2"
             : "bg-ocean-700 text-ocean-100 ring-line-subtle ring-1 ring-inset",
         )}
-        style={{ fontSize: Math.round(d * 0.38) }}
+        style={{ "--avatar-fs": `${Math.round(d * 0.38)}px` } as React.CSSProperties}
       >
         {src ? (
           <img src={src} alt={name} className="size-full object-cover contrast-105 grayscale" />
@@ -68,10 +68,10 @@ export function Avatar({
         <span
           aria-hidden="true"
           className={cn(
-            "ring-page absolute right-0 bottom-0 rounded-full ring-2",
+            "ring-page absolute right-0 bottom-0 size-(--avatar-status) rounded-full ring-2",
             STATUS_COLORS[status],
           )}
-          style={{ width: statusSize, height: statusSize }}
+          style={{ "--avatar-status": `${statusSize}px` } as React.CSSProperties}
         />
       )}
     </span>

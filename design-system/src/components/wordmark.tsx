@@ -36,20 +36,25 @@ export function Wordmark({
   return (
     <span
       ref={ref}
-      className={cn("inline-flex flex-col", TONES[tone], className)}
-      style={{ gap: fs * 0.28, ...style }}
+      className={cn("inline-flex flex-col gap-(--wm-gap)", TONES[tone], className)}
+      style={{ "--wm-gap": `${fs * 0.28}px`, ...style } as React.CSSProperties}
       {...props}
     >
       <span
-        className="font-display tracking-wordmark leading-none font-extrabold"
-        style={{ fontSize: fs }}
+        className="font-display tracking-wordmark text-(length:--wm-fs) leading-none font-extrabold"
+        style={{ "--wm-fs": `${fs}px` } as React.CSSProperties}
       >
         BOSUN
       </span>
       {tagline && (
         <span
-          className="font-sans font-normal opacity-72"
-          style={{ fontSize: Math.max(11, fs * 0.42), lineHeight: 1.2 }}
+          className="font-sans text-(length:--wm-tag-fs) leading-(--wm-tag-lh) font-normal opacity-72"
+          style={
+            {
+              "--wm-tag-fs": `${Math.max(11, fs * 0.42)}px`,
+              "--wm-tag-lh": 1.2,
+            } as React.CSSProperties
+          }
         >
           Seu mundo digital, sob comando.
         </span>

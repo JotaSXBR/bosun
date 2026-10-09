@@ -69,10 +69,10 @@ export function Dialog({
           )}
           <div
             className={cn(
-              "animate-rise bg-surface text-ink shadow-pop pointer-events-auto flex w-full flex-col rounded-xl",
+              "animate-rise bg-surface text-ink shadow-pop pointer-events-auto flex w-full max-w-(--dialog-w) flex-col rounded-xl",
               className,
             )}
-            style={{ maxWidth: width, ...style }}
+            style={{ "--dialog-w": `${width}px`, ...style } as React.CSSProperties}
           >
             <div className="flex items-start gap-4 pt-6 pr-5 pl-6">
               {icon}

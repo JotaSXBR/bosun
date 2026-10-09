@@ -55,8 +55,8 @@ export function RingChart({
   return (
     <div
       ref={ref}
-      className={cn("relative shrink-0", className)}
-      style={{ width: size, height: size, ...style }}
+      className={cn("relative size-(--ring-d) shrink-0", className)}
+      style={{ "--ring-d": `${size}px`, ...style } as React.CSSProperties}
       {...props}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="block">
@@ -92,8 +92,8 @@ export function RingChart({
           return (
             <span
               key={i}
-              className="bg-raised-2 text-2xs text-ink-strong ring-surface absolute inline-flex h-5 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1.5 font-medium tabular-nums ring-4"
-              style={{ left: x, top: y }}
+              className="bg-raised-2 text-2xs text-ink-strong ring-surface absolute top-(--chip-y) left-(--chip-x) inline-flex h-5 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1.5 font-medium tabular-nums ring-4"
+              style={{ "--chip-x": `${x}px`, "--chip-y": `${y}px` } as React.CSSProperties}
             >
               {a.display ?? a.value}
             </span>

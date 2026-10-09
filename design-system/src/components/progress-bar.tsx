@@ -43,8 +43,8 @@ function Header({ label, valueLabel }: { label?: React.ReactNode; valueLabel?: R
 function Thumb({ pct, h }: { pct: number; h: number }) {
   return (
     <div
-      className="bg-raised shadow-glow duration-chart ease-standard absolute top-1/2 flex -translate-x-3/5 -translate-y-1/2 items-center justify-center rounded-full transition-[left]"
-      style={{ left: `${pct}%`, width: h + 12, height: h + 12 }}
+      className="bg-raised shadow-glow duration-chart ease-standard absolute top-1/2 left-(--thumb-x) flex size-(--thumb-d) -translate-x-3/5 -translate-y-1/2 items-center justify-center rounded-full transition-[left]"
+      style={{ "--thumb-x": `${pct}%`, "--thumb-d": `${h + 12}px` } as React.CSSProperties}
     >
       <span className="flex flex-col gap-0.5">
         {[0, 1, 2].map((i) => (
@@ -79,15 +79,20 @@ export function ProgressBar({
         aria-valuenow={value}
         aria-valuemin={0}
         aria-valuemax={max}
-        className={cn("rounded-pill bg-data-track relative", pattern && "bx-hatch")}
-        style={{ height: h }}
+        className={cn("rounded-pill bg-data-track relative h-(--track-h)", pattern && "bx-hatch")}
+        style={{ "--track-h": `${h}px` } as React.CSSProperties}
       >
         <div
           className={cn(
-            "rounded-pill duration-chart ease-standard absolute top-0 bottom-0 left-0 transition-[width]",
+            "rounded-pill duration-chart ease-standard absolute top-0 bottom-0 left-0 w-(--fill-w) min-w-(--fill-min) transition-[width]",
             TONES[tone],
           )}
-          style={{ width: `${pct}%`, minWidth: pct > 0 ? h : 0 }}
+          style={
+            {
+              "--fill-w": `${pct}%`,
+              "--fill-min": `${pct > 0 ? h : 0}px`,
+            } as React.CSSProperties
+          }
         />
         {thumb && <Thumb pct={pct} h={h} />}
       </div>

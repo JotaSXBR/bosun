@@ -38,7 +38,13 @@ que quebrou, qual token usar e onde achar. Requer Tailwind v4 + ESLint ≥9.30
 | `no-restyle`             | **off — adiado até o DS assentar** | idem                                          |
 
 Baseline medido (spike): web 26 → 0 erros (5 warnings intencionais);
-ui 66 → 0 findings. Allowlist de `packages/ui` cobre: `ring-[3px]`,
+ui 66 → 0 findings. **2026-10-09**: `no-inline-styles` zerado no
+design-system — valores dinâmicos viraram CSS vars consumidas por
+classes arbitrárias (`style={{ "--d": "24px" }}` + `size-(--d)`; o
+shorthand `-(--var)` é o escape hatch documentado, não conta como
+valor arbitrário). Restam 3 `eslint-disable` justificados: passthrough
+de `bodyStyle`/`inputStyle` (props de API, estaticamente inverificáveis).
+Allowlist de `packages/ui` cobre: `ring-[3px]`,
 `grid-rows-[auto_auto]`, `grid-cols-[*]`, `top|left-[50%]`,
 `translate-x|y-[-50%]`, `max-w-[*]`, `min-w-[*]`, `h-[var(*)]`,
 `transition-[color,box-shadow]` — matching é na utility base (variants não
