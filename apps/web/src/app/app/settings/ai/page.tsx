@@ -1,5 +1,6 @@
 import { hasPermission } from "@crm/permissions";
-import { Card, CardContent } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
+import { PageHeader } from "@crm/ui/templates/page-header";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
@@ -32,15 +33,15 @@ export default async function AiSettingsPage() {
   if (!hasPermission(ctx.role, { ai: ["read"] })) {
     return (
       <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">{t("title")}</h1>
-          <Link href="/app/settings" className="text-muted-foreground text-sm underline">
-            {ts("back")}
-          </Link>
-        </div>
-        <Card>
-          <CardContent className="text-muted-foreground p-6 text-sm">{t("restricted")}</CardContent>
-        </Card>
+        <PageHeader
+          title={t("title")}
+          right={
+            <Link href="/app/settings" className="text-ink-muted text-sm">
+              {ts("back")}
+            </Link>
+          }
+        />
+        <Card bodyClassName="text-ink-muted p-6 text-sm">{t("restricted")}</Card>
       </main>
     );
   }
@@ -58,15 +59,17 @@ export default async function AiSettingsPage() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t("title")}</h1>
-        <div className="flex items-center gap-3">
-          <AnalyzeButton canManage={canManage} />
-          <Link href="/app/settings" className="text-muted-foreground text-sm underline">
-            {ts("back")}
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={t("title")}
+        right={
+          <>
+            <AnalyzeButton canManage={canManage} />
+            <Link href="/app/settings" className="text-ink-muted text-sm">
+              {ts("back")}
+            </Link>
+          </>
+        }
+      />
 
       <SuggestionsSection
         suggestions={suggestions}

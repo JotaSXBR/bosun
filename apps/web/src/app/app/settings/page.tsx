@@ -1,5 +1,6 @@
 import { hasPermission } from "@crm/permissions";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
+import { PageHeader } from "@crm/ui/templates/page-header";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
@@ -24,37 +25,27 @@ export default async function SettingsPage() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t("title")}</h1>
-        <Link href="/app" className="text-muted-foreground text-sm underline">
-          {t("back")}
-        </Link>
-      </div>
+      <PageHeader
+        title={t("title")}
+        right={
+          <Link href="/app" className="text-ink-muted text-sm">
+            {t("back")}
+          </Link>
+        }
+      />
 
       <SettingsForm settings={settings} canEdit={canEdit} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("teams")}</CardTitle>
-          <CardDescription>{t("teamsDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/app/settings/teams" className="text-sm underline">
-            {t("manageTeams")}
-          </Link>
-        </CardContent>
+      <Card title={t("teams")} subtitle={t("teamsDescription")}>
+        <Link href="/app/settings/teams" className="text-sm underline">
+          {t("manageTeams")}
+        </Link>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("ai.card")}</CardTitle>
-          <CardDescription>{t("ai.cardDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/app/settings/ai" className="text-sm underline">
-            {t("ai.manage")}
-          </Link>
-        </CardContent>
+      <Card title={t("ai.card")} subtitle={t("ai.cardDescription")}>
+        <Link href="/app/settings/ai" className="text-sm underline">
+          {t("ai.manage")}
+        </Link>
       </Card>
 
       {platform && <PlatformSettings summaries={platform} />}

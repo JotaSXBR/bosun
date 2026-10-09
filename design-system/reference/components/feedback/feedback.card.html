@@ -1,0 +1,38 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Feedback" subtitle="Toast (success, danger, running), Tooltip, TooltipBubble" -->
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:24px;margin:0}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:18px}.lbl{font:500 11px/1 var(--font-mono);color:var(--text-subtle);letter-spacing:.04em;width:84px;flex-shrink:0}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const NS = window.BOSUNDesignSystem_c587fa;
+
+const { Toast, Tooltip, TooltipBubble, IconButton, Button } = NS;
+function App() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 24, alignItems: 'start' }}>
+      <div className="col" style={{ gap: 10 }}>
+        <Toast tone="success" title="Fluxo concluído." description="Todas as etapas foram executadas." onClose={() => {}} />
+        <Toast tone="danger" title="Não foi possível conectar esta ferramenta." description="Revise as credenciais e tente novamente." action={<Button size="sm">Revisar credenciais</Button>} onClose={() => {}} />
+        <Toast tone="running" title="Sincronizando 3 integrações…" />
+      </div>
+      <div className="col" style={{ gap: 28, paddingTop: 40 }}>
+        <div className="row" style={{ gap: 18 }}>
+          <Tooltip content="Filtrar" open><IconButton icon="list-filter" label="Filtrar" variant="inverse" /></Tooltip>
+          <Tooltip content="Período" tone="default"><IconButton icon="calendar" label="Período" /></Tooltip>
+        </div>
+        <div className="row" style={{ gap: 14 }}>
+          <TooltipBubble tone="accent" stem={14}>32 concluídas</TooltipBubble>
+          <TooltipBubble tone="inverse" stem={14}>26 set</TooltipBubble>
+          <TooltipBubble tone="default" stem={0}>Ctrl + K</TooltipBubble>
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script></body></html>

@@ -3,17 +3,11 @@
 import { Button } from "@crm/ui/components/button";
 import { Input } from "@crm/ui/components/input";
 import { Label } from "@crm/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@crm/ui/components/select";
+import { Select } from "@crm/ui/components/select";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import { createLlmCredentialAction } from "@/server/actions/ai";
 
@@ -59,34 +53,33 @@ export function CredentialCreateForm() {
         <div className="space-y-1">
           <Label htmlFor="cred-provider">{t("provider")}</Label>
           <Select
+            options={[
+              { value: "openrouter", label: "OpenRouter" },
+              { value: "openai", label: "OpenAI" },
+              { value: "anthropic", label: "Anthropic" },
+            ]}
             value={provider}
-            onValueChange={(v) => setProvider(v as Provider)}
+            onChange={(v) => setProvider(v as Provider)}
             disabled={pending}
-          >
-            <SelectTrigger id="cred-provider">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="openrouter">OpenRouter</SelectItem>
-              <SelectItem value="openai">OpenAI</SelectItem>
-              <SelectItem value="anthropic">Anthropic</SelectItem>
-            </SelectContent>
-          </Select>
+            id="cred-provider"
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="cred-model">{t("model")}</Label>
           <Input
+            shape="rounded"
             id="cred-model"
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder="openai/gpt-5-mini"
             disabled={pending}
           />
-          <p className="text-muted-foreground text-xs">{t("modelHint")}</p>
+          <p className="text-ink-muted text-xs">{t("modelHint")}</p>
         </div>
         <div className="space-y-1">
           <Label htmlFor="cred-label">{t("label")}</Label>
           <Input
+            shape="rounded"
             id="cred-label"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -99,6 +92,7 @@ export function CredentialCreateForm() {
         <div className="space-y-1 sm:col-span-2">
           <Label htmlFor="cred-key">{t("apiKey")}</Label>
           <Input
+            shape="rounded"
             id="cred-key"
             type="password"
             value={apiKey}
@@ -111,6 +105,7 @@ export function CredentialCreateForm() {
         <div className="space-y-1">
           <Label htmlFor="cred-priority">{t("priority")}</Label>
           <Input
+            shape="rounded"
             id="cred-priority"
             type="number"
             min={0}
@@ -119,7 +114,7 @@ export function CredentialCreateForm() {
             onChange={(e) => setPriority(e.target.value)}
             disabled={pending}
           />
-          <p className="text-muted-foreground text-xs">{t("priorityHint")}</p>
+          <p className="text-ink-muted text-xs">{t("priorityHint")}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -129,13 +124,17 @@ export function CredentialCreateForm() {
           checked={zdr}
           onChange={(e) => setZdr(e.target.checked)}
           disabled={pending}
-          className="border-input size-4 rounded border"
+          className="border-line size-4 rounded-xs border"
         />
         <Label htmlFor="cred-zdr" className="text-sm font-normal">
           {t("zdr")} — {t("zdrHint")}
         </Label>
       </div>
-      <Button disabled={pending || !apiKey.trim() || !model.trim()} onClick={submit}>
+      <Button
+        variant="primary"
+        disabled={pending || !apiKey.trim() || !model.trim()}
+        onClick={submit}
+      >
         {t("create")}
       </Button>
     </div>

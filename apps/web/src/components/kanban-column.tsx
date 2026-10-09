@@ -8,10 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@crm/ui/components/dropdown-menu";
+import { IconButton } from "@crm/ui/components/icon-button";
 import { cn } from "@crm/ui/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { SortableDealCard } from "@/components/deal-card";
@@ -43,19 +43,18 @@ function StageHeader({
       <div className="flex min-w-0 items-center gap-1.5">
         <span className={cn("size-2 shrink-0 rounded-full", paletteStyle(stage.color).dot)} />
         <span className="truncate text-sm font-medium">{stage.name}</span>
-        <span className="text-muted-foreground text-xs">{count}</span>
+        <span className="text-ink-muted text-xs">{count}</span>
       </div>
       {canManage && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
+            <IconButton
               variant="ghost"
               size="sm"
+              icon="ellipsis"
               className="size-6 p-0"
-              aria-label={t("stageActions", { name: stage.name })}
-            >
-              <MoreHorizontalIcon className="size-3.5" />
-            </Button>
+              label={t("stageActions", { name: stage.name })}
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={onEditStage}>{t("editStage")}</DropdownMenuItem>
@@ -98,8 +97,8 @@ export function KanbanStageColumn({
       ref={setNodeRef}
       data-testid={`stage-column-${stage.id}`}
       className={cn(
-        "bg-muted/40 flex w-64 shrink-0 flex-col gap-2 rounded-lg border p-2",
-        isOver && "ring-ring ring-2",
+        "bg-raised/40 flex w-64 shrink-0 flex-col gap-2 rounded-lg border p-2",
+        isOver && "ring-line-accent ring-2",
       )}
     >
       <StageHeader
@@ -127,10 +126,11 @@ export function KanbanStageColumn({
         <Button
           variant="ghost"
           size="sm"
-          className="text-muted-foreground justify-start"
+          iconLeft="plus"
+          className="text-ink-muted justify-start"
           onClick={onAddDeal}
         >
-          <PlusIcon className="size-3.5" /> {t("addDeal")}
+          {t("addDeal")}
         </Button>
       )}
     </div>

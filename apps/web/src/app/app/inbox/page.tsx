@@ -1,7 +1,9 @@
 import type { ConversationView } from "@crm/core/messaging";
 import { Badge } from "@crm/ui/components/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
 import { cn } from "@crm/ui/lib/utils";
+import { EmptyState } from "@crm/ui/templates/empty-state";
+import { PageHeader } from "@crm/ui/templates/page-header";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 
@@ -29,12 +31,7 @@ export default async function InboxPage({
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t("title")}</h1>
-        <Link href="/app/deals" className="text-muted-foreground text-sm underline">
-          {t("funnelLink")}
-        </Link>
-      </div>
+      <PageHeader title={t("title")} />
 
       <nav className="flex gap-1 border-b" aria-label={t("viewsAria")}>
         {VIEWS.map((v) => (
@@ -42,8 +39,8 @@ export default async function InboxPage({
             key={v}
             href={`/app/inbox?view=${v}`}
             className={cn(
-              "text-muted-foreground hover:text-foreground -mb-px border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-colors",
-              view === v && "border-primary text-foreground",
+              "text-ink-muted hover:text-ink -mb-px border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-colors",
+              view === v && "border-line-accent text-ink",
             )}
             aria-current={view === v ? "page" : undefined}
           >
@@ -52,65 +49,58 @@ export default async function InboxPage({
         ))}
       </nav>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t(`views.${view}`)}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {conversations.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t(`empty.${view}`)}</p>
-          ) : (
-            <ul className="divide-y" data-testid="conversation-list">
-              {conversations.map((conversation) => (
-                <li key={conversation.id}>
-                  <Link
-                    href={`/app/inbox/${conversation.id}`}
-                    className="hover:bg-muted/50 -mx-2 block space-y-1 rounded-md px-2 py-3 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium">
-                          {conversation.contactDisplayName ?? conversation.contactChannelUserId}
-                        </span>
-                        <span className="text-muted-foreground text-xs">
-                          #{conversation.ticketNumber}
-                        </span>
-                        <Badge variant={TICKET_STATUS[conversation.status]?.variant ?? "outline"}>
-                          {ts.has(conversation.status)
-                            ? ts(conversation.status)
-                            : conversation.status}
-                        </Badge>
-                      </div>
-                      {conversation.lastMessageAt && (
-                        <time className="text-muted-foreground text-xs">
-                          {format.dateTime(conversation.lastMessageAt, {
-                            dateStyle: "short",
-                            timeStyle: "medium",
-                          })}
-                        </time>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      {conversation.lastMessagePreview ? (
-                        <p className="text-muted-foreground truncate text-sm">
-                          {conversation.lastMessagePreview}
-                        </p>
-                      ) : (
-                        <span />
-                      )}
-                      <span className="text-muted-foreground shrink-0 text-xs">
-                        {[conversation.assigneeName, conversation.sectorName]
-                          .filter(Boolean)
-                          .join(" · ")}
+      {conversations.length === 0 ? (
+        <EmptyState icon="inbox" title={t(`empty.${view}`)} />
+      ) : (
+        <Card title={t(`views.${view}`)}>
+          <ul className="divide-y" data-testid="conversation-list">
+            {conversations.map((conversation) => (
+              <li key={conversation.id}>
+                <Link
+                  href={`/app/inbox/${conversation.id}`}
+                  className="hover:bg-raised/50 -mx-2 block space-y-1 rounded-md px-2 py-3 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">
+                        {conversation.contactDisplayName ?? conversation.contactChannelUserId}
                       </span>
+                      <span className="text-ink-muted text-xs">#{conversation.ticketNumber}</span>
+                      <Badge tone={TICKET_STATUS[conversation.status]?.tone ?? "neutral"}>
+                        {ts.has(conversation.status)
+                          ? ts(conversation.status)
+                          : conversation.status}
+                      </Badge>
                     </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                    {conversation.lastMessageAt && (
+                      <time className="text-ink-muted text-xs">
+                        {format.dateTime(conversation.lastMessageAt, {
+                          dateStyle: "short",
+                          timeStyle: "medium",
+                        })}
+                      </time>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    {conversation.lastMessagePreview ? (
+                      <p className="text-ink-muted truncate text-sm">
+                        {conversation.lastMessagePreview}
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="text-ink-muted shrink-0 text-xs">
+                      {[conversation.assigneeName, conversation.sectorName]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
     </main>
   );
 }

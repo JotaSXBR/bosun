@@ -12,6 +12,7 @@
 .devin
 docs
 research
+design-system/reference
 graft
 docker/postgres
 docker/trigger

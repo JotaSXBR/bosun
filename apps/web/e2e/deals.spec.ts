@@ -6,7 +6,7 @@ test("funnel lifecycle: create from template, manage stages, delete", async ({ p
   await page.goto("/sign-up");
   await page.getByLabel("Nome").fill("E2E Deals");
   await page.getByLabel("E-mail").fill(`e2e-deals-${suffix}@crm.local`);
-  await page.getByLabel("Senha").fill("Password123!");
+  await page.getByLabel("Senha", { exact: true }).fill("Password123!");
   await page.getByRole("button", { name: "Cadastrar" }).click();
 
   await page.waitForURL("**/onboarding");

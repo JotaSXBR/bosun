@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@crm/ui/components/button";
-import { PlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -13,8 +12,8 @@ export function NewFunnelButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <PlusIcon className="size-4" /> {t("createFunnel")}
+      <Button variant="primary" iconLeft="plus" onClick={() => setOpen(true)}>
+        {t("createFunnel")}
       </Button>
       <NewFunnelDialog open={open} onOpenChange={setOpen} />
     </>

@@ -58,9 +58,7 @@ function QuoteBlock({
     <div
       className={cn(
         "mb-1 rounded-md border-l-4 px-2 py-1 text-xs",
-        outbound
-          ? "border-primary-foreground/60 bg-primary-foreground/15"
-          : "border-muted-foreground/50 bg-background/60",
+        outbound ? "border-ink-on-signal/60 bg-ink-on-signal/15" : "border-ink-muted/50 bg-page/60",
       )}
       data-testid="quoted-message"
     >
@@ -86,6 +84,7 @@ function MediaContent({ msg, t, tc }: { msg: MessageWithAuthorRow; t: T; tc: T }
           alt={content.caption ?? t("imageAlt")}
           width={0}
           height={0}
+          // eslint-disable-next-line no-restricted-syntax -- next/image sizes attribute (runtime hint, not styling)
           sizes="320px"
           unoptimized
           className="h-auto max-w-full rounded-md"
@@ -148,10 +147,7 @@ function SystemLine({
     text = t("transfer", { from, to });
   }
   return (
-    <li
-      className="text-muted-foreground py-1 text-center text-xs italic"
-      data-testid="system-event"
-    >
+    <li className="text-ink-muted py-1 text-center text-xs italic" data-testid="system-event">
       — {text} · {format.dateTime(msg.createdAt, { dateStyle: "short", timeStyle: "medium" })} —
     </li>
   );
@@ -219,7 +215,7 @@ function BubbleMeta({
     <p
       className={cn(
         "mt-1 flex items-center justify-end gap-1 text-xs",
-        outbound ? "text-primary-foreground/70" : "text-muted-foreground",
+        outbound ? "text-ink-on-signal/70" : "text-ink-muted",
       )}
     >
       {outbound && msg.authorName ? `${msg.authorName} · ` : ""}
@@ -304,7 +300,7 @@ export async function MessageItem({
         <div
           className={cn(
             "relative rounded-lg px-3 py-2",
-            outbound ? "bg-primary text-primary-foreground" : "bg-muted",
+            outbound ? "bg-signal text-ink-on-signal" : "bg-raised",
           )}
         >
           {msg.quoted && <QuoteBlock quoted={msg.quoted} outbound={outbound} t={t} />}

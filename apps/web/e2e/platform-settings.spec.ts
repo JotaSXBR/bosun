@@ -12,7 +12,7 @@ test("platform admin: setup gate, then Plataforma section visible", async ({ pag
 
   await page.goto("/sign-in");
   await page.getByLabel("E-mail").fill("superadmin@crm.local");
-  await page.getByLabel("Senha").fill("Password123!");
+  await page.getByLabel("Senha", { exact: true }).fill("Password123!");
   await page.getByRole("button", { name: "Entrar" }).click();
   await page.waitForURL(/\/(app|onboarding)/, { timeout: 30_000 });
 
@@ -40,9 +40,8 @@ test("platform admin: setup gate, then Plataforma section visible", async ({ pag
   }
 
   await expect(page.getByRole("heading", { name: "Plataforma" })).toBeVisible();
-  // Group titles are CardTitle (div[data-slot]), not semantic headings.
-  await expect(
-    page.locator('[data-slot="card-title"]', { hasText: "E-mail" }).first(),
-  ).toBeVisible();
-  await expect(page.locator('[data-slot="card-title"]', { hasText: "Cobrança" })).toBeVisible();
+  // Group titles render inside the DS Card title slot (.bx-card-title), not
+  // semantic headings.
+  await expect(page.locator(".bx-card-title", { hasText: "E-mail" }).first()).toBeVisible();
+  await expect(page.locator(".bx-card-title", { hasText: "Cobrança" })).toBeVisible();
 });

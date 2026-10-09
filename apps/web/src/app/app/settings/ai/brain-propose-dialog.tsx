@@ -2,23 +2,10 @@
 
 import type { MemoryConfidence, MemoryEntryType, MemoryScope } from "@crm/core/brain";
 import { Button } from "@crm/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@crm/ui/components/dialog";
+import { Dialog } from "@crm/ui/components/dialog";
 import { Input } from "@crm/ui/components/input";
 import { Label } from "@crm/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@crm/ui/components/select";
+import { Select } from "@crm/ui/components/select";
 import { Textarea } from "@crm/ui/components/textarea";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
@@ -100,21 +87,15 @@ function ContactPicker({
         aria-label={t("searchContact")}
         disabled={disabled}
       />
-      <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger aria-label={t("contact")}>
-          <SelectValue placeholder={t("selectContact")} />
-        </SelectTrigger>
-        <SelectContent>
-          {contacts.map((c) => (
-            <SelectItem key={c.id} value={c.id}>
-              {c.displayName ?? c.channelUserId}
-            </SelectItem>
-          ))}
-          {contacts.length === 0 && (
-            <div className="text-muted-foreground px-2 py-1.5 text-xs">{t("noContacts")}</div>
-          )}
-        </SelectContent>
-      </Select>
+      <Select
+        options={contacts.map((c) => ({ value: c.id, label: c.displayName ?? c.channelUserId }))}
+        value={value || undefined}
+        onChange={onChange}
+        placeholder={t("selectContact")}
+        aria-label={t("contact")}
+        disabled={disabled}
+      />
+      {contacts.length === 0 && <p className="text-ink-muted text-xs">{t("noContacts")}</p>}
     </div>
   );
 }
@@ -137,55 +118,36 @@ function ProposeFields({
         <div className="space-y-1">
           <Label>{t("type")}</Label>
           <Select
+            options={TYPES.map((type) => ({ value: type, label: t(TYPE_LABEL[type]) }))}
             value={form.type}
-            onValueChange={(v) => set("type", v as MemoryEntryType)}
+            onChange={(v) => set("type", v as MemoryEntryType)}
             disabled={pending}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {t(TYPE_LABEL[type])}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
         <div className="space-y-1">
           <Label>{t("scope")}</Label>
           <Select
+            options={[
+              { value: "org", label: t("scopeOrg") },
+              { value: "team", label: t("scopeTeam") },
+              { value: "contact", label: t("scopeContact") },
+            ]}
             value={form.scope}
-            onValueChange={(v) => set("scope", v as MemoryScope)}
+            onChange={(v) => set("scope", v as MemoryScope)}
             disabled={pending}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="org">{t("scopeOrg")}</SelectItem>
-              <SelectItem value="team">{t("scopeTeam")}</SelectItem>
-              <SelectItem value="contact">{t("scopeContact")}</SelectItem>
-            </SelectContent>
-          </Select>
+          />
         </div>
       </div>
       {form.scope === "team" && (
         <div className="space-y-1">
           <Label>{t("team")}</Label>
-          <Select value={form.teamId} onValueChange={(v) => set("teamId", v)} disabled={pending}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {teams.map((team) => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+            options={teams.map((team) => ({ value: team.id, label: team.name }))}
+            value={form.teamId || undefined}
+            onChange={(v) => set("teamId", v)}
+            placeholder={t("team")}
+            disabled={pending}
+          />
         </div>
       )}
       {form.scope === "contact" && (
@@ -208,29 +170,26 @@ function ProposeFields({
           maxLength={2000}
           disabled={pending}
         />
-        <p className="text-muted-foreground text-xs">{t("contentHint")}</p>
+        <p className="text-ink-muted text-xs">{t("contentHint")}</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label>{t("confidence")}</Label>
           <Select
+            options={[
+              { value: "low", label: t("confidenceLow") },
+              { value: "medium", label: t("confidenceMedium") },
+              { value: "high", label: t("confidenceHigh") },
+            ]}
             value={form.confidence}
-            onValueChange={(v) => set("confidence", v as MemoryConfidence)}
+            onChange={(v) => set("confidence", v as MemoryConfidence)}
             disabled={pending}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">{t("confidenceLow")}</SelectItem>
-              <SelectItem value="medium">{t("confidenceMedium")}</SelectItem>
-              <SelectItem value="high">{t("confidenceHigh")}</SelectItem>
-            </SelectContent>
-          </Select>
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="brain-stale">{t("staleAfterDays")}</Label>
           <Input
+            shape="rounded"
             id="brain-stale"
             type="number"
             min={1}
@@ -239,7 +198,7 @@ function ProposeFields({
             onChange={(e) => set("staleAfterDays", Number(e.target.value) || 90)}
             disabled={pending}
           />
-          <p className="text-muted-foreground text-xs">{t("staleAfterHint")}</p>
+          <p className="text-ink-muted text-xs">{t("staleAfterHint")}</p>
         </div>
       </div>
       <div className="space-y-1">
@@ -252,7 +211,7 @@ function ProposeFields({
           maxLength={4000}
           disabled={pending}
         />
-        <p className="text-muted-foreground text-xs">{t("rationaleHint")}</p>
+        <p className="text-ink-muted text-xs">{t("rationaleHint")}</p>
       </div>
     </div>
   );
@@ -288,26 +247,28 @@ export function BrainProposeDialog({
   const valid = form.content.trim().length > 0 && form.rationale.trim().length > 0 && scopeReady;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("propose")}</DialogTitle>
-          <DialogDescription>{t("description")}</DialogDescription>
-        </DialogHeader>
-        <ProposeFields form={form} set={set} teams={teams} pending={pending} />
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
+    <Dialog
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={t("propose")}
+      description={t("description")}
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={pending}>
             {tc("cancel")}
           </Button>
           <Button
+            variant="primary"
             onClick={onSubmit}
             disabled={pending || !valid}
             data-testid="brain-propose-submit"
           >
             {t("propose")}
           </Button>
-        </DialogFooter>
-      </DialogContent>
+        </>
+      }
+    >
+      <ProposeFields form={form} set={set} teams={teams} pending={pending} />
     </Dialog>
   );
 }

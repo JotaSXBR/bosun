@@ -2,11 +2,11 @@
 
 import { Button } from "@crm/ui/components/button";
 import { Textarea } from "@crm/ui/components/textarea";
+import { toast } from "@crm/ui/components/toast";
 import { cn } from "@crm/ui/lib/utils";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import { VoiceRecorder } from "@/components/voice-recorder";
 import { useChatPresence } from "@/lib/chat-presence";
@@ -29,7 +29,7 @@ function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
     <span className="relative">
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -40,14 +40,14 @@ function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
       </Button>
       {open && (
         <div
-          className="bg-popover absolute bottom-full left-0 z-10 mb-1 grid w-64 grid-cols-8 gap-0.5 rounded-md border p-1 shadow-md"
+          className="bg-raised shadow-raised absolute bottom-full left-0 z-10 mb-1 grid w-64 grid-cols-8 gap-0.5 rounded-md border p-1"
           data-testid="emoji-grid"
         >
           {EMOJIS.map((emoji) => (
             <button
               key={emoji}
               type="button"
-              className="hover:bg-muted rounded p-1 text-lg"
+              className="hover:bg-raised rounded-xs p-1 text-lg"
               onClick={() => {
                 onPick(emoji);
                 setOpen(false);
@@ -88,7 +88,7 @@ function ComposerToolbar({
       {channelTools && (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           disabled={disabled || sendingMedia}
           onClick={onAttach}
@@ -99,7 +99,7 @@ function ComposerToolbar({
         </Button>
       )}
       {channelTools && recorder}
-      <span className="text-muted-foreground text-xs">{hint}</span>
+      <span className="text-ink-muted text-xs">{hint}</span>
     </div>
   );
 }
@@ -124,8 +124,8 @@ function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void 
             mode === m.key
               ? m.key === "note"
                 ? "bg-warning/15 text-warning"
-                : "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
+                : "bg-signal text-ink-on-signal"
+              : "text-ink-muted hover:text-ink",
           )}
         >
           {m.label}
@@ -139,13 +139,13 @@ function ReplyChip({ preview, onClear }: { preview: string; onClear: () => void 
   const t = useTranslations("composer");
   return (
     <div
-      className="bg-muted border-l-success flex items-center justify-between rounded-md border-l-4 px-3 py-1.5 text-xs"
+      className="bg-raised border-l-success flex items-center justify-between rounded-md border-l-4 px-3 py-1.5 text-xs"
       data-testid="reply-preview"
     >
       <span className="line-clamp-1 italic opacity-80">↩ {preview}</span>
       <button
         type="button"
-        className="text-muted-foreground hover:text-foreground px-1"
+        className="text-ink-muted hover:text-ink px-1"
         onClick={onClear}
         aria-label={t("cancelReply")}
       >
@@ -289,7 +289,7 @@ export function Composer({
           }
           hint={sendingMedia ? t("hintSendingMedia") : t("hintSend")}
         />
-        <Button onClick={send} disabled={disabled || pending || !text.trim()}>
+        <Button variant="primary" onClick={send} disabled={disabled || pending || !text.trim()}>
           {pending ? t("sending") : mode === "reply" ? t("send") : t("addNote")}
         </Button>
       </div>

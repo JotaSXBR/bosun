@@ -2,7 +2,7 @@
 
 import type { OrganizationSettingsRow } from "@crm/core/organizations";
 import { Button } from "@crm/ui/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
 import {
   Form,
   FormControl,
@@ -14,11 +14,11 @@ import {
 } from "@crm/ui/components/form";
 import { Input } from "@crm/ui/components/input";
 import { Textarea } from "@crm/ui/components/textarea";
+import { toast } from "@crm/ui/components/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import { z } from "zod";
 
 import { updateOrgSettingsAction } from "@/server/actions/settings";
@@ -74,88 +74,94 @@ export function SettingsForm({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("org.title")}</CardTitle>
-        <CardDescription>{t("org.description")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="ticketReopenWindowHours"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("org.reopenWindow")}</FormLabel>
-                    <FormControl>
-                      <Input type="number" min={1} max={168} disabled={!canEdit} {...field} />
-                    </FormControl>
-                    <FormDescription>{t("org.reopenWindowHint")}</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="timezone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("org.timezone")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="America/Sao_Paulo" disabled={!canEdit} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="locale"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("org.locale")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="pt-BR" disabled={!canEdit} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+    <Card title={t("org.title")} subtitle={t("org.description")}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
-              name="offHoursMessage"
+              name="ticketReopenWindowHours"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("org.offHours")}</FormLabel>
+                  <FormLabel>{t("org.reopenWindow")}</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder={t("org.offHoursPlaceholder", {
-                        proximo_atendimento: "{proximo_atendimento}",
-                      })}
+                    <Input
+                      shape="rounded"
+                      type="number"
+                      min={1}
+                      max={168}
                       disabled={!canEdit}
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    {t("org.offHoursHint", { proximo_atendimento: "{proximo_atendimento}" })}
-                  </FormDescription>
+                  <FormDescription>{t("org.reopenWindowHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {canEdit && (
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {t("org.submit")}
-              </Button>
+            <FormField
+              control={form.control}
+              name="timezone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("org.timezone")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      shape="rounded"
+                      placeholder="America/Sao_Paulo"
+                      disabled={!canEdit}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="locale"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("org.locale")}</FormLabel>
+                  <FormControl>
+                    <Input shape="rounded" placeholder="pt-BR" disabled={!canEdit} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
+            control={form.control}
+            name="offHoursMessage"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("org.offHours")}</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder={t("org.offHoursPlaceholder", {
+                      proximo_atendimento: "{proximo_atendimento}",
+                    })}
+                    disabled={!canEdit}
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {t("org.offHoursHint", { proximo_atendimento: "{proximo_atendimento}" })}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
             )}
-          </form>
-        </Form>
-      </CardContent>
+          />
+          {canEdit && (
+            <Button variant="primary" type="submit" disabled={form.formState.isSubmitting}>
+              {t("org.submit")}
+            </Button>
+          )}
+        </form>
+      </Form>
     </Card>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@crm/ui/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
 import {
   Form,
   FormControl,
@@ -11,11 +11,11 @@ import {
   FormMessage,
 } from "@crm/ui/components/form";
 import { Input } from "@crm/ui/components/input";
+import { toast } from "@crm/ui/components/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { toast } from "sonner";
 import { z } from "zod";
 
 import { createChannelConnectionAction } from "@/server/actions/integrations";
@@ -110,80 +110,74 @@ export function NewConnectionForm() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("form.title")}</CardTitle>
-        <CardDescription>{t("form.description")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <Card title={t("form.title")} subtitle={t("form.description")}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="kind"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("form.channel")}</FormLabel>
+                  <FormControl>
+                    <select
+                      className="border-line shadow-control h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                      {...field}
+                    >
+                      <option value="waha">{t("form.kindWaha")}</option>
+                      <option value="meta_cloud">{t("form.kindMeta")}</option>
+                      <option value="site_chat">{t("form.kindSiteChat")}</option>
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("form.name")}</FormLabel>
+                  <FormControl>
+                    <Input shape="rounded" placeholder={t("form.namePlaceholder")} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          {kind === "meta_cloud" && (
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="kind"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("form.channel")}</FormLabel>
-                    <FormControl>
-                      <select
-                        className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
-                        {...field}
-                      >
-                        <option value="waha">{t("form.kindWaha")}</option>
-                        <option value="meta_cloud">{t("form.kindMeta")}</option>
-                        <option value="site_chat">{t("form.kindSiteChat")}</option>
-                      </select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("form.name")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("form.namePlaceholder")} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {META_FIELDS.map((item) => (
+                <FormField
+                  key={`${kind}-${item.name}`}
+                  control={form.control}
+                  name={item.name}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {item.name === "graphApiVersion" ? t("form.graphApiVersion") : item.label}
+                      </FormLabel>
+                      <FormControl>
+                        <Input shape="rounded" placeholder={item.placeholder} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
             </div>
-            {kind === "meta_cloud" && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {META_FIELDS.map((item) => (
-                  <FormField
-                    key={`${kind}-${item.name}`}
-                    control={form.control}
-                    name={item.name}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {item.name === "graphApiVersion" ? t("form.graphApiVersion") : item.label}
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder={item.placeholder} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
-            )}
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {t("form.submit")}
-            </Button>
-          </form>
-        </Form>
-        {pairing && (
-          <PairingPanel id={pairing.id} initialQr={pairing.qr} onDone={() => setPairing(null)} />
-        )}
-      </CardContent>
+          )}
+          <Button variant="primary" type="submit" disabled={form.formState.isSubmitting}>
+            {t("form.submit")}
+          </Button>
+        </form>
+      </Form>
+      {pairing && (
+        <PairingPanel id={pairing.id} initialQr={pairing.qr} onDone={() => setPairing(null)} />
+      )}
     </Card>
   );
 }

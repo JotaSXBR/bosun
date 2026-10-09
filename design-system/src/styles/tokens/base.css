@@ -1,0 +1,11 @@
+/* BOSUN — minimal element defaults. */
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;}
+body{margin:0;background:var(--bg-page);color:var(--text-body);font-family:var(--font-sans);font-size:var(--text-md);line-height:var(--leading-md);font-feature-settings:"cv11","ss01";}
+h1,h2,h3,h4{font-family:var(--font-display);color:var(--text-strong);letter-spacing:var(--tracking-heading);margin:0;text-wrap:balance;}
+p{text-wrap:pretty;}
+code,kbd,samp{font-family:var(--font-mono);font-size:.92em;}
+a{color:var(--text-accent);text-decoration:none;transition:color var(--dur-fast) var(--ease-standard);}
+a:hover{color:var(--signal-300);text-decoration:underline;text-underline-offset:3px;}
+[data-theme="light"] a:hover{color:var(--signal-800);}
+::selection{background:rgba(45,212,191,.32);color:var(--text-strong);}
+:focus-visible{outline:none;box-shadow:var(--focus-ring);}

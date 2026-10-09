@@ -3,11 +3,11 @@
 import type { MemoryEntryRow } from "@crm/core/brain";
 import { Badge } from "@crm/ui/components/badge";
 import { Button } from "@crm/ui/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import type { AiActionResult } from "@/server/actions/ai";
 import {
@@ -93,14 +93,14 @@ export function BrainSection({
     <li key={entry.id} className="space-y-1 border-b pb-2 last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <Badge variant="secondary">{t(TYPE_LABEL[entry.type] ?? "typePattern")}</Badge>
-          <Badge variant="outline">{t(SCOPE_LABEL[entry.scope] ?? "scopeOrg")}</Badge>
-          <Badge variant="outline">
+          <Badge tone="neutral">{t(TYPE_LABEL[entry.type] ?? "typePattern")}</Badge>
+          <Badge tone="neutral">{t(SCOPE_LABEL[entry.scope] ?? "scopeOrg")}</Badge>
+          <Badge tone="neutral">
             {t(
               `confidence${entry.confidence === "high" ? "High" : entry.confidence === "low" ? "Low" : "Medium"}`,
             )}
           </Badge>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-ink-muted text-xs">
             {t("validUntil", { date: formatDate(entry.staleAfter) })}
           </span>
         </div>
@@ -109,7 +109,7 @@ export function BrainSection({
             {actions === "stale" && (
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 disabled={pending}
                 onClick={() =>
                   run(
@@ -123,7 +123,7 @@ export function BrainSection({
             )}
             <Button
               size="sm"
-              variant="destructive"
+              variant="danger"
               disabled={pending}
               onClick={() => {
                 if (window.confirm(t("archiveConfirm"))) {
@@ -141,16 +141,12 @@ export function BrainSection({
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>{t("description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Card bodyClassName="space-y-4" title={t("title")} subtitle={t("description")}>
+      <>
         {stale.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase">{t("staleTitle")}</p>
-            <p className="text-muted-foreground text-xs">{t("staleDescription")}</p>
+            <p className="text-ink-muted text-xs">{t("staleDescription")}</p>
             <ul className="space-y-2" data-testid="brain-stale-list">
               {stale.map((entry) => entryRow(entry, "stale"))}
             </ul>
@@ -158,7 +154,7 @@ export function BrainSection({
         )}
 
         {entries.length === 0 ? (
-          <p className="text-muted-foreground text-sm" data-testid="brain-empty">
+          <p className="text-ink-muted text-sm" data-testid="brain-empty">
             {t("empty")}
           </p>
         ) : (
@@ -170,7 +166,7 @@ export function BrainSection({
         {canManage && (
           <Button
             size="sm"
-            variant="outline"
+            variant="secondary"
             onClick={() => {
               setForm(emptyProposeForm);
               setOpen(true);
@@ -180,7 +176,7 @@ export function BrainSection({
             {t("new")}
           </Button>
         )}
-      </CardContent>
+      </>
 
       <BrainProposeDialog
         open={open}

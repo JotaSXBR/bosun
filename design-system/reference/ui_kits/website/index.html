@@ -1,0 +1,326 @@
+<!-- @dsCard group="Website" viewport="1440x900" name="BOSUN website" subtitle="Landing page: hero, live product preview, módulos (light panel), pilares, manifesto, FAQ, footer" -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>BOSUN — Seu mundo digital, sob comando.</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{min-width:1200px}html{scroll-behavior:smooth}</style>
+</head><body>
+<div id="root"></div>
+<script type="text/babel" data-source="hero.jsx">
+// BOSUN website — nav, hero, product preview, idea
+(() => {
+const { Wordmark, Button, Card, IconButton, Metric, ProgressBar, RingChart, BarChart, Badge, Icon } = window.BOSUNDesignSystem_c587fa;
+
+function SiteNav({ onCta }) {
+  const [scrolled, setScrolled] = React.useState(false);
+  React.useEffect(() => {
+    const s = () => setScrolled(window.scrollY > 24);
+    window.addEventListener('scroll', s);
+    return () => window.removeEventListener('scroll', s);
+  }, []);
+  return (
+    <header style={{ position: 'sticky', top: 0, zIndex: 40, transition: 'background var(--dur-base), backdrop-filter var(--dur-base)',
+      background: scrolled ? 'rgba(11,23,38,.72)' : 'transparent', backdropFilter: scrolled ? 'blur(var(--blur-glass))' : 'none', WebkitBackdropFilter: scrolled ? 'blur(var(--blur-glass))' : 'none',
+      borderBottom: '1px solid ' + (scrolled ? 'var(--border-subtle)' : 'transparent') }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', height: 76, padding: '0 32px', display: 'flex', alignItems: 'center', gap: 40 }}>
+        <Wordmark size={22} />
+        <nav style={{ display: 'flex', gap: 28, flex: 1, justifyContent: 'center' }}>
+          {[['Plataforma', '#plataforma'], ['Módulos', '#modulos'], ['Manifesto', '#manifesto'], ['Perguntas', '#perguntas']].map(([l, h]) => (
+            <a key={l} href={h} style={{ fontSize: 14, color: 'var(--text-body)', textDecoration: 'none' }}>{l}</a>
+          ))}
+        </nav>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="ghost" size="sm">Entrar</Button>
+          <Button variant="primary" size="sm" onClick={onCta}>Começar agora</Button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Eyebrow({ children, onLight }) {
+  return <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: onLight ? 'var(--signal-700)' : 'var(--text-accent)' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />{children}</div>;
+}
+
+function TwoWeight({ lead, payoff, size = 64, onLight, style }) {
+  return (
+    <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: size, lineHeight: 1.04, letterSpacing: '-0.035em', textWrap: 'balance', ...style }}>
+      <span style={{ fontWeight: 300, color: onLight ? 'var(--steel-600)' : 'var(--text-muted)' }}>{lead}</span>{' '}
+      <span style={{ fontWeight: 600, color: onLight ? 'var(--abyss-900)' : 'var(--text-strong)' }}>{payoff}</span>
+    </h2>
+  );
+}
+
+function ProductPreview() {
+  return (
+    <div style={{ borderRadius: 32, padding: 16, background: 'var(--bg-sunken)', boxShadow: '0 0 0 1px var(--border-default), 0 60px 120px -40px rgba(45,212,191,.18)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '8px 12px 20px' }}>
+        <Wordmark size={15} />
+        <div style={{ display: 'flex', gap: 6, flex: 1, justifyContent: 'center' }}>
+          {[['house', 'Início', true], ['list-checks', 'Tarefas'], ['file-text', 'Documentos'], ['workflow', 'Automações'], ['plug', 'Integrações']].map(([ic, l, on]) => (
+            <span key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', borderRadius: 999, fontSize: 12, color: on ? 'var(--text-accent)' : 'var(--text-body)',
+              background: on ? 'var(--surface-accent-soft)' : 'var(--surface-control)', border: '1px solid ' + (on ? 'var(--border-accent)' : 'var(--border-subtle)') }}><Icon name={ic} size={14} />{l}</span>
+          ))}
+        </div>
+        <span style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--ocean-700)' }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <Card title="Prioridades de hoje" actions={<><IconButton icon="bell" label="Lembretes" size="sm" /><IconButton icon="arrow-up-right" label="Abrir" size="sm" /></>}>
+          <Metric value="12" suffix="tarefas" size="sm" />
+          <div style={{ height: 18 }} />
+          <ProgressBar size="md" value={42} labels={['8h', '12h', '16h', '20h']} />
+        </Card>
+        <Card tone="accent" title="Automações ativas" actions={<IconButton icon="arrow-up-right" label="Abrir" size="sm" variant="inverse" />}>
+          <Metric onAccent value="24" size="sm" label="executando hoje" />
+        </Card>
+        <Card title="Execuções" actions={<IconButton icon="arrow-up-right" label="Abrir" size="sm" />}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}><RingChart size={104} thickness={14} showValues={false} segments={[{ value: 70 }, { value: 30 }]} /></div>
+        </Card>
+        <Card title="Andamento da semana" style={{ gridColumn: 'span 3' }} actions={<><IconButton icon="list-filter" variant="inverse" label="Filtrar" size="sm" /><IconButton icon="calendar" label="Período" size="sm" /></>}>
+          <BarChart height={170} maxBarWidth={96} formatValue={(v) => v + ' concluídas'} data={[
+            { label: 'Seg', value: 18, target: 26 }, { label: 'Ter', value: 22, target: 26 }, { label: 'Qua', value: 32, target: 34 },
+            { label: 'Qui', value: 14, target: 28 }, { label: 'Sex', value: 20, target: 24 }, { label: 'Sáb', value: 6, target: 10 }, { label: 'Dom', value: 4, target: 8 },
+          ]} />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function Hero({ onCta }) {
+  return (
+    <section className="bx-grid" style={{ position: 'relative', paddingTop: 88 }} id="plataforma">
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 60% at 50% 0%, transparent 0%, var(--bg-page) 72%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', maxWidth: 1280, margin: '0 auto', padding: '0 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+        <Eyebrow>Sistema operacional de trabalho na web</Eyebrow>
+        <h1 style={{ margin: '24px 0 0', fontFamily: 'var(--font-display)', fontSize: 'var(--text-display-xl)', lineHeight: 0.98, letterSpacing: '-0.04em' }}>
+          <span style={{ fontWeight: 300, color: 'var(--text-muted)' }}>Seu mundo digital,</span><br />
+          <span style={{ fontWeight: 600, color: 'var(--text-strong)' }}>sob comando.</span>
+        </h1>
+        <p style={{ margin: '28px 0 0', maxWidth: 560, fontSize: 18, lineHeight: 1.55, color: 'var(--text-body)' }}>Organize tarefas, reúna informações e conecte suas ferramentas em um único ambiente de trabalho.</p>
+        <div style={{ display: 'flex', gap: 10, marginTop: 36 }}>
+          <Button variant="primary" size="lg" iconRight="arrow-right" onClick={onCta}>Começar agora</Button>
+          <Button variant="outline" size="lg" onClick={() => window.scrollTo({ top: document.getElementById('modulos').offsetTop - 60, behavior: 'smooth' })}>Conhecer a plataforma</Button>
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--text-subtle)', marginTop: 16 }}>Funciona no navegador. Nada para instalar.</div>
+        <div style={{ width: '100%', marginTop: 72 }}><ProductPreview /></div>
+      </div>
+    </section>
+  );
+}
+
+function Idea() {
+  return (
+    <section style={{ maxWidth: 1280, margin: '0 auto', padding: '160px 32px 120px', display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 80, alignItems: 'end' }}>
+      <div>
+        <Eyebrow>A ideia</Eyebrow>
+        <TwoWeight size={52} lead="Ferramentas dispersas viram" payoff="um ambiente de trabalho conectado." style={{ marginTop: 20 }} />
+      </div>
+      <p style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: 'var(--text-muted)' }}>BOSUN é seu ambiente de trabalho na web. Reúna ferramentas, organize atividades e conecte informações em uma experiência feita para acompanhar sua rotina.</p>
+    </section>
+  );
+}
+
+Object.assign(window, { SiteNav, SiteHero: Hero, SiteIdea: Idea, SiteEyebrow: Eyebrow, SiteTwoWeight: TwoWeight });
+})();
+</script>
+<script type="text/babel" data-source="sections.jsx">
+// BOSUN website — módulos (light panel), pilares, manifesto, FAQ, footer
+(() => {
+const { Wordmark, Button, Card, IconButton, Metric, ProgressBar, Badge, Icon, Accordion, Switch, Checkbox, Toast } = window.BOSUNDesignSystem_c587fa;
+
+const MODS = [
+  { id: 'home', name: 'BOSUN Home', nav: 'Início', icon: 'house', body: 'Visão geral do dia: prioridades, andamento e o que precisa de atenção.' },
+  { id: 'tasks', name: 'BOSUN Tasks', nav: 'Tarefas', icon: 'list-checks', body: 'Tarefas e projetos com prazos, responsáveis e próximos passos claros.' },
+  { id: 'docs', name: 'BOSUN Docs', nav: 'Documentos', icon: 'file-text', body: 'Documentos e conhecimento ligados às tarefas que dependem deles.' },
+  { id: 'flow', name: 'BOSUN Flow', nav: 'Automações', icon: 'workflow', body: 'Fluxos que executam etapas repetitivas e mostram cada resultado.' },
+  { id: 'connect', name: 'BOSUN Connect', nav: 'Integrações', icon: 'plug', body: 'Conecte as ferramentas que você já usa. Você decide o que cada uma acessa.' },
+  { id: 'insights', name: 'BOSUN Insights', nav: 'Indicadores', icon: 'chart-no-axes-column', body: 'Indicadores e relatórios a partir do que acontece no seu ambiente.' },
+];
+
+function ModPreview({ id }) {
+  if (id === 'flow') return (
+    <Card tone="raised" title="Resumo diário de vendas" subtitle="Todos os dias, 8h" actions={<Switch defaultChecked size="sm" />}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 6 }}>
+        {['Buscar dados', 'Gerar resumo', 'Enviar para a equipe'].map((s) => <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}><span style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-accent)', color: 'var(--text-on-accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={14} strokeWidth={2.2} /></span>{s}</div>)}
+        <Toast tone="success" title="Fluxo concluído." description="Todas as etapas foram executadas." style={{ marginTop: 8, boxShadow: 'var(--shadow-raised)' }} />
+      </div>
+    </Card>
+  );
+  if (id === 'connect') return (
+    <Card tone="raised" title="Conectar Google Agenda" subtitle="Você decide quais informações esta integração pode acessar.">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 6 }}>
+        <Checkbox label="Ler eventos" defaultChecked /><Checkbox label="Criar e editar eventos" /><Checkbox label="Ver disponibilidade da equipe" defaultChecked />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}><Button size="sm">Cancelar</Button><Button size="sm" variant="primary">Permitir acesso</Button></div>
+      </div>
+    </Card>
+  );
+  if (id === 'tasks') return (
+    <Card tone="raised" title="Lançamento Q4" subtitle="8 de 14 etapas" actions={<IconButton icon="arrow-up-right" label="Abrir" />}>
+      <ProgressBar value={57} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
+        {[['Aprovar peças da campanha', 'warning', 'Em revisão'], ['Revisar proposta comercial', 'running', 'Em andamento'], ['Publicar página de preços', 'neutral', 'A fazer']].map(([t, tone, l]) => (
+          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}><Checkbox /><span style={{ flex: 1 }}>{t}</span><Badge tone={tone} dot>{l}</Badge></div>
+        ))}
+      </div>
+    </Card>
+  );
+  return (
+    <Card tone="accent" title={id === 'insights' ? 'Tarefas concluídas' : id === 'docs' ? 'Documentos vinculados' : 'Prioridades de hoje'} actions={<IconButton variant="inverse" icon="arrow-up-right" label="Abrir" />}>
+      <Metric onAccent size="lg" value={id === 'insights' ? '116' : id === 'docs' ? '38' : '12'} label={id === 'insights' ? 'nesta semana · 18% acima da anterior' : id === 'docs' ? 'a tarefas em andamento' : 'tarefas · 4 concluídas'} />
+      <div className="bx-dots bx-on-accent" style={{ height: 64, borderRadius: 20, marginTop: 24 }} />
+    </Card>
+  );
+}
+
+function Modules() {
+  const [sel, setSel] = React.useState('home');
+  return (
+    <section id="modulos" style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
+      <div data-theme="light" style={{ borderRadius: 40, background: 'var(--bg-page)', color: 'var(--text-body)', padding: 64, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 64 }}>
+        <div>
+          <SiteEyebrow onLight>Módulos</SiteEyebrow>
+          <SiteTwoWeight onLight size={44} lead="Um só ambiente." payoff="Módulos que trabalham juntos." style={{ marginTop: 18 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 40 }}>
+            {MODS.map((m) => {
+              const on = m.id === sel;
+              return (
+                <button key={m.id} type="button" onClick={() => setSel(m.id)} style={{ display: 'grid', gridTemplateColumns: '40px 1fr auto', gap: 14, alignItems: 'start', textAlign: 'left', padding: '16px 0', border: 0, borderTop: '1px solid var(--border-default)', background: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  <span style={{ width: 36, height: 36, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: on ? 'var(--surface-accent)' : 'var(--surface-control)', color: on ? 'var(--text-on-accent)' : 'var(--icon-default)', transition: 'background var(--dur-base)' }}><Icon name={m.icon} size={17} /></span>
+                  <span>
+                    <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, color: 'var(--text-strong)', letterSpacing: '-0.01em', marginTop: 6 }}>{m.name}</span>
+                    {on && <span style={{ display: 'block', fontSize: 14.5, lineHeight: 1.5, color: 'var(--text-muted)', marginTop: 6, maxWidth: 420 }}>{m.body}</span>}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--text-subtle)', marginTop: 10 }}>no menu: {m.nav}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div style={{ borderRadius: 28, background: 'var(--abyss-900)', padding: 32, display: 'flex', alignItems: 'center' }} data-theme="dark">
+          <div style={{ width: '100%' }}><ModPreview id={sel} /></div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const PILLARS = [
+  ['target', 'Clareza', 'Mostrar o que importa e qual é a próxima ação.'],
+  ['git-branch', 'Coordenação', 'Conectar funcionalidades, não apenas colocá-las lado a lado.'],
+  ['sliders-horizontal', 'Autonomia', 'Cada pessoa organiza o próprio ambiente.'],
+  ['shield-check', 'Confiança', 'Estados, resultados e problemas sem ambiguidade.'],
+  ['layers', 'Evolução', 'A plataforma cresce com novas necessidades.'],
+];
+
+function Pillars() {
+  return (
+    <section style={{ maxWidth: 1280, margin: '0 auto', padding: '140px 32px 0' }}>
+      <SiteTwoWeight size={44} lead="Tudo conectado." payoff="Você no comando." />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 12, marginTop: 48 }}>
+        {PILLARS.map(([ic, t, b], i) => (
+          <Card key={t} tone={i === 0 ? 'accent' : 'default'} icon={<span style={{ width: 44, height: 44, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 40, background: i === 0 ? 'rgba(11,23,38,.12)' : 'var(--surface-raised)', color: i === 0 ? 'var(--text-on-accent)' : 'var(--text-accent)' }}><Icon name={ic} size={19} /></span>} title={t} titleSize={22}>
+            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: i === 0 ? 'var(--text-on-accent-muted)' : 'var(--text-muted)' }}>{b}</p>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const MANIFESTO = [
+  ['m', 'Você não precisa de mais uma ferramenta isolada.'], ['s', 'Precisa de um lugar onde tudo faça sentido.'],
+  ['m', 'Onde informações encontrem contexto. Onde tarefas tenham direção. Onde ferramentas trabalhem juntas.'],
+  ['s', 'BOSUN nasce para coordenar essa experiência.'],
+  ['m', 'Você escolhe o destino. Organiza suas prioridades. Mantém o controle.'], ['s', 'Nós conectamos o que precisa funcionar em conjunto.'],
+];
+
+function Manifesto() {
+  return (
+    <section id="manifesto" style={{ maxWidth: 1280, margin: '0 auto', padding: '160px 32px', display: 'grid', gridTemplateColumns: '240px minmax(0,1fr)', gap: 48 }}>
+      <div><SiteEyebrow>Manifesto</SiteEyebrow></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 22, maxWidth: 860 }}>
+        {MANIFESTO.map(([k, t], i) => <p key={i} style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.22, letterSpacing: '-0.025em', fontWeight: k === 's' ? 600 : 300, color: k === 's' ? 'var(--text-strong)' : 'var(--text-muted)', textWrap: 'pretty' }}>{t}</p>)}
+        <div style={{ marginTop: 24 }}><Wordmark size={28} tagline /></div>
+      </div>
+    </section>
+  );
+}
+
+function Faq() {
+  const items = [
+    ['install', 'Preciso instalar alguma coisa?', 'Não. A BOSUN é um ambiente de trabalho acessado pelo navegador. Ela não substitui o sistema operacional do seu computador.'],
+    ['data', 'Quem decide o que cada integração acessa?', 'Você. Ao conectar uma ferramenta, você escolhe o nível de acesso e quais informações ela pode ler ou alterar, e pode revogar quando quiser.'],
+    ['team', 'Funciona para equipes?', 'Sim. Profissionais independentes, empreendedores e pequenas equipes usam o mesmo ambiente, com permissões por pessoa.'],
+    ['custom', 'Posso organizar o ambiente do meu jeito?', 'Sim. Escolha os módulos, a ordem dos painéis e o que aparece na sua página inicial, sem perder a consistência entre eles.'],
+  ];
+  return (
+    <section id="perguntas" style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 140px', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.3fr)', gap: 64 }}>
+      <div>
+        <SiteEyebrow>Perguntas frequentes</SiteEyebrow>
+        <SiteTwoWeight size={44} lead="Dúvidas?" payoff="Respostas diretas." style={{ marginTop: 18 }} />
+      </div>
+      <Accordion items={items.map(([id, q, a]) => ({ id, title: q, content: <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: 'var(--text-muted)' }}>{a}</p> }))} />
+    </section>
+  );
+}
+
+function Footer({ onCta }) {
+  const cols = [['Plataforma', ['Módulos', 'Integrações', 'Segurança', 'Preços']], ['Empresa', ['Sobre', 'Manifesto', 'Carreiras']], ['Suporte', ['Central de ajuda', 'Status', 'Contato']], ['Recursos', ['Guias', 'Modelos', 'Novidades']]];
+  return (
+    <footer style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 32px' }}>
+      <div style={{ borderRadius: 40, background: 'var(--surface-accent)', color: 'var(--text-on-accent)', padding: '56px 64px 32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr repeat(4, minmax(0,1fr))', gap: 32 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28, alignItems: 'flex-start' }}>
+            <Wordmark size={30} tone="dark" tagline />
+            <Button variant="inverse" iconRight="arrow-right" onClick={onCta} style={{ background: 'var(--abyss-900)', color: 'var(--mist)' }}>Começar agora</Button>
+          </div>
+          {cols.map(([h, ls]) => (
+            <div key={h} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.08em', fontWeight: 500 }}>{h.toUpperCase()}</div>
+              {ls.map((l) => <a key={l} href="#" onClick={(e) => e.preventDefault()} style={{ fontSize: 14, color: 'var(--abyss-900)', textDecoration: 'none' }}>{l}</a>)}
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 64, paddingTop: 20, borderTop: '1px solid rgba(11,23,38,.18)', fontSize: 12.5, color: 'var(--signal-900)' }}>
+          <span>© 2026 BOSUN</span><span>Privacidade · Termos</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+Object.assign(window, { SiteModules: Modules, SitePillars: Pillars, SiteManifesto: Manifesto, SiteFaq: Faq, SiteFooter: Footer });
+})();
+</script>
+<script type="text/babel" data-source="app.jsx">
+// BOSUN website — page assembly
+(() => {
+const { Toast } = window.BOSUNDesignSystem_c587fa;
+
+function Site() {
+  const [toast, setToast] = React.useState(false);
+  const cta = () => { setToast(true); setTimeout(() => setToast(false), 4000); };
+  return (
+    <div>
+      <SiteNav onCta={cta} />
+      <SiteHero onCta={cta} />
+      <SiteIdea />
+      <SiteModules />
+      <SitePillars />
+      <SiteManifesto />
+      <SiteFaq />
+      <SiteFooter onCta={cta} />
+      {toast && <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 60, width: 380 }}><Toast tone="success" title="Seu espaço de trabalho está pronto." description="Enviamos o link de acesso para o seu e-mail." onClose={() => setToast(false)} /></div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Site />);
+})();
+</script>
+</body></html>

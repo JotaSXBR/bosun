@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BOSUN — referência visual</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body {
+    margin: 0;
+    background: var(--bg-page);
+    color: var(--text-body);
+    font-family: var(--font-sans);
+    font-size: var(--text-md);
+    line-height: var(--leading-md);
+  }
+  main {
+    max-width: var(--container-text);
+    margin-inline: auto;
+    padding: var(--card-pad);
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: var(--text-h1);
+    line-height: var(--leading-h1);
+    letter-spacing: var(--tracking-heading);
+    color: var(--text-strong);
+    margin: 0 0 var(--space-4);
+  }
+  p.lede { color: var(--text-muted); margin: 0 0 var(--space-8); }
+  section { margin-bottom: var(--space-8); }
+  h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-h4);
+    line-height: var(--leading-h4);
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    margin: 0 0 var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: var(--space-2);
+  }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+  a {
+    display: block;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    text-decoration: none;
+    transition: background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+  }
+  a:hover { background: var(--surface-raised); border-color: var(--border-default); }
+  .name { display: block; color: var(--text-strong); font-weight: 500; }
+  .sub { display: block; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--leading-sm); margin-top: var(--space-1); }
+</style>
+</head>
+<body>
+<main>
+  <h1>BOSUN — referência visual</h1>
+  <p class="lede">Static specimens exported from the design system. Each link opens a standalone HTML page.</p>
+    <section>
+      <h2>Brand</h2>
+      <ul>
+        <li><a href="guidelines/brand-connect.html"><span class="name">Connection motif</span><span class="sub">Dotted lines linking nodes — modules working together. Use in marketing &amp; onboarding only, never inside work areas.</span></a></li>
+        <li><a href="guidelines/brand-patterns.html"><span class="name">Patterns</span><span class="sub">Hatch = planned / remaining. Dots = current / in motion. Grid = precision backdrop. Classes: .bx-hatch .bx-dots .bx-grid</span></a></li>
+        <li><a href="guidelines/brand-voice.html"><span class="name">Voice — microcopy</span><span class="sub">Calm, competent, direct. Short sentences, clear verbs, useful information. Nautical only in brand moments.</span></a></li>
+        <li><a href="guidelines/brand-wordmark.html"><span class="name">Wordmark (interim)</span><span class="sub">No logo file supplied — the name is set in Manrope ExtraBold +6% tracking. Do not draw a symbol.</span></a></li>
+        <li><a href="guidelines/iconography.html"><span class="name">Iconography</span><span class="sub">Lucide line icons, 1.5px stroke, round caps — shipped as SVGs in assets/icons and via the Icon component.</span></a></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Colors</h2>
+      <ul>
+        <li><a href="guidelines/colors-abyss-ocean.html"><span class="name">Abyss &amp; Ocean</span><span class="sub">Dark structural blues — page, cards, raised layers, controls. 900 and ocean-700 are brand.</span></a></li>
+        <li><a href="guidelines/colors-brand.html"><span class="name">Brand palette</span><span class="sub">The six named brand colors. Core pairing: Azul abissal + Branco névoa + Verde sinal.</span></a></li>
+        <li><a href="guidelines/colors-data.html"><span class="name">Data palette</span><span class="sub">Charts lead with Verde sinal, support with névoa and ocean; Âmbar only flags. Hatch/dots carry meaning before hue.</span></a></li>
+        <li><a href="guidelines/colors-light.html"><span class="name">Light theme</span><span class="sub">[data-theme=light] — Branco névoa page, white cards, Azul abissal ink. Same components, no overrides.</span></a></li>
+        <li><a href="guidelines/colors-neutral.html"><span class="name">Névoa &amp; Aço</span><span class="sub">Neutrals. Mist = light page &amp; dark-theme ink; steel-400 = muted text on dark; steel-500 (brand) = icons/meta only.</span></a></li>
+        <li><a href="guidelines/colors-semantic.html"><span class="name">Status colors</span><span class="sub">Soft tint + full-strength ink. Âmbar is the only warning color; running reuses Verde sinal.</span></a></li>
+        <li><a href="guidelines/colors-signal.html"><span class="name">Verde sinal</span><span class="sub">Accent scale. 400 is brand: selection, primary action, live data. Text on it is always Azul abissal.</span></a></li>
+        <li><a href="guidelines/colors-surfaces.html"><span class="name">Surface layers (dark)</span><span class="sub">Depth is tonal: each step closer to the user is a little lighter. No borders between layers.</span></a></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Components</h2>
+      <ul>
+        <li><a href="components/core/core.card.html"><span class="name">Core</span><span class="sub">Button, IconButton, Badge, Tag, Avatar, Wordmark, Icon</span></a></li>
+        <li><a href="components/data/data.card.html"><span class="name">Data</span><span class="sub">Metric, ProgressBar, RingChart, BarChart</span></a></li>
+        <li><a href="components/feedback/feedback.card.html"><span class="name">Feedback</span><span class="sub">Toast (success, danger, running), Tooltip, TooltipBubble</span></a></li>
+        <li><a href="components/forms/forms.card.html"><span class="name">Forms</span><span class="sub">Input, Select, Checkbox, Radio, Switch</span></a></li>
+        <li><a href="components/navigation/navigation.card.html"><span class="name">Navigation</span><span class="sub">ModuleNav (pills + compact dock), Tabs (underline + pill)</span></a></li>
+        <li><a href="components/surfaces/surfaces.card.html"><span class="name">Surfaces</span><span class="sub">Card (notched, accent, raised), Accordion, Dialog</span></a></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Spacing</h2>
+      <ul>
+        <li><a href="guidelines/card-anatomy.html"><span class="name">Notched card anatomy</span><span class="sub">Tab + body share one surface; actions sit in the cut, 8px off the edges; 16px concave fillet; 24px radius &amp; padding.</span></a></li>
+        <li><a href="guidelines/elevation.html"><span class="name">Elevation</span><span class="sub">Tonal first. Shadows only for controls (hairline highlight) and floating layers (pop).</span></a></li>
+        <li><a href="guidelines/motion.html"><span class="name">Motion</span><span class="sub">Calm and precise: short eased transitions, no bounce, no overshoot. Charts grow in 640ms.</span></a></li>
+        <li><a href="guidelines/radii.html"><span class="name">Corner radii</span><span class="sub">Soft-geometric. Cards 24, nested 18, inputs/menus 14, chips &amp; buttons fully round.</span></a></li>
+        <li><a href="guidelines/spacing-scale.html"><span class="name">Spacing scale</span><span class="sub">4px base. 16 between cards, 24 inside cards, 8 between grouped controls.</span></a></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Type</h2>
+      <ul>
+        <li><a href="guidelines/type-body.html"><span class="name">Interface — Inter</span><span class="sub">Inter for all UI copy. 14px is the working size; 16px for reading; 12px for meta.</span></a></li>
+        <li><a href="guidelines/type-display.html"><span class="name">Display — Manrope</span><span class="sub">Two-weight headline: Light lead-in in muted ink, SemiBold payoff in strong ink. Tight tracking.</span></a></li>
+        <li><a href="guidelines/type-headings.html"><span class="name">Heading scale</span><span class="sub">Manrope 600 for page/section titles, 500 for card titles. Sentence case always.</span></a></li>
+        <li><a href="guidelines/type-metrics.html"><span class="name">Metrics</span><span class="sub">Big numbers in Manrope Light, tabular, units at 40% size in muted ink.</span></a></li>
+        <li><a href="guidelines/type-mono.html"><span class="name">Technical — JetBrains Mono</span><span class="sub">IDs, run logs, keyboard shortcuts, timestamps in logs. Never for headings or prose.</span></a></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Webapp</h2>
+      <ul>
+        <li><a href="ui_kits/webapp/index.html"><span class="name">BOSUN webapp</span><span class="sub">Click-through: Início, Tarefas, Automações, Integrações, Documentos (vazio), busca ⌘K, login</span></a></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Website</h2>
+      <ul>
+        <li><a href="ui_kits/website/index.html"><span class="name">BOSUN website</span><span class="sub">Landing page: hero, live product preview, módulos (light panel), pilares, manifesto, FAQ, footer</span></a></li>
+      </ul>
+    </section>
+</main>
+</body>
+</html>

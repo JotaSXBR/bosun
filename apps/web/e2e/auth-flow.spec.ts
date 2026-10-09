@@ -22,7 +22,7 @@ test("sign up → create organization → app shows org and audit entry", async 
   await page.goto("/sign-up");
   await page.getByLabel("Nome").fill("E2E User");
   await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill("Password123!");
+  await page.getByLabel("Senha", { exact: true }).fill("Password123!");
   await page.getByRole("button", { name: "Cadastrar" }).click();
 
   await page.waitForURL("**/onboarding");

@@ -2,10 +2,10 @@
 
 // Shared helper for the message islands: wraps a server action in a
 // transition, toasts failures and refreshes the route on success.
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { toast } from "sonner";
 
 export function useAction() {
   const t = useTranslations("common");

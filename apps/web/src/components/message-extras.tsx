@@ -83,7 +83,7 @@ export function MessageMenu({
           setOpen((v) => !v);
           setConfirming(false);
         }}
-        className="text-muted-foreground hover:text-foreground rounded px-1 text-sm opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+        className="text-ink-muted hover:text-ink rounded-xs px-1 text-sm opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
       >
         ▾
       </button>
@@ -142,19 +142,19 @@ function MessageEditForm({
         value={draft}
         onChange={(e) => onDraftChange(e.target.value)}
         rows={2}
-        className="border-input bg-background w-full rounded-md border px-2 py-1 text-sm"
+        className="border-line bg-page w-full rounded-md border px-2 py-1 text-sm"
         disabled={pending}
       />
       <div className="flex gap-1 text-xs">
         <button
           type="button"
-          className="bg-primary text-primary-foreground rounded px-2 py-1"
+          className="bg-signal text-ink-on-signal rounded-xs px-2 py-1"
           disabled={pending || !draft.trim()}
           onClick={onSave}
         >
           {tc("save")}
         </button>
-        <button type="button" className="rounded border px-2 py-1" onClick={onCancel}>
+        <button type="button" className="rounded-xs border px-2 py-1" onClick={onCancel}>
           {tc("cancel")}
         </button>
       </div>
@@ -191,10 +191,10 @@ function MessageMenuPanel({
   onDeleteCancel: () => void;
   onDeleteConfirm: () => void;
 }) {
-  const item = "hover:bg-muted rounded px-2 py-1 text-left";
+  const item = "hover:bg-raised rounded-xs px-2 py-1 text-left";
   return (
     <span
-      className="bg-popover text-popover-foreground absolute top-full right-0 z-10 flex min-w-36 flex-col gap-0.5 rounded-md border p-1 text-xs shadow-md"
+      className="bg-raised text-ink shadow-raised absolute top-full right-0 z-10 flex min-w-36 flex-col gap-0.5 rounded-md border p-1 text-xs"
       data-testid="message-menu"
     >
       {canReact && (
@@ -203,7 +203,7 @@ function MessageMenuPanel({
             <button
               key={emoji}
               type="button"
-              className="hover:bg-muted rounded p-0.5 text-base"
+              className="hover:bg-raised text-md rounded-xs p-0.5"
               onClick={() => onReact(emoji)}
             >
               {emoji}
@@ -227,7 +227,7 @@ function MessageMenuPanel({
             {t("deleteConfirm")}
             <button
               type="button"
-              className="text-destructive font-medium"
+              className="text-danger font-medium"
               disabled={pending}
               onClick={onDeleteConfirm}
             >
@@ -238,7 +238,7 @@ function MessageMenuPanel({
             </button>
           </span>
         ) : (
-          <button type="button" className={cn(item, "text-destructive")} onClick={onDeleteStart}>
+          <button type="button" className={cn(item, "text-danger")} onClick={onDeleteStart}>
             {t("delete")}
           </button>
         ))}
@@ -331,7 +331,7 @@ export function RevokedActions({ conversationId, messageId }: TargetProps) {
         {original === null ? t("viewOriginal") : t("hide")}
       </button>
       {original !== null && (
-        <span className="mt-1 block rounded border border-dashed p-2 text-xs whitespace-pre-wrap">
+        <span className="mt-1 block rounded-xs border border-dashed p-2 text-xs whitespace-pre-wrap">
           {original}
         </span>
       )}

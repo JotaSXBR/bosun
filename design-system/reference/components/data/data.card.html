@@ -1,0 +1,36 @@
+<!-- @dsCard group="Components" viewport="700x400" name="Data" subtitle="Metric, ProgressBar, RingChart, BarChart" -->
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:24px;margin:0}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:18px}.lbl{font:500 11px/1 var(--font-mono);color:var(--text-subtle);letter-spacing:.04em;width:84px;flex-shrink:0}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const NS = window.BOSUNDesignSystem_c587fa;
+
+const { Metric, ProgressBar, RingChart, BarChart } = NS;
+function App() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: 28 }}>
+      <div className="col" style={{ gap: 24 }}>
+        <Metric value="34" suffix="tarefas" label="concluídas esta semana" delta="18%" />
+        <ProgressBar size="lg" thumb value={64} labels={['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']} />
+        <div className="row" style={{ gap: 20 }}>
+          <RingChart size={120} thickness={16} segments={[{ value: 70, color: 'var(--data-1)' }, { value: 30, color: 'var(--data-2)' }]} />
+          <ProgressBar style={{ flex: 1 }} value={8} max={14} label="Lançamento Q4" valueLabel="8 de 14" size="sm" />
+        </div>
+      </div>
+      <div style={{ background: 'var(--surface-card)', borderRadius: 24, padding: 20 }}>
+        <BarChart height={290} formatValue={(v) => v + ' concluídas'} data={[
+          { label: 'Seg', value: 18, target: 26 }, { label: 'Ter', value: 22, target: 26 }, { label: 'Qua', value: 32, target: 34 },
+          { label: 'Qui', value: 14, target: 28 }, { label: 'Sex', value: 20, target: 24 }, { label: 'Sáb', value: 6, target: 10 },
+        ]} />
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script></body></html>

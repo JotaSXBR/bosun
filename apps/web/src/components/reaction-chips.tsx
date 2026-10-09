@@ -40,9 +40,9 @@ export function ReactionChips({
             run(() => reactToMessageAction({ conversationId, messageId, emoji: mine ? "" : emoji }))
           }
           className={cn(
-            "bg-muted flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
-            mine && "border-primary bg-primary/10",
-            interactive && "hover:border-primary/60",
+            "bg-raised flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
+            mine && "border-line-accent bg-signal/10",
+            interactive && "hover:border-line-accent/60",
           )}
         >
           {emoji}

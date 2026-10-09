@@ -3,31 +3,17 @@
 import type { LabelRow } from "@crm/core/leads";
 import { Badge } from "@crm/ui/components/badge";
 import { Button } from "@crm/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@crm/ui/components/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@crm/ui/components/dialog";
+import { Card } from "@crm/ui/components/card";
+import { Dialog } from "@crm/ui/components/dialog";
 import { Input } from "@crm/ui/components/input";
 import { Label } from "@crm/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@crm/ui/components/select";
+import { Select } from "@crm/ui/components/select";
+import { toast } from "@crm/ui/components/toast";
 import { cn } from "@crm/ui/lib/utils";
-import { SparklesIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import { LabelPicker } from "@/components/label-picker";
 import { formatValueCents, paletteStyle } from "@/components/palette";
@@ -37,6 +23,9 @@ import {
   setConversationLabelsAction,
 } from "@/server/actions/leads";
 import type { ConversationDeal, FunnelWithStages } from "@/server/services";
+
+/** Radix Select rejects "" — empty form state maps to `undefined`. */
+const selectedOrUndefined = (v: string) => v || undefined;
 
 function ConvertToDealDialog({
   conversationId,
@@ -66,80 +55,69 @@ function ConvertToDealDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("panel.convertTitle")}</DialogTitle>
-          <DialogDescription>{t("panel.convertDescription")}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
+    <Dialog
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={t("panel.convertTitle")}
+      description={t("panel.convertDescription")}
+      footer={
+        <Button
+          variant="primary"
+          disabled={!title.trim() || !stageId || pending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await createDealFromConversationAction({
+                conversationId,
+                funnelId,
+                stageId,
+                title: title.trim(),
+              });
+              if (result.ok) {
+                toast.success(t("panel.converted"));
+                onOpenChange(false);
+                router.refresh();
+              } else {
+                toast.error(result.error);
+              }
+            })
+          }
+        >
+          {t("dealForm.createSubmit")}
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="lead-title">{t("panel.dealTitle")}</Label>
+          <Input
+            shape="rounded"
+            id="lead-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={200}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="lead-title">{t("panel.dealTitle")}</Label>
-            <Input
-              id="lead-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              maxLength={200}
+            <Label htmlFor="lead-funnel">{t("funnel")}</Label>
+            <Select
+              options={funnels.map((f) => ({ value: f.funnel.id, label: f.funnel.name }))}
+              value={selectedOrUndefined(funnelId)}
+              onChange={selectFunnel}
+              id="lead-funnel"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="lead-funnel">{t("funnel")}</Label>
-              <Select value={funnelId} onValueChange={selectFunnel}>
-                <SelectTrigger id="lead-funnel">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {funnels.map((f) => (
-                    <SelectItem key={f.funnel.id} value={f.funnel.id}>
-                      {f.funnel.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lead-stage">{t("panel.stage")}</Label>
-              <Select value={stageId} onValueChange={setStageId}>
-                <SelectTrigger id="lead-stage">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(funnel?.stages ?? []).map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-stage">{t("panel.stage")}</Label>
+            <Select
+              options={(funnel?.stages ?? []).map((s) => ({ value: s.id, label: s.name }))}
+              value={selectedOrUndefined(stageId)}
+              onChange={setStageId}
+              id="lead-stage"
+            />
           </div>
         </div>
-        <DialogFooter>
-          <Button
-            disabled={!title.trim() || !stageId || pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await createDealFromConversationAction({
-                  conversationId,
-                  funnelId,
-                  stageId,
-                  title: title.trim(),
-                });
-                if (result.ok) {
-                  toast.success(t("panel.converted"));
-                  onOpenChange(false);
-                  router.refresh();
-                } else {
-                  toast.error(result.error);
-                }
-              })
-            }
-          >
-            {t("dealForm.createSubmit")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+      </div>
     </Dialog>
   );
 }
@@ -187,97 +165,85 @@ export function ConversationLeadPanel({
 
   return (
     <aside className="w-full shrink-0 space-y-4 lg:w-72" data-testid="lead-panel">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("panel.lead")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          {deal ? (
-            <>
-              <div>
-                <p className="font-medium">{deal.title}</p>
-                <p className="text-muted-foreground text-xs">
-                  {deal.funnelName}
-                  {deal.valueCents > 0 && ` · ${formatValueCents(deal.valueCents)}`}
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="deal-stage-select" className="text-xs">
-                  {t("panel.stage")}
-                </Label>
-                <Select
-                  value={deal.stageId}
-                  onValueChange={changeStage}
-                  disabled={!canWrite || pending}
-                >
-                  <SelectTrigger id="deal-stage-select" className="h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(dealFunnel?.stages ?? []).map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Link
-                href={`/app/deals?funnel=${deal.funnelId}`}
-                className="text-muted-foreground text-xs underline"
-              >
-                {t("panel.viewKanban")}
-              </Link>
-            </>
-          ) : canWrite && readyFunnels.length > 0 ? (
-            <>
-              <p className="text-muted-foreground text-xs">{t("panel.notLead")}</p>
-              <Button size="sm" onClick={() => setConvertOpen(true)} className="w-full">
-                <SparklesIcon className="size-3.5" /> {t("panel.convertTitle")}
-              </Button>
-            </>
-          ) : (
-            <p className="text-muted-foreground text-xs">
-              {readyFunnels.length === 0 ? t("panel.noFunnelHint") : t("panel.noDeal")}
-            </p>
-          )}
-        </CardContent>
+      <Card bodyClassName="space-y-3 text-sm" title={t("panel.lead")}>
+        {deal ? (
+          <>
+            <div>
+              <p className="font-medium">{deal.title}</p>
+              <p className="text-ink-muted text-xs">
+                {deal.funnelName}
+                {deal.valueCents > 0 && ` · ${formatValueCents(deal.valueCents)}`}
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="deal-stage-select" className="text-xs">
+                {t("panel.stage")}
+              </Label>
+              <Select
+                options={(dealFunnel?.stages ?? []).map((s) => ({ value: s.id, label: s.name }))}
+                value={deal.stageId}
+                onChange={changeStage}
+                disabled={!canWrite || pending}
+                size="sm"
+                id="deal-stage-select"
+              />
+            </div>
+            <Link
+              href={`/app/deals?funnel=${deal.funnelId}`}
+              className="text-ink-muted text-xs underline"
+            >
+              {t("panel.viewKanban")}
+            </Link>
+          </>
+        ) : canWrite && readyFunnels.length > 0 ? (
+          <>
+            <p className="text-ink-muted text-xs">{t("panel.notLead")}</p>
+            <Button
+              variant="primary"
+              size="sm"
+              iconLeft="sparkles"
+              onClick={() => setConvertOpen(true)}
+              className="w-full"
+            >
+              {t("panel.convertTitle")}
+            </Button>
+          </>
+        ) : (
+          <p className="text-ink-muted text-xs">
+            {readyFunnels.length === 0 ? t("panel.noFunnelHint") : t("panel.noDeal")}
+          </p>
+        )}
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("labels")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex flex-wrap gap-1">
-            {conversationLabels.map((label) => (
-              <Badge
-                key={label.id}
-                variant="secondary"
-                className={cn("text-xs", paletteStyle(label.color).chip)}
-              >
-                {label.name}
-              </Badge>
-            ))}
-            {conversationLabels.length === 0 && (
-              <span className="text-muted-foreground text-xs">{t("panel.noLabelsShort")}</span>
-            )}
-          </div>
-          {canWrite && (
-            <LabelPicker
-              allLabels={allLabels}
-              selectedIds={conversationLabels.map((l) => l.id)}
-              canCreate={canManage}
-              onSave={async (labelIds) => {
-                const result = await setConversationLabelsAction({ conversationId, labelIds });
-                if (result.ok) router.refresh();
-                return result.ok
-                  ? { ok: true }
-                  : { ok: false, error: "error" in result ? result.error : undefined };
-              }}
-            />
+      <Card bodyClassName="space-y-2" title={t("labels")}>
+        <div className="flex flex-wrap gap-1">
+          {conversationLabels.map((label) => (
+            <Badge
+              key={label.id}
+              tone="neutral"
+              className={cn("text-xs", paletteStyle(label.color).chip)}
+            >
+              {label.name}
+            </Badge>
+          ))}
+          {conversationLabels.length === 0 && (
+            <span className="text-ink-muted text-xs">{t("panel.noLabelsShort")}</span>
           )}
-        </CardContent>
+        </div>
+        {canWrite && (
+          <LabelPicker
+            allLabels={allLabels}
+            selectedIds={conversationLabels.map((l) => l.id)}
+            canCreate={canManage}
+            onSave={async (labelIds) => {
+              const result = await setConversationLabelsAction({ conversationId, labelIds });
+              if (result.ok) router.refresh();
+              return result.ok
+                ? { ok: true }
+                : { ok: false, error: "error" in result ? result.error : undefined };
+            }}
+          />
+        )}
       </Card>
 
       <ConvertToDealDialog

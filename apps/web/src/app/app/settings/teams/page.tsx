@@ -1,4 +1,5 @@
 import { hasPermission } from "@crm/permissions";
+import { PageHeader } from "@crm/ui/templates/page-header";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
@@ -19,12 +20,14 @@ export default async function TeamsSettingsPage() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t("teams")}</h1>
-        <Link href="/app/settings" className="text-muted-foreground text-sm underline">
-          {t("back")}
-        </Link>
-      </div>
+      <PageHeader
+        title={t("teams")}
+        right={
+          <Link href="/app/settings" className="text-ink-muted text-sm">
+            {t("back")}
+          </Link>
+        }
+      />
 
       <TeamsManager teams={teams} members={members} canManage={canManage} />
     </main>

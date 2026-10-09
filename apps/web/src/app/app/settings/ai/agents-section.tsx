@@ -3,11 +3,11 @@
 import type { AgentRow } from "@crm/core/agents";
 import { Badge } from "@crm/ui/components/badge";
 import { Button } from "@crm/ui/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import type { AiActionResult } from "@/server/actions/ai";
 import { createAgentAction, deleteAgentAction, updateAgentAction } from "@/server/actions/ai";
@@ -70,14 +70,10 @@ export function AgentsSection({ agents, canManage }: { agents: AgentRow[]; canMa
         : t("statusDraft");
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>{t("description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Card bodyClassName="space-y-3" title={t("title")} subtitle={t("description")}>
+      <>
         {agents.length === 0 ? (
-          <p className="text-muted-foreground text-sm" data-testid="agents-empty">
+          <p className="text-ink-muted text-sm" data-testid="agents-empty">
             {t("empty")}
           </p>
         ) : (
@@ -89,16 +85,14 @@ export function AgentsSection({ agents, canManage }: { agents: AgentRow[]; canMa
               >
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium">{agent.name}</span>
-                  <Badge variant="secondary">{statusLabel(agent.status)}</Badge>
-                  {agent.specialty && (
-                    <span className="text-muted-foreground">{agent.specialty}</span>
-                  )}
+                  <Badge tone="neutral">{statusLabel(agent.status)}</Badge>
+                  {agent.specialty && <span className="text-ink-muted">{agent.specialty}</span>}
                 </div>
                 {canManage && (
                   <div className="flex shrink-0 items-center gap-2">
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="secondary"
                       disabled={pending}
                       onClick={() => openEdit(agent)}
                     >
@@ -106,7 +100,7 @@ export function AgentsSection({ agents, canManage }: { agents: AgentRow[]; canMa
                     </Button>
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="danger"
                       disabled={pending}
                       onClick={() => {
                         if (window.confirm(t("deleteConfirm", { name: agent.name }))) {
@@ -123,11 +117,11 @@ export function AgentsSection({ agents, canManage }: { agents: AgentRow[]; canMa
           </ul>
         )}
         {canManage && (
-          <Button size="sm" variant="outline" onClick={openCreate} disabled={pending}>
+          <Button size="sm" variant="secondary" onClick={openCreate} disabled={pending}>
             {t("new")}
           </Button>
         )}
-      </CardContent>
+      </>
 
       <AgentFormDialog
         open={open}

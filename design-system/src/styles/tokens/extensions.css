@@ -1,0 +1,21 @@
+/* BOSUN — extension tokens: values the export's component specs used as raw px,
+   plus theme-dependent composites re-declared per theme scope so [data-theme]
+   islands recompute them. Documented in DESIGN.md; drift-checked by tokens.test.ts. */
+:root{
+  --text-page-title:40px;
+  --leading-page-title:1;
+  --tracking-title:-0.03em;
+  --text-ui-lg:15px;
+  --text-ui:13px;
+  --leading-ui:1.4;
+  --leading-mono:1.7;
+  --tracking-card:-0.01em;
+  --tracking-wordmark:0.06em;
+  --text-unit:0.4em;
+  --shadow-bubble:0 6px 18px -6px rgba(2,6,12,.5);
+}
+:root,[data-theme="dark"],[data-theme="light"]{
+  --focus-ring:0 0 0 2px var(--bg-page),0 0 0 4px var(--signal-400);
+  --shadow-halo:0 0 0 3px var(--surface-accent-soft);
+  --shadow-halo-danger:0 0 0 3px var(--status-danger-bg);
+}

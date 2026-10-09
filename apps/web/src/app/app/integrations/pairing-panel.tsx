@@ -2,9 +2,9 @@
 
 import { Button } from "@crm/ui/components/button";
 import { Input } from "@crm/ui/components/input";
+import { toast } from "@crm/ui/components/toast";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import {
   connectChannelConnectionAction,
@@ -72,7 +72,7 @@ export function PairingPanel({
   }
 
   return (
-    <div className="bg-muted/40 space-y-4 rounded-md border p-4" data-testid="pairing-panel">
+    <div className="bg-raised/40 space-y-4 rounded-md border p-4" data-testid="pairing-panel">
       <div className="flex flex-col items-start gap-4 sm:flex-row">
         <div className="flex h-48 w-48 shrink-0 items-center justify-center rounded-md bg-white">
           {qr ? (
@@ -83,14 +83,14 @@ export function PairingPanel({
               className="h-44 w-44"
             />
           ) : (
-            <span className="text-muted-foreground px-4 text-center text-xs">
+            <span className="text-ink-muted px-4 text-center text-xs">
               {status === "connecting" ? t("pairing.generatingQr") : t("pairing.qrUnavailable")}
             </span>
           )}
         </div>
         <div className="space-y-1 text-sm">
           <p className="font-medium">{t("pairing.qrTitle")}</p>
-          <p className="text-muted-foreground">{t("pairing.qrHelp")}</p>
+          <p className="text-ink-muted">{t("pairing.qrHelp")}</p>
         </div>
       </div>
 
@@ -98,6 +98,7 @@ export function PairingPanel({
         <p className="text-sm font-medium">{t("pairing.phoneTitle")}</p>
         <div className="flex gap-2">
           <Input
+            shape="rounded"
             value={phone}
             onChange={(event) => setPhone(event.target.value.replace(/\D/g, ""))}
             placeholder="5511999998888"
@@ -106,7 +107,7 @@ export function PairingPanel({
           />
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={pending || !phone}
             onClick={requestCode}
@@ -117,7 +118,7 @@ export function PairingPanel({
         {code && (
           <p className="text-sm">
             {t("pairing.typeCode")}{" "}
-            <span className="font-mono text-lg font-semibold tracking-wider">{code}</span>
+            <span className="tracking-wordmark font-mono text-lg font-semibold">{code}</span>
           </p>
         )}
       </div>

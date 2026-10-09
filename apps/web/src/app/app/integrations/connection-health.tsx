@@ -30,7 +30,7 @@ export function ConnectionHealth({ id, kind }: { id: string; kind: string }) {
   if (!health?.session && !health?.server) return null;
 
   return (
-    <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+    <div className="text-ink-muted flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
       {health.session?.phone && <span>{t("health.number", { phone: health.session.phone })}</span>}
       {health.session?.pushName && (
         <span>{t("health.account", { pushName: health.session.pushName })}</span>

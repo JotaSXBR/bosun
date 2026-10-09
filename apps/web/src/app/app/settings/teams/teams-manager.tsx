@@ -3,19 +3,13 @@
 import type { OrgMember } from "@crm/core/organizations";
 import type { TeamWithMembers } from "@crm/core/teams";
 import { Button } from "@crm/ui/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
 import { Input } from "@crm/ui/components/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@crm/ui/components/select";
+import { Select } from "@crm/ui/components/select";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import type { TeamsActionResult } from "@/server/actions/teams";
 import {
@@ -42,6 +36,7 @@ export function TeamsManager({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
+  // eslint-disable-next-line no-restricted-syntax -- persisted team color default (hex data, not styling)
   const [color, setColor] = useState("#3366ff");
 
   const run: Run = (action, success, onSuccess) =>
@@ -65,69 +60,59 @@ export function TeamsManager({
   return (
     <div className="space-y-4">
       {canManage && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("teamsManager.newTeam")}</CardTitle>
-            <CardDescription>{t("teamsManager.newTeamDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2">
-              <div className="flex-1 space-y-1">
-                <label htmlFor="new-team-name" className="text-sm font-medium">
-                  {t("teamsManager.name")}
-                </label>
-                <Input
-                  id="new-team-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t("teamsManager.namePlaceholder")}
-                  maxLength={100}
-                />
-              </div>
-              <div className="space-y-1">
-                <label htmlFor="new-team-color" className="text-sm font-medium">
-                  {t("teamsManager.color")}
-                </label>
-                <input
-                  id="new-team-color"
-                  type="color"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="border-input block h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1"
-                />
-              </div>
-              <Button disabled={pending || !name.trim()} onClick={submitNew}>
-                {t("teamsManager.create")}
-              </Button>
+        <Card title={t("teamsManager.newTeam")} subtitle={t("teamsManager.newTeamDescription")}>
+          <div className="flex items-end gap-2">
+            <div className="flex-1 space-y-1">
+              <label htmlFor="new-team-name" className="text-sm font-medium">
+                {t("teamsManager.name")}
+              </label>
+              <Input
+                shape="rounded"
+                id="new-team-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t("teamsManager.namePlaceholder")}
+                maxLength={100}
+              />
             </div>
-          </CardContent>
+            <div className="space-y-1">
+              <label htmlFor="new-team-color" className="text-sm font-medium">
+                {t("teamsManager.color")}
+              </label>
+              <input
+                id="new-team-color"
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="border-line block h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1"
+              />
+            </div>
+            <Button variant="primary" disabled={pending || !name.trim()} onClick={submitNew}>
+              {t("teamsManager.create")}
+            </Button>
+          </div>
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("teamsManager.list")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {teams.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t("teamsManager.empty")}</p>
-          ) : (
-            <ul className="space-y-4" data-testid="team-list">
-              {teams.map((team) => (
-                <TeamRow
-                  key={team.id}
-                  team={team}
-                  members={members}
-                  canManage={canManage}
-                  pending={pending}
-                  run={run}
-                  t={t}
-                  tc={tc}
-                />
-              ))}
-            </ul>
-          )}
-        </CardContent>
+      <Card title={t("teamsManager.list")}>
+        {teams.length === 0 ? (
+          <p className="text-ink-muted text-sm">{t("teamsManager.empty")}</p>
+        ) : (
+          <ul className="space-y-4" data-testid="team-list">
+            {teams.map((team) => (
+              <TeamRow
+                key={team.id}
+                team={team}
+                members={members}
+                canManage={canManage}
+                pending={pending}
+                run={run}
+                t={t}
+                tc={tc}
+              />
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );
@@ -154,6 +139,7 @@ function TeamRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(team.name);
+  // eslint-disable-next-line no-restricted-syntax -- persisted team color default (hex data, not styling)
   const [editColor, setEditColor] = useState(team.color ?? "#3366ff");
 
   const saveEdit = () => {
@@ -183,9 +169,10 @@ function TeamRow({
               value={editColor}
               onChange={(e) => setEditColor(e.target.value)}
               aria-label={t("teamsManager.teamColor")}
-              className="border-input block h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1"
+              className="border-line block h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1"
             />
             <Input
+              shape="rounded"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               maxLength={100}
@@ -206,12 +193,17 @@ function TeamRow({
           <div className="flex shrink-0 items-center gap-2">
             {editing ? (
               <>
-                <Button size="sm" disabled={pending || !editName.trim()} onClick={saveEdit}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={pending || !editName.trim()}
+                  onClick={saveEdit}
+                >
                   {tc("save")}
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   disabled={pending}
                   onClick={() => setEditing(false)}
                 >
@@ -221,10 +213,11 @@ function TeamRow({
             ) : (
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 disabled={pending}
                 onClick={() => {
                   setEditName(team.name);
+                  // eslint-disable-next-line no-restricted-syntax -- persisted team color default (hex data, not styling)
                   setEditColor(team.color ?? "#3366ff");
                   setEditing(true);
                 }}
@@ -232,7 +225,7 @@ function TeamRow({
                 {t("teamsManager.edit")}
               </Button>
             )}
-            <Button size="sm" variant="destructive" disabled={pending} onClick={remove}>
+            <Button size="sm" variant="danger" disabled={pending} onClick={remove}>
               {t("teamsManager.delete")}
             </Button>
           </div>
@@ -284,19 +277,19 @@ function TeamMembers({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {team.memberUserIds.length === 0 && (
-        <span className="text-muted-foreground text-sm">{t("teamsManager.noMembers")}</span>
+        <span className="text-ink-muted text-sm">{t("teamsManager.noMembers")}</span>
       )}
       {team.memberUserIds.map((userId) => (
         <span
           key={userId}
-          className="bg-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
+          className="bg-raised inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
         >
           {nameOf(userId)}
           {canManage && (
             <button
               type="button"
               aria-label={t("teamsManager.removeMember", { name: nameOf(userId) })}
-              className="hover:text-destructive"
+              className="hover:text-danger"
               disabled={pending}
               onClick={() => run(removeTeamMemberAction({ teamId: team.id, userId }))}
             >
@@ -307,22 +300,22 @@ function TeamMembers({
       ))}
       {canManage && candidates.length > 0 && (
         <div className="flex items-center gap-1">
-          <Select value={newMember} onValueChange={setNewMember} disabled={pending}>
-            <SelectTrigger
-              className="h-8 w-44"
-              aria-label={t("teamsManager.addMemberTo", { team: team.name })}
-            >
-              <SelectValue placeholder={t("teamsManager.addMemberPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {candidates.map((m) => (
-                <SelectItem key={m.userId} value={m.userId}>
-                  {m.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button size="sm" variant="outline" disabled={pending || !newMember} onClick={addMember}>
+          <Select
+            options={candidates.map((m) => ({ value: m.userId, label: m.name }))}
+            value={newMember || undefined}
+            onChange={setNewMember}
+            placeholder={t("teamsManager.addMemberPlaceholder")}
+            aria-label={t("teamsManager.addMemberTo", { team: team.name })}
+            disabled={pending}
+            size="sm"
+            className="w-44"
+          />
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={pending || !newMember}
+            onClick={addMember}
+          >
             {t("teamsManager.add")}
           </Button>
         </div>

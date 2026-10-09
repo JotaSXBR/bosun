@@ -1,0 +1,34 @@
+/* BOSUN — elevation, focus, motion, blur. Depth is mostly tonal (lighter surface = closer); shadows are quiet. */
+:root{
+  --shadow-none:none;
+  --shadow-control:inset 0 1px 0 rgba(244,247,250,.05),0 1px 2px rgba(2,6,12,.40);
+  --shadow-card:inset 0 1px 0 rgba(244,247,250,.035);
+  --shadow-raised:inset 0 1px 0 rgba(244,247,250,.05),0 8px 24px -12px rgba(2,6,12,.55);
+  --shadow-pop:0 0 0 1px rgba(244,247,250,.07),0 20px 48px -16px rgba(2,6,12,.75);
+  --shadow-glow:0 0 0 4px rgba(45,212,191,.16),0 0 22px rgba(45,212,191,.38);
+  --focus-ring:0 0 0 2px var(--bg-page),0 0 0 4px var(--signal-400);
+
+  --ease-standard:cubic-bezier(.2,.7,.2,1); /* @kind other */
+  --ease-enter:cubic-bezier(0,0,.2,1); /* @kind other */
+  --ease-exit:cubic-bezier(.4,0,1,1); /* @kind other */
+  --dur-instant:80ms; /* @kind other */
+  --dur-fast:140ms; /* @kind other */
+  --dur-base:220ms; /* @kind other */
+  --dur-slow:360ms; /* @kind other */
+  --dur-chart:640ms; /* @kind other */
+
+  --blur-overlay:10px;
+  --blur-glass:18px;
+}
+[data-theme="light"]{
+  --shadow-control:inset 0 1px 0 rgba(255,255,255,.7),0 1px 2px rgba(11,23,38,.08);
+  --shadow-card:0 1px 2px rgba(11,23,38,.04);
+  --shadow-raised:0 8px 24px -12px rgba(11,23,38,.18);
+  --shadow-pop:0 0 0 1px rgba(11,23,38,.06),0 20px 48px -16px rgba(11,23,38,.28);
+}
+[data-theme="dark"]{
+  --shadow-control:inset 0 1px 0 rgba(244,247,250,.05),0 1px 2px rgba(2,6,12,.40);
+  --shadow-card:inset 0 1px 0 rgba(244,247,250,.035);
+  --shadow-raised:inset 0 1px 0 rgba(244,247,250,.05),0 8px 24px -12px rgba(2,6,12,.55);
+  --shadow-pop:0 0 0 1px rgba(244,247,250,.07),0 20px 48px -16px rgba(2,6,12,.75);
+}

@@ -1,3 +1,4 @@
+import { designSystemAdherence } from "@crm/eslint-config/design-system";
 import next from "@crm/eslint-config/next";
 import playwright from "@crm/eslint-config/playwright";
 import { plugin as shadcn } from "@shadcn/lint";
@@ -44,6 +45,7 @@ const config = [
       "shadcn/no-unknown-classes": "error",
     },
   },
+  designSystemAdherence({ files: ["src/**/*.tsx"] }),
 ];
 
 export default config;

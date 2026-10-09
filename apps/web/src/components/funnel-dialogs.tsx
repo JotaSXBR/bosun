@@ -4,28 +4,15 @@ import type { PaletteColor, StageRow } from "@crm/core/leads";
 import { COLOR_PALETTE } from "@crm/core/leads/schemas";
 import { FUNNEL_TEMPLATES } from "@crm/core/leads/templates";
 import { Button } from "@crm/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@crm/ui/components/dialog";
+import { Dialog } from "@crm/ui/components/dialog";
 import { Input } from "@crm/ui/components/input";
 import { Label } from "@crm/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@crm/ui/components/select";
+import { Select } from "@crm/ui/components/select";
+import { toast } from "@crm/ui/components/toast";
 import { cn } from "@crm/ui/lib/utils";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import { paletteStyle } from "@/components/palette";
 import {
@@ -55,7 +42,7 @@ function ColorField({
           className={cn(
             "size-6 rounded-full ring-offset-2",
             paletteStyle(color).dot,
-            value === color && "ring-foreground ring-2",
+            value === color && "ring-ink ring-2",
           )}
         />
       ))}
@@ -93,45 +80,43 @@ export function NewFunnelDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("funnelForm.newTitle")}</DialogTitle>
-          <DialogDescription>{t("funnelForm.newDescription")}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="funnel-name">{t("funnelForm.name")}</Label>
-            <Input
-              id="funnel-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("funnelForm.namePlaceholder")}
-              maxLength={100}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="funnel-template">{t("funnelForm.template")}</Label>
-            <Select value={templateRef} onValueChange={setTemplateRef}>
-              <SelectTrigger id="funnel-template">
-                <SelectValue placeholder={t("funnelForm.templateEmpty")} />
-              </SelectTrigger>
-              <SelectContent>
-                {FUNNEL_TEMPLATES.map((tpl) => (
-                  <SelectItem key={tpl.ref} value={tpl.ref}>
-                    {tpl.label} — {t("funnelForm.templateStages", { count: tpl.stages.length })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <Dialog
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={t("funnelForm.newTitle")}
+      description={t("funnelForm.newDescription")}
+      footer={
+        <Button variant="primary" onClick={submit} disabled={!name.trim() || pending}>
+          {t("createFunnel")}
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="funnel-name">{t("funnelForm.name")}</Label>
+          <Input
+            shape="rounded"
+            id="funnel-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("funnelForm.namePlaceholder")}
+            maxLength={100}
+          />
         </div>
-        <DialogFooter>
-          <Button onClick={submit} disabled={!name.trim() || pending}>
-            {t("createFunnel")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+        <div className="space-y-1.5">
+          <Label htmlFor="funnel-template">{t("funnelForm.template")}</Label>
+          <Select
+            options={FUNNEL_TEMPLATES.map((tpl) => ({
+              value: tpl.ref,
+              label: `${tpl.label} — ${t("funnelForm.templateStages", { count: tpl.stages.length })}`,
+            }))}
+            value={templateRef || undefined}
+            onChange={setTemplateRef}
+            placeholder={t("funnelForm.templateEmpty")}
+            id="funnel-template"
+          />
+        </div>
+      </div>
     </Dialog>
   );
 }
@@ -170,34 +155,32 @@ export function StageDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {editing ? t("funnelForm.stageEditTitle") : t("funnelForm.stageNewTitle")}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="stage-name">{t("funnelForm.name")}</Label>
-            <Input
-              id="stage-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={60}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t("funnelForm.color")}</Label>
-            <ColorField value={color} onChange={setColor} />
-          </div>
+    <Dialog
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={editing ? t("funnelForm.stageEditTitle") : t("funnelForm.stageNewTitle")}
+      footer={
+        <Button variant="primary" onClick={submit} disabled={!name.trim() || pending}>
+          {editing ? tc("save") : t("funnelForm.addStage")}
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="stage-name">{t("funnelForm.name")}</Label>
+          <Input
+            shape="rounded"
+            id="stage-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={60}
+          />
         </div>
-        <DialogFooter>
-          <Button onClick={submit} disabled={!name.trim() || pending}>
-            {editing ? tc("save") : t("funnelForm.addStage")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+        <div className="space-y-1.5">
+          <Label>{t("funnelForm.color")}</Label>
+          <ColorField value={color} onChange={setColor} />
+        </div>
+      </div>
     </Dialog>
   );
 }
@@ -218,36 +201,32 @@ export function DeleteFunnelDialog({
   const [pending, startTransition] = useTransition();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("deleteFunnel")}</DialogTitle>
-          <DialogDescription>
-            {t("funnelForm.deleteFunnelConfirm", { name: funnelName })}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await deleteFunnelAction(funnelId);
-                if (result.ok) {
-                  toast.success(t("funnelForm.funnelDeleted"));
-                  onOpenChange(false);
-                  router.push("/app/deals");
-                } else {
-                  toast.error(result.error);
-                }
-              })
-            }
-          >
-            {t("deleteFunnel")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Dialog
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={t("deleteFunnel")}
+      description={t("funnelForm.deleteFunnelConfirm", { name: funnelName })}
+      footer={
+        <Button
+          variant="danger"
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await deleteFunnelAction(funnelId);
+              if (result.ok) {
+                toast.success(t("funnelForm.funnelDeleted"));
+                onOpenChange(false);
+                router.push("/app/deals");
+              } else {
+                toast.error(result.error);
+              }
+            })
+          }
+        >
+          {t("deleteFunnel")}
+        </Button>
+      }
+    ></Dialog>
   );
 }
 
@@ -265,34 +244,30 @@ export function DeleteStageDialog({
   const [pending, startTransition] = useTransition();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("deleteStage")}</DialogTitle>
-          <DialogDescription>
-            {t("funnelForm.deleteStageConfirm", { name: stage.name })}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await deleteStageAction(stage.id);
-                if (result.ok) {
-                  onOpenChange(false);
-                  router.refresh();
-                } else {
-                  toast.error(result.error);
-                }
-              })
-            }
-          >
-            {t("deleteStage")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Dialog
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={t("deleteStage")}
+      description={t("funnelForm.deleteStageConfirm", { name: stage.name })}
+      footer={
+        <Button
+          variant="danger"
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await deleteStageAction(stage.id);
+              if (result.ok) {
+                onOpenChange(false);
+                router.refresh();
+              } else {
+                toast.error(result.error);
+              }
+            })
+          }
+        >
+          {t("deleteStage")}
+        </Button>
+      }
+    ></Dialog>
   );
 }

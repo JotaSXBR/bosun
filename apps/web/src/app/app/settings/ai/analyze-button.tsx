@@ -1,10 +1,10 @@
 "use client";
 
 import { Button } from "@crm/ui/components/button";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { toast } from "sonner";
 
 import { analyzeNowAction } from "@/server/actions/ai";
 
@@ -18,7 +18,7 @@ export function AnalyzeButton({ canManage }: { canManage: boolean }) {
 
   return (
     <Button
-      variant="outline"
+      variant="secondary"
       size="sm"
       disabled={pending}
       onClick={() =>

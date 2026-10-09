@@ -1,6 +1,7 @@
 "use client";
 
 import type { BoardData, DealCardRow, FunnelRow, LabelRow, StageRow } from "@crm/core/leads";
+import { toast } from "@crm/ui/components/toast";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import {
   closestCorners,
@@ -12,7 +13,6 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { DealCardView } from "@/components/deal-card";
 import { KanbanStageColumn } from "@/components/kanban-column";

@@ -11,11 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@crm/ui/components/dropdown-menu";
 import { Input } from "@crm/ui/components/input";
+import { toast } from "@crm/ui/components/toast";
 import { cn } from "@crm/ui/lib/utils";
-import { CheckIcon, PlusIcon, TagIcon } from "lucide-react";
+import { CheckIcon, TagIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import { paletteStyle } from "@/components/palette";
 import { createLabelAction } from "@/server/actions/leads";
@@ -80,7 +80,7 @@ export function LabelPicker({
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" disabled={pending}>
+        <Button type="button" variant="secondary" size="sm" disabled={pending}>
           <TagIcon className="size-3.5" />
           {triggerLabel ?? t("labels")}
         </Button>
@@ -101,13 +101,14 @@ export function LabelPicker({
           );
         })}
         {allLabels.length === 0 && !canCreate && (
-          <p className="text-muted-foreground px-2 py-1.5 text-xs">{t("noLabels")}</p>
+          <p className="text-ink-muted px-2 py-1.5 text-xs">{t("noLabels")}</p>
         )}
         {canCreate && (
           <>
             <DropdownMenuSeparator />
             <div className="space-y-2 p-2" onKeyDown={(e) => e.stopPropagation()}>
               <Input
+                shape="rounded"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder={t("newLabelPlaceholder")}
@@ -134,11 +135,12 @@ export function LabelPicker({
                 type="button"
                 size="sm"
                 variant="secondary"
+                iconLeft="plus"
                 className="w-full"
                 disabled={!newName.trim() || pending}
                 onClick={createLabel}
               >
-                <PlusIcon className="size-3.5" /> {t("createLabel")}
+                {t("createLabel")}
               </Button>
             </div>
           </>

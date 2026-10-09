@@ -1,9 +1,10 @@
 "use client";
 
+import { Button } from "@crm/ui/components/button";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { subscribeToDomainEvents } from "@/lib/sse";
 
@@ -29,7 +30,11 @@ export function InboxLive() {
       if (event.type === "contact.presence") return;
       if (event.type === "agent_suggestion.created") {
         toast.info(tAi("newSuggestion"), {
-          action: { label: tAi("title"), onClick: () => router.push("/app/settings/ai") },
+          action: (
+            <Button variant="secondary" size="sm" onClick={() => router.push("/app/settings/ai")}>
+              {tAi("title")}
+            </Button>
+          ),
         });
       }
       setHasNew(true);
@@ -43,7 +48,7 @@ export function InboxLive() {
   if (!hasNew) return null;
   return (
     <div
-      className="bg-success text-success-foreground fixed right-4 bottom-4 z-50 flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium shadow-lg"
+      className="bg-success text-ink-inverse shadow-pop fixed right-4 bottom-4 z-50 flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium"
       data-testid="inbox-live-indicator"
     >
       <span className="size-2 animate-pulse rounded-full bg-white" />

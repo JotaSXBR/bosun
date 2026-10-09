@@ -1,3 +1,4 @@
+import { PageHeader } from "@crm/ui/templates/page-header";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
@@ -21,10 +22,8 @@ export default async function SetupPage() {
 
   return (
     <main className="mx-auto max-w-xl space-y-6 p-8">
-      <div>
-        <h1 className="text-2xl font-semibold">{t("pageTitle")}</h1>
-        <p className="text-muted-foreground mt-2 text-sm">{t("pageDescription")}</p>
-      </div>
+      <PageHeader title={t("pageTitle")} />
+      <p className="text-ink-muted -mt-4 mb-6 text-sm">{t("pageDescription")}</p>
       <SetupForm />
     </main>
   );

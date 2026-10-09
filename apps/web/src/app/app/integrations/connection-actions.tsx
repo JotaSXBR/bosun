@@ -1,9 +1,9 @@
 "use client";
 
 import { Button } from "@crm/ui/components/button";
+import { toast } from "@crm/ui/components/toast";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import {
   connectChannelConnectionAction,
@@ -71,7 +71,7 @@ export function ConnectionActions({
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {kind !== "site_chat" && (
-          <Button type="button" size="sm" disabled={pending} onClick={connect}>
+          <Button variant="primary" type="button" size="sm" disabled={pending} onClick={connect}>
             {status === "connected" ? t("actions.reconnect") : t("actions.connect")}
           </Button>
         )}
@@ -79,7 +79,7 @@ export function ConnectionActions({
           <>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={pending}
               onClick={() => lifecycle("restart", t("actions.sessionRestarted"))}
@@ -88,7 +88,7 @@ export function ConnectionActions({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={pending}
               onClick={() => lifecycle("stop", t("actions.sessionStopped"))}
@@ -97,7 +97,7 @@ export function ConnectionActions({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={pending}
               onClick={() => lifecycle("logout", t("actions.deviceUnpaired"))}
@@ -110,7 +110,7 @@ export function ConnectionActions({
           <>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={pending}
               onClick={() => lifecycle("restart", t("actions.sessionRestartedQr"))}
@@ -119,7 +119,7 @@ export function ConnectionActions({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={pending}
               onClick={() => lifecycle("logout", t("actions.deviceUnpaired"))}
@@ -128,7 +128,7 @@ export function ConnectionActions({
             </Button>
           </>
         )}
-        <Button type="button" variant="destructive" size="sm" disabled={pending} onClick={remove}>
+        <Button type="button" variant="danger" size="sm" disabled={pending} onClick={remove}>
           {t("actions.delete")}
         </Button>
       </div>

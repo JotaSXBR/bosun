@@ -1,0 +1,368 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* BOSUN tokens — canonical values live in ./tokens (plain CSS, also consumed by
+   design-system/reference). DESIGN.md at the repo root is the contract.
+   fonts.css is NOT imported here: the app loads the same families through
+   next/font (apps/web/src/app/layout.tsx). */
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "./tokens/effects.css";
+@import "./tokens/extensions.css";
+@import "./tokens/patterns.css" layer(components);
+@import "./tokens/base.css" layer(base);
+
+/* Monorepo: auto content detection only covers the app dir — the ui
+   package's own sources must be registered or classes used exclusively
+   inside components/* generate no CSS (silent dead styles). */
+@source "../";
+
+/* Theme scopes — dark is :root; [data-theme] islands switch locally. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *):not(:where([data-theme=light], [data-theme=light] *)));
+@custom-variant light (&:where([data-theme=light], [data-theme=light] *));
+
+/* Interaction states also match [data-preview~=…] so the showcase can render
+   hover/active/focus statically. */
+@custom-variant hover (&:hover, &[data-preview~="hover"]);
+@custom-variant active (&:active, &[data-preview~="active"]);
+@custom-variant focus-visible (&:focus-visible, &[data-preview~="focus"]);
+@custom-variant focus-within (&:focus-within, &[data-preview~="focus"]);
+
+@theme inline {
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --tracking-*: initial;
+
+  /* Surfaces */
+  --color-page: var(--bg-page);
+  --color-sunken: var(--bg-sunken);
+  --color-surface: var(--surface-card);
+  --color-raised: var(--surface-raised);
+  --color-raised-2: var(--surface-raised-2);
+  --color-control: var(--surface-control);
+  --color-control-hover: var(--surface-control-hover);
+  --color-control-active: var(--surface-control-active);
+  --color-inverse: var(--surface-inverse);
+  --color-signal: var(--surface-accent);
+  --color-signal-hover: var(--surface-accent-hover);
+  --color-signal-soft: var(--surface-accent-soft);
+  --color-overlay: var(--surface-overlay);
+  /* Ink (text) */
+  --color-ink-strong: var(--text-strong);
+  --color-ink: var(--text-body);
+  --color-ink-muted: var(--text-muted);
+  --color-ink-subtle: var(--text-subtle);
+  --color-ink-accent: var(--text-accent);
+  --color-ink-on-signal: var(--text-on-accent);
+  --color-ink-on-signal-muted: var(--text-on-accent-muted);
+  --color-ink-inverse: var(--text-inverse);
+  --color-ink-disabled: var(--text-disabled);
+  /* Lines */
+  --color-line-subtle: var(--border-subtle);
+  --color-line: var(--border-default);
+  --color-line-strong: var(--border-strong);
+  --color-line-accent: var(--border-accent);
+  /* Icons */
+  --color-icon: var(--icon-default);
+  --color-icon-strong: var(--icon-strong);
+  --color-icon-muted: var(--icon-muted);
+  /* Status */
+  --color-success: var(--status-success);
+  --color-success-soft: var(--status-success-bg);
+  --color-warning: var(--status-warning);
+  --color-warning-soft: var(--status-warning-bg);
+  --color-danger: var(--status-danger);
+  --color-danger-soft: var(--status-danger-bg);
+  --color-info: var(--status-info);
+  --color-info-soft: var(--status-info-bg);
+  --color-running: var(--status-running);
+  --color-running-soft: var(--status-running-bg);
+  /* Data viz */
+  --color-data-1: var(--data-1);
+  --color-data-2: var(--data-2);
+  --color-data-3: var(--data-3);
+  --color-data-4: var(--data-4);
+  --color-data-5: var(--data-5);
+  --color-data-track: var(--data-track);
+  /* Brand scales — prefer the semantic keys above. */
+  --color-abyss-1000: var(--abyss-1000);
+  --color-abyss-950: var(--abyss-950);
+  --color-abyss-900: var(--abyss-900);
+  --color-abyss-850: var(--abyss-850);
+  --color-abyss-800: var(--abyss-800);
+  --color-abyss-750: var(--abyss-750);
+  --color-ocean-700: var(--ocean-700);
+  --color-ocean-600: var(--ocean-600);
+  --color-ocean-500: var(--ocean-500);
+  --color-ocean-400: var(--ocean-400);
+  --color-ocean-300: var(--ocean-300);
+  --color-ocean-200: var(--ocean-200);
+  --color-ocean-100: var(--ocean-100);
+  --color-signal-50: var(--signal-50);
+  --color-signal-100: var(--signal-100);
+  --color-signal-200: var(--signal-200);
+  --color-signal-300: var(--signal-300);
+  --color-signal-400: var(--signal-400);
+  --color-signal-500: var(--signal-500);
+  --color-signal-600: var(--signal-600);
+  --color-signal-700: var(--signal-700);
+  --color-signal-800: var(--signal-800);
+  --color-signal-900: var(--signal-900);
+  --color-steel-100: var(--steel-100);
+  --color-steel-200: var(--steel-200);
+  --color-steel-300: var(--steel-300);
+  --color-steel-400: var(--steel-400);
+  --color-steel-500: var(--steel-500);
+  --color-steel-600: var(--steel-600);
+  --color-steel-700: var(--steel-700);
+  --color-mist: var(--mist);
+  --color-white: var(--white);
+
+  /* Type */
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --text-display-xl: var(--text-display-xl);
+  --text-display-xl--line-height: var(--leading-display-xl);
+  --text-display-xl--letter-spacing: var(--tracking-display);
+  --text-display: var(--text-display);
+  --text-display--line-height: var(--leading-display);
+  --text-display--letter-spacing: var(--tracking-display);
+  --text-h1: var(--text-h1);
+  --text-h1--line-height: var(--leading-h1);
+  --text-h1--letter-spacing: var(--tracking-heading);
+  --text-h2: var(--text-h2);
+  --text-h2--line-height: var(--leading-h2);
+  --text-h2--letter-spacing: var(--tracking-heading);
+  --text-h3: var(--text-h3);
+  --text-h3--line-height: var(--leading-h3);
+  --text-h3--letter-spacing: var(--tracking-heading);
+  --text-h4: var(--text-h4);
+  --text-h4--line-height: var(--leading-h4);
+  --text-h4--letter-spacing: var(--tracking-heading);
+  --text-page-title: var(--text-page-title);
+  --text-page-title--line-height: var(--leading-page-title);
+  --text-page-title--letter-spacing: var(--tracking-title);
+  --text-ui-lg: var(--text-ui-lg);
+  --text-ui-lg--line-height: 1;
+  --text-ui: var(--text-ui);
+  --text-ui--line-height: var(--leading-ui);
+  --text-lg: var(--text-lg);
+  --text-lg--line-height: var(--leading-lg);
+  --text-md: var(--text-md);
+  --text-md--line-height: var(--leading-md);
+  --text-sm: var(--text-sm);
+  --text-sm--line-height: var(--leading-sm);
+  --text-xs: var(--text-xs);
+  --text-xs--line-height: var(--leading-xs);
+  --text-2xs: var(--text-2xs);
+  --text-2xs--line-height: var(--leading-2xs);
+  --text-metric-xl: var(--text-metric-xl);
+  --text-metric-xl--line-height: 1;
+  --text-metric-xl--letter-spacing: var(--tracking-display);
+  --text-metric: var(--text-metric);
+  --text-metric--line-height: 1;
+  --text-metric--letter-spacing: var(--tracking-display);
+  --text-metric-sm: var(--text-metric-sm);
+  --text-metric-sm--line-height: 1;
+  --text-metric-sm--letter-spacing: var(--tracking-display);
+  --text-unit: var(--text-unit);
+  --tracking-display: var(--tracking-display);
+  --tracking-heading: var(--tracking-heading);
+  --tracking-card: var(--tracking-card);
+  --tracking-wordmark: var(--tracking-wordmark);
+  --tracking-title: var(--tracking-title);
+  --tracking-body: var(--tracking-body);
+  --tracking-ui: var(--tracking-ui);
+  --tracking-eyebrow: var(--tracking-eyebrow);
+  --tracking-mono: var(--tracking-mono);
+  --leading-mono: var(--leading-mono);
+
+  /* Shape */
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-pill: var(--radius-pill);
+  --radius-card: var(--radius-card);
+  --radius-card-inner: var(--radius-card-inner);
+  --radius-notch: var(--radius-notch);
+
+  /* Layout — the Tailwind 4px spacing scale already equals --space-*. */
+  --spacing-control-xs: var(--control-xs);
+  --spacing-control-sm: var(--control-sm);
+  --spacing-control-md: var(--control-md);
+  --spacing-control-lg: var(--control-lg);
+  --spacing-icon-btn: var(--icon-btn);
+  --spacing-icon-sm: var(--icon-sm);
+  --spacing-icon-md: var(--icon-md);
+  --spacing-icon-lg: var(--icon-lg);
+  --spacing-nav: var(--nav-height);
+  --spacing-gutter: var(--gutter);
+  --spacing-card-gap: var(--card-gap);
+  --spacing-card-pad: var(--card-pad);
+  --container-page: var(--container-max);
+  --container-text: var(--container-text);
+
+  /* Effects */
+  --shadow-control: var(--shadow-control);
+  --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-pop: var(--shadow-pop);
+  --shadow-glow: var(--shadow-glow);
+  --shadow-focus: var(--focus-ring);
+  --shadow-halo: var(--shadow-halo);
+  --shadow-halo-danger: var(--shadow-halo-danger);
+  --shadow-bubble: var(--shadow-bubble);
+  --ease-standard: var(--ease-standard);
+  --ease-enter: var(--ease-enter);
+  --ease-exit: var(--ease-exit);
+  --blur-overlay: var(--blur-overlay);
+  --blur-glass: var(--blur-glass);
+}
+
+@utility duration-instant {
+  transition-duration: var(--dur-instant);
+}
+@utility duration-fast {
+  transition-duration: var(--dur-fast);
+}
+@utility duration-base {
+  transition-duration: var(--dur-base);
+}
+@utility duration-slow {
+  transition-duration: var(--dur-slow);
+}
+@utility duration-chart {
+  transition-duration: var(--dur-chart);
+}
+
+/* DS motion — keyframes + matching animate-* utilities. */
+@theme {
+  --animate-loader: bx-spin 900ms linear infinite;
+  --animate-pulse-dot: bx-pulse 1.6s var(--ease-standard) infinite;
+  --animate-fade: bx-fade var(--dur-base) var(--ease-enter);
+  --animate-rise: bx-rise var(--dur-slow) var(--ease-standard);
+
+  @keyframes bx-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes bx-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @keyframes bx-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes bx-rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.985);
+    }
+  }
+}
+
+/* DS-only geometry that doesn't fit a utility — the notched card's concave
+   fillet (joins the tab to the body). Uses --card-notch-fillet (px) and
+   --card-bg (the card's surface color) set by the Card component. */
+@utility card-fillet {
+  position: absolute;
+  right: calc(var(--card-notch-fillet) * -1);
+  bottom: 0;
+  width: var(--card-notch-fillet);
+  height: var(--card-notch-fillet);
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 100% 0,
+    transparent calc(var(--card-notch-fillet) - 0.5px),
+    var(--card-bg) var(--card-notch-fillet)
+  );
+}
+
+/* Notched card — tone sets CSS vars on .bx-card; every surface part
+   (.bx-card-part, incl. the tab and the body) paints from them so the notch,
+   fillet and hover step stay in sync without JS. */
+@layer components {
+  .bx-card {
+    --card-bg: var(--surface-card);
+    --card-fg: var(--text-body);
+    --card-title-ink: var(--text-strong);
+    --card-meta: var(--text-muted);
+    --card-shadow: var(--shadow-card);
+    --card-notch-fillet: var(--radius-notch);
+    color: var(--card-fg);
+  }
+  .bx-card[data-tone="raised"] {
+    --card-bg: var(--surface-raised);
+    --card-bg-hover: var(--surface-raised-2);
+  }
+  .bx-card[data-tone="accent"] {
+    --card-bg: var(--surface-accent);
+    --card-fg: var(--text-on-accent);
+    --card-title-ink: var(--text-on-accent);
+    --card-meta: var(--text-on-accent-muted);
+    --card-shadow: none;
+    --card-bg-hover: var(--surface-accent-hover);
+    --pattern-ink: var(--pattern-ink-on-accent);
+  }
+  .bx-card[data-tone="sunken"] {
+    --card-bg: var(--bg-sunken);
+    --card-bg-hover: var(--surface-card);
+  }
+  .bx-card[data-tone="default"] {
+    --card-bg-hover: var(--surface-raised);
+  }
+  .bx-card[data-interactive] {
+    cursor: pointer;
+  }
+  .bx-card[data-interactive]:hover {
+    --card-bg: var(--card-bg-hover);
+  }
+  .bx-card-part {
+    background: var(--card-bg);
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+  /* Shadow only where a continuous silhouette exists: the whole plain card or
+     the notched tab — never the body under the notch (per Card.jsx). */
+  .bx-card-shadow {
+    box-shadow: var(--card-shadow);
+  }
+  .bx-card-title {
+    color: var(--card-title-ink);
+  }
+  .bx-card-meta {
+    color: var(--card-meta);
+  }
+}
+
+@layer base {
+  :root,
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+  [data-theme="light"] {
+    color-scheme: light;
+  }
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border-default);
+  }
+  /* lucide-react icons follow the DS stroke until they migrate to <Icon>. */
+  svg.lucide {
+    stroke-width: var(--stroke-icon);
+  }
+}

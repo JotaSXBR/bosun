@@ -2,23 +2,10 @@
 
 import type { AgentRow } from "@crm/core/agents";
 import { Button } from "@crm/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@crm/ui/components/dialog";
+import { Dialog } from "@crm/ui/components/dialog";
 import { Input } from "@crm/ui/components/input";
 import { Label } from "@crm/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@crm/ui/components/select";
+import { Select } from "@crm/ui/components/select";
 import { Textarea } from "@crm/ui/components/textarea";
 import { useTranslations } from "next-intl";
 
@@ -116,22 +103,24 @@ export function AgentFormDialog({
   const tc = useTranslations("common");
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{editing ? t("edit") : t("new")}</DialogTitle>
-          <DialogDescription>{t("description")}</DialogDescription>
-        </DialogHeader>
-        <AgentFormFields form={form} setForm={setForm} pending={pending} />
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
+    <Dialog
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={editing ? t("edit") : t("new")}
+      description={t("description")}
+      width={672}
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={pending}>
             {tc("cancel")}
           </Button>
-          <Button onClick={onSubmit} disabled={pending || !form.name.trim()}>
+          <Button variant="primary" onClick={onSubmit} disabled={pending || !form.name.trim()}>
             {editing ? tc("save") : t("create")}
           </Button>
-        </DialogFooter>
-      </DialogContent>
+        </>
+      }
+    >
+      <AgentFormFields form={form} setForm={setForm} pending={pending} />
     </Dialog>
   );
 }
@@ -152,6 +141,7 @@ function AgentFormFields({
         <div className="space-y-1">
           <Label htmlFor="agent-name">{t("name")}</Label>
           <Input
+            shape="rounded"
             id="agent-name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -162,6 +152,7 @@ function AgentFormFields({
         <div className="space-y-1">
           <Label htmlFor="agent-specialty">{t("specialty")}</Label>
           <Input
+            shape="rounded"
             id="agent-specialty"
             value={form.specialty}
             onChange={(e) => setForm({ ...form, specialty: e.target.value })}
@@ -172,44 +163,37 @@ function AgentFormFields({
         <div className="space-y-1">
           <Label>{t("status")}</Label>
           <Select
+            options={[
+              { value: "draft", label: t("statusDraft") },
+              { value: "active", label: t("statusActive") },
+              { value: "paused", label: t("statusPaused") },
+            ]}
             value={form.status}
-            onValueChange={(v) => setForm({ ...form, status: v as AgentForm["status"] })}
+            onChange={(v) => setForm({ ...form, status: v as AgentForm["status"] })}
             disabled={pending}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">{t("statusDraft")}</SelectItem>
-              <SelectItem value="active">{t("statusActive")}</SelectItem>
-              <SelectItem value="paused">{t("statusPaused")}</SelectItem>
-            </SelectContent>
-          </Select>
+          />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
             <Label>{t("provider")}</Label>
             <Select
+              options={[
+                { value: "none", label: "—" },
+                { value: "openrouter", label: "OpenRouter" },
+                { value: "openai", label: "OpenAI" },
+                { value: "anthropic", label: "Anthropic" },
+              ]}
               value={form.provider || "none"}
-              onValueChange={(v) =>
+              onChange={(v) =>
                 setForm({ ...form, provider: v === "none" ? "" : (v as AgentForm["provider"]) })
               }
               disabled={pending}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">—</SelectItem>
-                <SelectItem value="openrouter">OpenRouter</SelectItem>
-                <SelectItem value="openai">OpenAI</SelectItem>
-                <SelectItem value="anthropic">Anthropic</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="agent-model">{t("modelId")}</Label>
             <Input
+              shape="rounded"
               id="agent-model"
               value={form.modelId}
               onChange={(e) => setForm({ ...form, modelId: e.target.value })}
@@ -261,6 +245,7 @@ function AgentLimitFields({
       <div className="space-y-1">
         <Label htmlFor="agent-tools">{t("toolsAllowlist")}</Label>
         <Input
+          shape="rounded"
           id="agent-tools"
           value={form.toolsAllowlist}
           onChange={(e) => setForm({ ...form, toolsAllowlist: e.target.value })}
@@ -270,6 +255,7 @@ function AgentLimitFields({
       <div className="space-y-1">
         <Label htmlFor="agent-signature">{t("signatureLine")}</Label>
         <Input
+          shape="rounded"
           id="agent-signature"
           value={form.signatureLine}
           onChange={(e) => setForm({ ...form, signatureLine: e.target.value })}
@@ -280,6 +266,7 @@ function AgentLimitFields({
       <div className="space-y-1">
         <Label htmlFor="agent-memory">{t("memoryTokenCap")}</Label>
         <Input
+          shape="rounded"
           id="agent-memory"
           type="number"
           min={256}
@@ -292,6 +279,7 @@ function AgentLimitFields({
       <div className="space-y-1">
         <Label htmlFor="agent-maxtools">{t("toolExecutionLimit")}</Label>
         <Input
+          shape="rounded"
           id="agent-maxtools"
           type="number"
           min={1}

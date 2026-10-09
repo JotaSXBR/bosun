@@ -2,10 +2,10 @@
 
 import { Button } from "@crm/ui/components/button";
 import { Input } from "@crm/ui/components/input";
+import { toast } from "@crm/ui/components/toast";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import { updateWidgetConfigAction } from "@/server/actions/integrations";
 
@@ -54,10 +54,10 @@ export function WidgetPanel({
   return (
     <div className="space-y-3" data-testid="widget-panel">
       <div className="flex items-center gap-2">
-        <code className="bg-muted flex-1 truncate rounded px-2 py-1 text-xs">{snippet}</code>
+        <code className="bg-raised flex-1 truncate rounded-xs px-2 py-1 text-xs">{snippet}</code>
         <CopyButton value={snippet} />
       </div>
-      <div className="text-muted-foreground flex items-center gap-3 text-xs">
+      <div className="text-ink-muted flex items-center gap-3 text-xs">
         <Link href={`/widget-demo?token=${webhookToken}`} className="underline" target="_blank">
           {t("widget.demoLink")}
         </Link>
@@ -65,8 +65,9 @@ export function WidgetPanel({
       {canManage && (
         <div className="grid gap-3 sm:grid-cols-5 sm:items-end">
           <label className="space-y-1 text-sm sm:col-span-2">
-            <span className="text-muted-foreground text-xs">{t("widget.welcome")}</span>
+            <span className="text-ink-muted text-xs">{t("widget.welcome")}</span>
             <Input
+              shape="rounded"
               value={welcomeText}
               onChange={(e) => setWelcomeText(e.target.value)}
               placeholder={t("widget.welcomePlaceholder")}
@@ -74,18 +75,20 @@ export function WidgetPanel({
             />
           </label>
           <label className="space-y-1 text-sm">
-            <span className="text-muted-foreground text-xs">{t("widget.accentColor")}</span>
+            <span className="text-ink-muted text-xs">{t("widget.accentColor")}</span>
             <Input
+              shape="rounded"
               value={accentColor}
               onChange={(e) => setAccentColor(e.target.value)}
+              // eslint-disable-next-line no-restricted-syntax -- hex-format placeholder for the persisted widget accent color
               placeholder="#ff6600"
               maxLength={32}
             />
           </label>
           <label className="space-y-1 text-sm">
-            <span className="text-muted-foreground text-xs">{t("widget.position")}</span>
+            <span className="text-ink-muted text-xs">{t("widget.position")}</span>
             <select
-              className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
+              className="border-line shadow-control h-9 w-full rounded-md border bg-transparent px-3 text-sm"
               value={position}
               onChange={(e) => setPosition(e.target.value as "left" | "right")}
             >
@@ -93,7 +96,7 @@ export function WidgetPanel({
               <option value="left">{t("widget.left")}</option>
             </select>
           </label>
-          <Button type="button" size="sm" disabled={pending} onClick={save}>
+          <Button variant="primary" type="button" size="sm" disabled={pending} onClick={save}>
             {t("widget.save")}
           </Button>
         </div>

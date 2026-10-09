@@ -24,8 +24,7 @@
     "closed": "Fechado"
   },
   "inbox": {
-    "title": "Inbox",
-    "funnelLink": "Funil →",
+    "title": "Atendimento",
     "backToList": "← Inbox",
     "viewsAria": "Views da inbox",
     "newMessage": "Nova mensagem",
@@ -114,14 +113,23 @@
     "resolve": "Resolver"
   },
   "nav": {
-    "inbox": "Inbox",
+    "home": "Início",
+    "inbox": "Atendimento",
+    "deals": "Negócios",
     "integrations": "Integrações",
     "settings": "Configurações",
-    "signOut": "Sair"
+    "signOut": "Sair",
+    "search": "Buscar",
+    "account": "Conta",
+    "modules": "Módulos",
+    "alerts": "Alertas",
+    "alertsEmpty": "Nenhum alerta por enquanto.",
+    "alertsEmptyBody": "Avisos de conexões e automações aparecem aqui.",
+    "commandPlaceholder": "Buscar conteúdo e ações",
+    "commandEmpty": "Nenhum resultado para “{query}”."
   },
   "leads": {
-    "funnel": "Funil",
-    "backToInbox": "← Inbox",
+    "funnel": "Negócios",
     "emptyFunnel": "Nenhum funil ainda. Crie o primeiro — pode partir de um modelo de nicho.",
     "createFunnel": "Criar funil",
     "newStage": "Etapa",
@@ -576,6 +584,13 @@
       "error": "Falha ao criar conta.",
       "hasAccount": "Já tem conta?",
       "signInLink": "Entrar"
-    }
+    },
+    "layout": {
+      "lead": "Você define o rumo.",
+      "payoff": "BOSUN organiza a operação.",
+      "nodes": ["Atendimento", "Negócios", "Integrações", "Automações"]
+    },
+    "showPassword": "Mostrar senha",
+    "hidePassword": "Ocultar senha"
   }
 }

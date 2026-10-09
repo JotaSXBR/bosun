@@ -2,18 +2,11 @@
 
 import type { DealCardRow } from "@crm/core/leads";
 import { Button } from "@crm/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@crm/ui/components/dialog";
+import { Dialog } from "@crm/ui/components/dialog";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { toast } from "sonner";
 
 import { deleteDealAction } from "@/server/actions/leads";
 
@@ -31,35 +24,31 @@ export function DeleteDealDialog({
   const [pending, startTransition] = useTransition();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("dealForm.deleteTitle")}</DialogTitle>
-          <DialogDescription>
-            {t("dealForm.deleteConfirm", { title: deal.title })}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await deleteDealAction(deal.id, deal.conversationId ?? undefined);
-                if (result.ok) {
-                  toast.success(t("dealForm.deleted"));
-                  onOpenChange(false);
-                  router.refresh();
-                } else {
-                  toast.error(result.error);
-                }
-              })
-            }
-          >
-            {t("dealForm.deleteTitle")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Dialog
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={t("dealForm.deleteTitle")}
+      description={t("dealForm.deleteConfirm", { title: deal.title })}
+      footer={
+        <Button
+          variant="danger"
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await deleteDealAction(deal.id, deal.conversationId ?? undefined);
+              if (result.ok) {
+                toast.success(t("dealForm.deleted"));
+                onOpenChange(false);
+                router.refresh();
+              } else {
+                toast.error(result.error);
+              }
+            })
+          }
+        >
+          {t("dealForm.deleteTitle")}
+        </Button>
+      }
+    ></Dialog>
   );
 }

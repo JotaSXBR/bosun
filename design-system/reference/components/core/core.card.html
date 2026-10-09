@@ -1,0 +1,71 @@
+<!-- @dsCard group="Components" viewport="700x460" name="Core" subtitle="Button, IconButton, Badge, Tag, Avatar, Wordmark, Icon" -->
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:24px;margin:0}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:18px}.lbl{font:500 11px/1 var(--font-mono);color:var(--text-subtle);letter-spacing:.04em;width:84px;flex-shrink:0}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const NS = window.BOSUNDesignSystem_c587fa;
+
+const { Button, IconButton, Badge, Tag, Avatar, Wordmark, Icon } = NS;
+function App() {
+  return (
+    <div className="col">
+      <div className="row"><span className="lbl">BUTTON</span>
+        <Button variant="primary" iconLeft="plus">Novo projeto</Button>
+        <Button>Cancelar</Button>
+        <Button variant="outline" iconRight="arrow-up-right">Conhecer</Button>
+        <Button variant="ghost">Ignorar</Button>
+        <Button variant="inverse">Começar agora</Button>
+      </div>
+      <div className="row"><span className="lbl">SIZE·STATE</span>
+        <Button variant="primary" size="sm">Salvar</Button>
+        <Button variant="primary" size="lg" iconRight="arrow-right">Começar agora</Button>
+        <Button loading>Sincronizando</Button>
+        <Button disabled>Indisponível</Button>
+        <Button variant="danger" iconLeft="trash-2" size="sm">Excluir</Button>
+      </div>
+      <div className="row"><span className="lbl">ICONBUTTON</span>
+        <IconButton icon="bell" label="Notificações" dot />
+        <IconButton icon="arrow-up-right" label="Abrir" />
+        <IconButton icon="list-filter" label="Filtrar" variant="inverse" />
+        <IconButton icon="arrow-up-right" label="Abrir" variant="accent" />
+        <IconButton icon="calendar" label="Período" variant="outline" />
+        <IconButton icon="ellipsis" label="Mais" variant="ghost" />
+        <IconButton icon="search" label="Buscar" size="sm" />
+        <IconButton icon="plus" label="Criar" size="lg" variant="accent" />
+      </div>
+      <div className="row"><span className="lbl">BADGE</span>
+        <Badge tone="success" icon="arrow-up-right">18% esta semana</Badge>
+        <Badge tone="running" dot>Em execução</Badge>
+        <Badge tone="warning" dot>Aguardando</Badge>
+        <Badge tone="danger" dot>Falhou</Badge>
+        <Badge tone="accent">Novo</Badge>
+        <Badge>Rascunho</Badge>
+        <Badge tone="accent" variant="solid" size="sm">3</Badge>
+      </div>
+      <div className="row"><span className="lbl">TAG</span>
+        <Tag onRemove={() => {}}>Semanal</Tag>
+        <Tag icon="clock" onRemove={() => {}}>Última hora</Tag>
+        <Tag selected onClick={() => {}}>Atrasadas</Tag>
+        <Tag size="sm" onClick={() => {}}>Equipe</Tag>
+      </div>
+      <div className="row"><span className="lbl">AVATAR·MARK</span>
+        <Avatar name="Marina Costa" size="sm" />
+        <Avatar name="Rafael Lima" status="online" />
+        <Avatar name="Ana Dias" ring size="lg" />
+        <span style={{ width: 16 }} />
+        <Wordmark />
+        <Wordmark size="sm" tone="accent" />
+        <span style={{ width: 12 }} />
+        <span style={{ display: 'flex', gap: 12, color: 'var(--icon-default)' }}>{['house','list-checks','file-text','workflow','plug','chart-no-axes-column','sparkles'].map(n => <Icon key={n} name={n} />)}</span>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script></body></html>

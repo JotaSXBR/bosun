@@ -3,10 +3,10 @@
 // WhatsApp-style voice notes: record → listen to a preview → re-record,
 // discard or send. Sent as voiceNote → WAHA sendVoice (PTT bubble).
 import { Button } from "@crm/ui/components/button";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { sendMediaMessageAction } from "@/server/actions/chat";
 
@@ -65,16 +65,16 @@ function RecordingBar({
   const t = useTranslations("composer");
   return (
     <div
-      className="border-destructive/40 bg-destructive/10 flex items-center gap-3 rounded-md border px-3 py-2"
+      className="border-danger/40 bg-danger/10 flex items-center gap-3 rounded-md border px-3 py-2"
       data-testid="voice-recorder"
     >
-      <span className="bg-destructive size-2 animate-pulse rounded-full" />
+      <span className="bg-danger size-2 animate-pulse rounded-full" />
       <span className="text-sm font-medium tabular-nums">{formatElapsed(elapsed)}</span>
-      <span className="text-muted-foreground flex-1 text-xs">{t("recording")}</span>
+      <span className="text-ink-muted flex-1 text-xs">{t("recording")}</span>
       <Button type="button" size="sm" variant="ghost" onClick={onDiscard}>
         {t("discard")}
       </Button>
-      <Button type="button" size="sm" onClick={onStop}>
+      <Button variant="primary" type="button" size="sm" onClick={onStop}>
         {t("stop")}
       </Button>
     </div>
@@ -110,7 +110,7 @@ function PreviewBar({
       <Button type="button" size="sm" variant="ghost" onClick={onDiscard}>
         {t("discard")}
       </Button>
-      <Button type="button" size="sm" onClick={onSend} disabled={sending}>
+      <Button variant="primary" type="button" size="sm" onClick={onSend} disabled={sending}>
         {sending ? t("sending") : t("send")}
       </Button>
     </div>
@@ -245,7 +245,7 @@ export function VoiceRecorder({
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="secondary"
       size="sm"
       disabled={disabled}
       onClick={() => void start()}

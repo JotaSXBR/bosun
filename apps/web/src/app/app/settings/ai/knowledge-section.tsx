@@ -3,11 +3,11 @@
 import type { KnowledgeEntryRow } from "@crm/core/knowledge";
 import { Badge } from "@crm/ui/components/badge";
 import { Button } from "@crm/ui/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import type { AiActionResult } from "@/server/actions/ai";
 import {
@@ -75,14 +75,10 @@ export function KnowledgeSection({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>{t("description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Card bodyClassName="space-y-3" title={t("title")} subtitle={t("description")}>
+      <>
         {entries.length === 0 ? (
-          <p className="text-muted-foreground text-sm" data-testid="knowledge-empty">
+          <p className="text-ink-muted text-sm" data-testid="knowledge-empty">
             {t("empty")}
           </p>
         ) : (
@@ -94,10 +90,10 @@ export function KnowledgeSection({
               >
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium">{entry.title}</span>
-                  <Badge variant="secondary">
+                  <Badge tone="neutral">
                     {entry.status === "archived" ? t("statusArchived") : t("statusActive")}
                   </Badge>
-                  <Badge variant="outline">
+                  <Badge tone="neutral">
                     {entry.source === "suggestion" ? t("sourceSuggestion") : t("sourceManual")}
                   </Badge>
                 </div>
@@ -105,7 +101,7 @@ export function KnowledgeSection({
                   <div className="flex shrink-0 items-center gap-2">
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="secondary"
                       disabled={pending}
                       onClick={() => openEdit(entry)}
                     >
@@ -113,7 +109,7 @@ export function KnowledgeSection({
                     </Button>
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="danger"
                       disabled={pending}
                       onClick={() => {
                         if (window.confirm(t("deleteConfirm", { title: entry.title }))) {
@@ -130,11 +126,11 @@ export function KnowledgeSection({
           </ul>
         )}
         {canManage && (
-          <Button size="sm" variant="outline" onClick={openCreate} disabled={pending}>
+          <Button size="sm" variant="secondary" onClick={openCreate} disabled={pending}>
             {t("new")}
           </Button>
         )}
-      </CardContent>
+      </>
 
       <KnowledgeFormDialog
         open={open}

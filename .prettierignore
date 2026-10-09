@@ -20,6 +20,13 @@ pnpm-lock.yaml
 research/
 .trigger-selfhost/
 
+# BOSUN reference HTMLs (mirrors the export dump verbatim) + exported lint config
+design-system/reference/
+design-system/lint/adherence.oxlintrc.json
+
+# Canonical token CSS — byte-identical to the export (drift-checked by test)
+design-system/src/styles/tokens/
+
 # Vendored skill pack (third-party, keep as published)
 .devin/skills/
 

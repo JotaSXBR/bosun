@@ -4,7 +4,7 @@ import { defineConfig } from "vitest/config";
 // Integration tests live in `*.int.test.ts` and run via `pnpm test:integration`.
 export default defineConfig({
   test: {
-    include: ["packages/**/*.test.ts", "apps/**/*.test.ts"],
+    include: ["packages/**/*.test.ts", "apps/**/*.test.ts", "design-system/**/*.test.ts"],
     exclude: ["**/*.int.test.ts", "**/node_modules/**", "**/.next/**"],
   },
 });

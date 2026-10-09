@@ -1,15 +1,15 @@
 "use client";
 
 import { Button } from "@crm/ui/components/button";
+import { toast } from "@crm/ui/components/toast";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
 
 export function CopyButton({ value }: { value: string }) {
   const t = useTranslations("integrations");
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="secondary"
       size="sm"
       onClick={() => {
         void navigator.clipboard

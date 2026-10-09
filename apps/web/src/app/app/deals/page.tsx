@@ -1,7 +1,7 @@
 import { NotFoundError } from "@crm/core";
 import type { FunnelRow } from "@crm/core/leads";
 import { hasPermission } from "@crm/permissions";
-import Link from "next/link";
+import { PageHeader } from "@crm/ui/templates/page-header";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
@@ -33,17 +33,12 @@ export default async function DealsPage({
   if (!funnel) {
     return (
       <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">{t("funnel")}</h1>
-          <Link href="/app/inbox" className="text-muted-foreground text-sm underline">
-            {t("backToInbox")}
-          </Link>
-        </div>
+        <PageHeader title={t("funnel")} />
         <div
           className="rounded-lg border border-dashed p-12 text-center"
           data-testid="empty-funnel"
         >
-          <p className="text-muted-foreground text-sm">{t("emptyFunnel")}</p>
+          <p className="text-ink-muted text-sm">{t("emptyFunnel")}</p>
           {canManage && (
             <div className="mt-4">
               <NewFunnelButton />
@@ -64,12 +59,7 @@ export default async function DealsPage({
 
   return (
     <main className="space-y-4 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t("funnel")}</h1>
-        <Link href="/app/inbox" className="text-muted-foreground text-sm underline">
-          {t("backToInbox")}
-        </Link>
-      </div>
+      <PageHeader title={t("funnel")} />
       <KanbanBoard
         board={board}
         funnels={funnels}

@@ -7,12 +7,13 @@ import { isProductConfigured } from "@crm/core/platform";
 import { getDb } from "@crm/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { getAuth } from "./auth";
 
-export async function getSession(): Promise<Session | null> {
+export const getSession = cache(async (): Promise<Session | null> => {
   return getAuth().api.getSession({ headers: await headers() });
-}
+});
 
 export async function requireSession(): Promise<Session> {
   const session = await getSession();

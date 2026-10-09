@@ -1,0 +1,224 @@
+/* BOSUN — color tokens. Dark ("convés à noite") is the default product theme; light lives under [data-theme="light"]. */
+:root{
+  /* Brand base — Azul abissal / Azul oceano */
+  --abyss-1000:#050C15;
+  --abyss-950:#08111D;
+  --abyss-900:#0B1726; /* Azul abissal — brand */
+  --abyss-850:#0F1E31;
+  --abyss-800:#13253B;
+  --abyss-750:#182C45;
+  --ocean-700:#16324F; /* Azul oceano — brand */
+  --ocean-600:#1E4266;
+  --ocean-500:#2A5682;
+  --ocean-400:#4A76A3;
+  --ocean-300:#7FA2C6;
+  --ocean-200:#B5CAE0;
+  --ocean-100:#DCE6F0;
+
+  /* Verde sinal — accent */
+  --signal-50:#F0FDFA;
+  --signal-100:#CCFBF1;
+  --signal-200:#99F6E4;
+  --signal-300:#5EEAD4;
+  --signal-400:#2DD4BF; /* Verde sinal — brand */
+  --signal-500:#14B8A6;
+  --signal-600:#0D9488;
+  --signal-700:#0F766E;
+  --signal-800:#115E59;
+  --signal-900:#134E4A;
+
+  /* Neutrals — Branco névoa / Cinza aço */
+  --white:#FFFFFF;
+  --mist:#F4F7FA; /* Branco névoa — brand */
+  --steel-100:#E6ECF2;
+  --steel-200:#CFD8E3;
+  --steel-300:#A9B6C6;
+  --steel-400:#8594A8;
+  --steel-500:#64748B; /* Cinza aço — brand */
+  --steel-600:#4B5A70;
+  --steel-700:#364357;
+
+  /* Âmbar + semantic hues */
+  --amber-300:#FCD34D;
+  --amber-400:#FBBF24;
+  --amber-500:#F59E0B; /* Âmbar — brand */
+  --amber-600:#D97706;
+  --amber-700:#B45309;
+  --green-400:#4ADE80;
+  --green-600:#16A34A;
+  --red-400:#F87171;
+  --red-500:#EF4444;
+  --red-600:#DC2626;
+  --sky-400:#60A5FA;
+  --sky-600:#2563EB;
+
+  /* ---- Semantic aliases (dark) ---- */
+  --bg-page:var(--abyss-900);
+  --bg-sunken:var(--abyss-950);
+  --surface-card:var(--abyss-850);
+  --surface-raised:var(--abyss-800);
+  --surface-raised-2:var(--abyss-750);
+  --surface-control:var(--abyss-800);
+  --surface-control-hover:var(--ocean-700);
+  --surface-control-active:var(--ocean-600);
+  --surface-inverse:var(--mist);
+  --surface-accent:var(--signal-400);
+  --surface-accent-hover:var(--signal-300);
+  --surface-accent-soft:rgba(45,212,191,.12);
+  --surface-overlay:rgba(5,12,21,.64);
+
+  --text-strong:var(--mist);
+  --text-body:var(--steel-100);
+  --text-muted:var(--steel-400);
+  --text-subtle:var(--steel-500);
+  --text-accent:var(--signal-400);
+  --text-on-accent:var(--abyss-900);
+  --text-on-accent-muted:var(--signal-900);
+  --text-inverse:var(--abyss-900);
+  --text-disabled:var(--steel-600);
+
+  --border-subtle:rgba(244,247,250,.06);
+  --border-default:rgba(244,247,250,.10);
+  --border-strong:rgba(244,247,250,.18);
+  --border-accent:var(--signal-400);
+
+  --icon-default:var(--steel-300);
+  --icon-strong:var(--mist);
+  --icon-muted:var(--steel-500);
+
+  --status-success:var(--green-400);
+  --status-success-bg:rgba(74,222,128,.12);
+  --status-warning:var(--amber-500);
+  --status-warning-bg:rgba(245,158,11,.14);
+  --status-danger:var(--red-400);
+  --status-danger-bg:rgba(248,113,113,.14);
+  --status-info:var(--sky-400);
+  --status-info-bg:rgba(96,165,250,.14);
+  --status-running:var(--signal-400);
+  --status-running-bg:rgba(45,212,191,.12);
+
+  /* Data visualisation — signal leads, mist + ocean support, amber flags */
+  --data-1:var(--signal-400);
+  --data-2:var(--mist);
+  --data-3:var(--ocean-300);
+  --data-4:var(--signal-700);
+  --data-5:var(--amber-500);
+  --data-track:var(--abyss-750);
+
+  --pattern-ink:rgba(244,247,250,.20);
+  --pattern-ink-on-accent:rgba(11,23,38,.38);
+}
+
+/* Explicit dark scope — lets a dark island sit inside a light section. */
+[data-theme="dark"]{
+  --bg-page:var(--abyss-900);
+  --bg-sunken:var(--abyss-950);
+  --surface-card:var(--abyss-850);
+  --surface-raised:var(--abyss-800);
+  --surface-raised-2:var(--abyss-750);
+  --surface-control:var(--abyss-800);
+  --surface-control-hover:var(--ocean-700);
+  --surface-control-active:var(--ocean-600);
+  --surface-inverse:var(--mist);
+  --surface-accent:var(--signal-400);
+  --surface-accent-hover:var(--signal-300);
+  --surface-accent-soft:rgba(45,212,191,.12);
+  --surface-overlay:rgba(5,12,21,.64);
+
+  --text-strong:var(--mist);
+  --text-body:var(--steel-100);
+  --text-muted:var(--steel-400);
+  --text-subtle:var(--steel-500);
+  --text-accent:var(--signal-400);
+  --text-on-accent:var(--abyss-900);
+  --text-on-accent-muted:var(--signal-900);
+  --text-inverse:var(--abyss-900);
+  --text-disabled:var(--steel-600);
+
+  --border-subtle:rgba(244,247,250,.06);
+  --border-default:rgba(244,247,250,.10);
+  --border-strong:rgba(244,247,250,.18);
+  --border-accent:var(--signal-400);
+
+  --icon-default:var(--steel-300);
+  --icon-strong:var(--mist);
+  --icon-muted:var(--steel-500);
+
+  --status-success:var(--green-400);
+  --status-success-bg:rgba(74,222,128,.12);
+  --status-warning:var(--amber-500);
+  --status-warning-bg:rgba(245,158,11,.14);
+  --status-danger:var(--red-400);
+  --status-danger-bg:rgba(248,113,113,.14);
+  --status-info:var(--sky-400);
+  --status-info-bg:rgba(96,165,250,.14);
+  --status-running:var(--signal-400);
+  --status-running-bg:rgba(45,212,191,.12);
+
+  /* Data visualisation — signal leads, mist + ocean support, amber flags */
+  --data-1:var(--signal-400);
+  --data-2:var(--mist);
+  --data-3:var(--ocean-300);
+  --data-4:var(--signal-700);
+  --data-5:var(--amber-500);
+  --data-track:var(--abyss-750);
+
+  --pattern-ink:rgba(244,247,250,.20);
+  --pattern-ink-on-accent:rgba(11,23,38,.38);
+}
+
+[data-theme="light"]{
+  --bg-page:var(--mist);
+  --bg-sunken:#E9EEF4;
+  --surface-card:var(--white);
+  --surface-raised:#EEF2F7;
+  --surface-raised-2:#E4EAF1;
+  --surface-control:#EAEFF5;
+  --surface-control-hover:#DCE4EE;
+  --surface-control-active:#CFD8E3;
+  --surface-inverse:var(--abyss-900);
+  --surface-accent:var(--signal-400);
+  --surface-accent-hover:var(--signal-300);
+  --surface-accent-soft:rgba(13,148,136,.10);
+  --surface-overlay:rgba(11,23,38,.40);
+
+  --text-strong:var(--abyss-900);
+  --text-body:#1E2B3C;
+  --text-muted:var(--steel-600);
+  --text-subtle:var(--steel-500);
+  --text-accent:var(--signal-700);
+  --text-on-accent:var(--abyss-900);
+  --text-on-accent-muted:var(--signal-900);
+  --text-inverse:var(--mist);
+  --text-disabled:var(--steel-300);
+
+  --border-subtle:rgba(11,23,38,.06);
+  --border-default:rgba(11,23,38,.10);
+  --border-strong:rgba(11,23,38,.20);
+  --border-accent:var(--signal-600);
+
+  --icon-default:var(--steel-600);
+  --icon-strong:var(--abyss-900);
+  --icon-muted:var(--steel-400);
+
+  --status-success:var(--green-600);
+  --status-success-bg:rgba(22,163,74,.10);
+  --status-warning:var(--amber-700);
+  --status-warning-bg:rgba(245,158,11,.14);
+  --status-danger:var(--red-600);
+  --status-danger-bg:rgba(220,38,38,.08);
+  --status-info:var(--sky-600);
+  --status-info-bg:rgba(37,99,235,.08);
+  --status-running:var(--signal-700);
+  --status-running-bg:rgba(13,148,136,.10);
+
+  --data-1:var(--signal-500);
+  --data-2:var(--abyss-900);
+  --data-3:var(--ocean-400);
+  --data-4:var(--signal-800);
+  --data-5:var(--amber-500);
+  --data-track:#E4EAF1;
+
+  --pattern-ink:rgba(11,23,38,.18);
+  --pattern-ink-on-accent:rgba(11,23,38,.38);
+}

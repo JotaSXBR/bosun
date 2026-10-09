@@ -1,7 +1,6 @@
 "use client";
 
 import type { DealCardRow, StageRow } from "@crm/core/leads";
-import { Button } from "@crm/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,10 +10,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@crm/ui/components/dropdown-menu";
+import { IconButton } from "@crm/ui/components/icon-button";
 import { cn } from "@crm/ui/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { MoreHorizontalIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
 
@@ -35,15 +34,14 @@ function DealCardMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
+        <IconButton
           type="button"
           variant="ghost"
           size="sm"
+          icon="ellipsis"
           className="size-6 p-0 opacity-0 group-hover:opacity-100 focus:opacity-100"
-          aria-label={t("dealActions", { title: deal.title })}
-        >
-          <MoreHorizontalIcon className="size-4" />
-        </Button>
+          label={t("dealActions", { title: deal.title })}
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {canWrite && <DropdownMenuItem onSelect={() => onEdit(deal)}>{t("edit")}</DropdownMenuItem>}
@@ -112,8 +110,8 @@ export function DealCardView({
       style={style}
       data-testid={`deal-card-${deal.id}`}
       className={cn(
-        "bg-card group rounded-md border p-3 shadow-xs",
-        dragging && "opacity-60 shadow-md",
+        "bg-surface group shadow-control rounded-md border p-3",
+        dragging && "shadow-raised opacity-60",
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -127,9 +125,7 @@ export function DealCardView({
           {...(canWrite ? dragHandleProps : {})}
         >
           <p className="truncate text-sm font-medium">{deal.title}</p>
-          <p className="text-muted-foreground truncate text-xs">
-            {deal.contactName ?? deal.contactRef}
-          </p>
+          <p className="text-ink-muted truncate text-xs">{deal.contactName ?? deal.contactRef}</p>
         </button>
         <DealCardMenu
           deal={deal}

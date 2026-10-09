@@ -1,5 +1,6 @@
 packages:
   - "apps/*"
+  - "design-system"
   - "packages/*"
   - "tooling/*"
 

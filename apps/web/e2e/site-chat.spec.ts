@@ -9,7 +9,7 @@ test("site chat: visitor pre-form → message → agent reply reaches the widget
   await page.goto("/sign-up");
   await page.getByLabel("Nome").fill("E2E Widget");
   await page.getByLabel("E-mail").fill(`e2e-widget-${suffix}@crm.local`);
-  await page.getByLabel("Senha").fill("Password123!");
+  await page.getByLabel("Senha", { exact: true }).fill("Password123!");
   await page.getByRole("button", { name: "Cadastrar" }).click();
 
   await page.waitForURL("**/onboarding");

@@ -1,0 +1,721 @@
+<!-- @dsCard group="Webapp" viewport="1440x900" name="BOSUN webapp" subtitle="Click-through: Início, Tarefas, Automações, Integrações, Documentos (vazio), busca ⌘K, login" -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>BOSUN — Área de trabalho</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{min-width:1280px}</style>
+</head><body>
+<div id="root"></div>
+<script type="text/babel" data-source="shell.jsx">
+// BOSUN webapp — shell: top bar, page header, command palette, toast host.
+(() => {
+const { Wordmark, ModuleNav, IconButton, Avatar, Icon, Input, Toast, Tabs, Tag } = window.BOSUNDesignSystem_c587fa;
+
+const MODULES = [
+  { id: 'home', label: 'Início', icon: 'house' },
+  { id: 'tasks', label: 'Tarefas', icon: 'list-checks', badge: 3 },
+  { id: 'docs', label: 'Documentos', icon: 'file-text' },
+  { id: 'flows', label: 'Automações', icon: 'workflow' },
+  { id: 'connect', label: 'Integrações', icon: 'plug' },
+];
+
+function UserMenu({ onLogout }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen(!open)} aria-label="Conta" style={{ border: 0, padding: 0, background: 'none', cursor: 'pointer', borderRadius: '50%' }}>
+        <Avatar name="Marina Costa" size={44} ring={open} />
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', right: 0, top: 54, zIndex: 50, width: 220, padding: 6, borderRadius: 14, background: 'var(--surface-raised)', boxShadow: 'var(--shadow-pop)' }}>
+          <div style={{ padding: '10px 10px 12px' }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)' }}>Marina Costa</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>marina@costa.studio</div>
+          </div>
+          {[['settings', 'Configurações'], ['users', 'Equipe'], ['log-out', 'Sair']].map(([ic, l]) => (
+            <button key={l} type="button" onClick={() => { setOpen(false); if (ic === 'log-out') onLogout(); }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-control-hover)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', height: 38, padding: '0 10px', border: 0, borderRadius: 10, background: 'transparent', color: 'var(--text-body)', fontFamily: 'var(--font-sans)', fontSize: 13, cursor: 'pointer' }}>
+              <Icon name={ic} size={16} />{l}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TopBar({ route, onNavigate, onSearch, onLogout }) {
+  return (
+    <header style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 24, height: 'var(--nav-height)', padding: '0 32px' }}>
+      <div><Wordmark size={20} /></div>
+      <ModuleNav items={MODULES} value={route} onChange={onNavigate} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
+        <IconButton icon="search" label="Buscar (⌘K)" onClick={onSearch} />
+        <IconButton icon="bell" label="Notificações" dot />
+        <UserMenu onLogout={onLogout} />
+      </div>
+    </header>
+  );
+}
+
+function PageHeader({ title, tabs, tab, onTab, filters = [], onRemoveFilter, right }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 48, padding: '20px 0 28px', flexWrap: 'wrap' }}>
+      <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 40, fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text-strong)', lineHeight: 1 }}>{title}</h1>
+      {tabs && <Tabs items={tabs} value={tab} onChange={onTab} style={{ marginTop: 8 }} />}
+      <div style={{ flex: 1 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {filters.map((f) => <Tag key={f} onRemove={() => onRemoveFilter && onRemoveFilter(f)}>{f}</Tag>)}
+        {right}
+      </div>
+    </div>
+  );
+}
+
+const RESULTS = [
+  { group: 'Ações', items: [['plus', 'Criar tarefa', 'tasks'], ['workflow', 'Nova automação', 'flows'], ['plug', 'Conectar ferramenta', 'connect']] },
+  { group: 'Tarefas', items: [['square-check', 'Revisar proposta comercial · Lançamento Q4', 'tasks'], ['square-check', 'Fechar relatório de despesas · Financeiro', 'tasks']] },
+  { group: 'Automações', items: [['workflow', 'Resumo diário de vendas', 'flows'], ['workflow', 'Triagem de e-mails de suporte', 'flows']] },
+];
+
+function CommandPalette({ open, onClose, onNavigate }) {
+  const [q, setQ] = React.useState('');
+  React.useEffect(() => { if (open) setQ(''); }, [open]);
+  if (!open) return null;
+  const groups = RESULTS.map((g) => ({ ...g, items: g.items.filter((i) => i[1].toLowerCase().includes(q.toLowerCase())) })).filter((g) => g.items.length);
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--surface-overlay)', backdropFilter: 'blur(var(--blur-overlay))', display: 'flex', justifyContent: 'center', paddingTop: 120 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 640, maxHeight: 460, alignSelf: 'flex-start', borderRadius: 24, background: 'var(--surface-card)', boxShadow: 'var(--shadow-pop)', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Input autoFocus size="lg" icon="search" placeholder="Buscar conteúdo e ações" value={q} onChange={(e) => setQ(e.target.value)}
+          trailing={<kbd style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-subtle)', padding: '2px 6px', borderRadius: 6, border: '1px solid var(--border-default)' }}>esc</kbd>} />
+        <div style={{ overflow: 'auto', padding: '4px 4px 6px' }}>
+          {groups.length === 0 && <div style={{ padding: '28px 12px', textAlign: 'center', fontSize: 14, color: 'var(--text-muted)' }}>Nenhum resultado para “{q}”.</div>}
+          {groups.map((g) => (
+            <div key={g.group} style={{ marginTop: 8 }}>
+              <div style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-subtle)', letterSpacing: '.04em' }}>{g.group.toUpperCase()}</div>
+              {g.items.map(([ic, l, r]) => (
+                <button key={l} type="button" onClick={() => { onNavigate(r); onClose(); }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-raised)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', height: 44, padding: '0 10px', border: 0, borderRadius: 12, background: 'transparent', color: 'var(--text-body)', fontFamily: 'var(--font-sans)', fontSize: 14, cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--surface-control)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--icon-default)' }}><Icon name={ic} size={15} /></span>
+                  <span style={{ flex: 1 }}>{l}</span>
+                  <Icon name="arrow-right" size={15} color="var(--icon-muted)" />
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ToastHost({ toasts, onDismiss }) {
+  return (
+    <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 120, display: 'flex', flexDirection: 'column', gap: 8, width: 400 }}>
+      {toasts.map((t) => <Toast key={t.id} tone={t.tone} title={t.title} description={t.description} onClose={() => onDismiss(t.id)} />)}
+    </div>
+  );
+}
+
+function EmptyState({ icon, title, body, action }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '96px 24px', borderRadius: 24, background: 'var(--surface-card)', textAlign: 'center' }} className="bx-grid">
+      <span style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--surface-raised)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-accent)' }}><Icon name={icon} size={26} /></span>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 600, color: 'var(--text-strong)', letterSpacing: '-0.02em' }}>{title}</div>
+      <div style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 380 }}>{body}</div>
+      {action}
+    </div>
+  );
+}
+
+Object.assign(window, { BosunTopBar: TopBar, BosunPageHeader: PageHeader, BosunCommandPalette: CommandPalette, BosunToastHost: ToastHost, BosunEmptyState: EmptyState, BOSUN_MODULES: MODULES });
+})();
+</script>
+<script type="text/babel" data-source="home.jsx">
+// BOSUN webapp — Início (home dashboard)
+(() => {
+const { Card, IconButton, Metric, ProgressBar, RingChart, BarChart, Accordion, Badge, Avatar, Icon, Button } = window.BOSUNDesignSystem_c587fa;
+
+const WEEK = {
+  'Esta semana': [
+    { label: 'Seg', value: 18, target: 26 }, { label: 'Ter', value: 22, target: 26 }, { label: 'Qua', value: 32, target: 34 },
+    { label: 'Qui', value: 14, target: 28 }, { label: 'Sex', value: 20, target: 24 }, { label: 'Sáb', value: 6, target: 10 }, { label: 'Dom', value: 4, target: 8 },
+  ],
+  'Hoje': [
+    { label: '8h', value: 3, target: 4 }, { label: '10h', value: 6, target: 6 }, { label: '12h', value: 2, target: 5 },
+    { label: '14h', value: 7, target: 8 }, { label: '16h', value: 4, target: 6 }, { label: '18h', value: 1, target: 3 }, { label: '20h', value: 0, target: 1 },
+  ],
+};
+
+function Capsule({ h, children, cls, style }) {
+  return <div className={cls} style={{ height: h, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500, ...style }}>{children}</div>;
+}
+
+function FlowSplit() {
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 140 }}>
+      <div style={{ width: 58, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <Capsule h={58} cls="bx-hatch bx-on-accent" />
+        <Capsule h={70} style={{ background: 'var(--abyss-900)', color: 'var(--mist)' }}>58%</Capsule>
+      </div>
+      <div style={{ width: 58, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <Capsule h={60} style={{ background: 'linear-gradient(180deg, rgba(255,255,255,.42), rgba(255,255,255,.14))', color: 'var(--abyss-900)' }}>25%</Capsule>
+        <Capsule h={72} cls="bx-dots bx-on-accent" />
+      </div>
+    </div>
+  );
+}
+
+function Legend({ items }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {items.map(([c, l, v]) => (
+        <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-body)' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />{l}
+          {v != null && <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{v}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProjectBody({ pct, steps, next, people }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <ProgressBar value={pct} size="sm" label="Andamento" valueLabel={steps} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 14, background: 'var(--surface-raised-2)' }}>
+        <Icon name="flag" size={15} color="var(--text-accent)" />
+        <span style={{ flex: 1, fontSize: 13, color: 'var(--text-body)' }}>{next}</span>
+      </div>
+      <div style={{ display: 'flex' }}>{people.map((p, i) => <Avatar key={p} name={p} size={28} style={{ marginLeft: i ? -8 : 0, borderRadius: '50%', boxShadow: '0 0 0 2px var(--surface-raised)' }} />)}</div>
+    </div>
+  );
+}
+
+const ACTIVITY = [
+  ['09:41', 'circle-check', 'var(--status-success)', 'Fluxo “Resumo diário de vendas” concluído. Todas as etapas foram executadas.', 'Automações'],
+  ['09:12', 'square-check', 'var(--text-accent)', 'Rafael Lima concluiu “Revisar proposta comercial”.', 'Tarefas'],
+  ['08:55', 'triangle-alert', 'var(--status-warning)', 'O acesso ao Google Agenda expira em 2 dias. Renove para manter a sincronização.', 'Integrações'],
+  ['08:30', 'file-text', 'var(--icon-default)', 'Ana Dias editou “Plano de lançamento Q4”.', 'Documentos'],
+];
+
+function HomeScreen({ onNavigate, notify }) {
+  const [tab, setTab] = React.useState('Esta semana');
+  const [filters, setFilters] = React.useState(['Minha equipe']);
+  const data = WEEK[tab] || WEEK['Esta semana'];
+  const done = data.reduce((a, d) => a + d.value, 0), planned = data.reduce((a, d) => a + d.target, 0);
+  return (
+    <div>
+      <BosunPageHeader title="Início" tabs={['Esta semana', 'Hoje']} tab={tab} onTab={setTab} filters={filters} onRemoveFilter={(f) => setFilters(filters.filter((x) => x !== f))}
+        right={<IconButton variant="inverse" icon="list-filter" label="Filtros" />} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
+        <Card title="Prioridades de hoje" actions={<><IconButton icon="bell" label="Lembretes" /><IconButton icon="arrow-up-right" label="Abrir tarefas" onClick={() => onNavigate('tasks')} /></>} style={{ height: '100%' }}>
+          <Metric value="12" suffix="tarefas" />
+          <div style={{ height: 26 }} />
+          <ProgressBar size="lg" thumb value={33} labels={['8h', '10h', '12h', '14h', '16h', '18h']} />
+        </Card>
+        <Card tone="accent" title="Automações ativas" actions={<><IconButton variant="control" icon="bell" label="Alertas" /><IconButton variant="accent" icon="arrow-up-right" label="Abrir automações" onClick={() => onNavigate('flows')} style={{ boxShadow: '0 0 0 1px rgba(11,23,38,.15)' }} /></>} style={{ height: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ paddingBottom: 6 }}><Metric onAccent value="24" size="sm" label="executando hoje" /></div>
+            <FlowSplit />
+          </div>
+        </Card>
+        <Card title="Execuções hoje" actions={<><IconButton icon="bell" label="Alertas" /><IconButton icon="arrow-up-right" label="Detalhes" onClick={() => onNavigate('flows')} /></>} style={{ height: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 8 }}>
+            <Legend items={[['var(--data-1)', 'Automáticas', '70%'], ['var(--data-2)', 'Manuais', '30%']]} />
+            <RingChart size={132} thickness={18} segments={[{ value: 70, color: 'var(--data-1)' }, { value: 30, color: 'var(--data-2)' }]} />
+          </div>
+        </Card>
+        <Card title="Projetos" actions={<IconButton icon="arrow-up-right" label="Todos os projetos" />} style={{ gridRow: 'span 2', height: '100%' }}>
+          <Accordion items={[
+            { id: 'q4', title: 'Lançamento Q4', meta: 'Prazo · 14 nov', content: <ProjectBody pct={57} steps="8 de 14 etapas" next="Aprovar peças da campanha" people={['Marina Costa', 'Rafael Lima', 'Ana Dias']} /> },
+            { id: 'ops', title: 'Rotina de operações', meta: 'Contínuo', content: <ProjectBody pct={82} steps="23 de 28" next="Conferir estoque semanal" people={['Rafael Lima']} /> },
+            { id: 'fin', title: 'Fechamento mensal', meta: 'Prazo · 31 out', content: <ProjectBody pct={40} steps="4 de 10" next="Conciliar extratos" people={['Ana Dias', 'Marina Costa']} /> },
+            { id: 'hire', title: 'Contratação design', meta: 'Prazo · 20 nov', content: <ProjectBody pct={20} steps="1 de 5" next="Triar portfólios" people={['Marina Costa']} /> },
+          ]} />
+          <div style={{ flex: 1 }} />
+          <Button iconLeft="plus" fullWidth style={{ marginTop: 16 }} onClick={() => notify({ tone: 'info', title: 'Crie seu primeiro modelo de projeto para começar.' })}>Novo projeto</Button>
+        </Card>
+        <Card title="Andamento da semana" style={{ gridColumn: 'span 3' }}
+          actions={<><IconButton variant="inverse" icon="list-filter" label="Filtrar" /><IconButton icon="calendar" label="Período" /><IconButton icon="arrow-up-right" label="Relatório" /></>}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 240px', gap: 32, alignItems: 'center' }}>
+            <BarChart data={data} height={250} formatValue={(v) => v + ' concluídas'} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
+              <Metric value={done} size="lg" label="tarefas concluídas" delta="18% vs. anterior" />
+              <Metric value={planned} size="sm" label="planejadas no período" />
+            </div>
+          </div>
+        </Card>
+        <Card title="Atividade recente" style={{ gridColumn: 'span 4' }} actions={<IconButton icon="history" label="Histórico completo" />}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {ACTIVITY.map(([t, ic, c, txt, mod], i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '56px 36px minmax(0,1fr) auto', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: i ? '1px solid var(--border-subtle)' : 0 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-subtle)' }}>{t}</span>
+                <span style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-raised)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: c }}><Icon name={ic} size={16} /></span>
+                <span style={{ fontSize: 14, color: 'var(--text-body)' }}>{txt}</span>
+                <Badge>{mod}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { BosunHomeScreen: HomeScreen });
+})();
+</script>
+<script type="text/babel" data-source="tasks.jsx">
+// BOSUN webapp — Tarefas (tasks list)
+(() => {
+const { Card, IconButton, Metric, RingChart, Badge, Avatar, Icon, Button, Input, Select, Checkbox } = window.BOSUNDesignSystem_c587fa;
+
+const SEED = [
+  { id: 'T-1042', title: 'Revisar proposta comercial', project: 'Lançamento Q4', who: 'Rafael Lima', due: 'Hoje', status: 'progress', done: false },
+  { id: 'T-1043', title: 'Aprovar peças da campanha', project: 'Lançamento Q4', who: 'Marina Costa', due: 'Hoje', status: 'review', done: false },
+  { id: 'T-1038', title: 'Conciliar extratos de setembro', project: 'Fechamento mensal', who: 'Ana Dias', due: 'Ontem', status: 'late', done: false },
+  { id: 'T-1047', title: 'Conferir estoque semanal', project: 'Rotina de operações', who: 'Rafael Lima', due: 'Amanhã', status: 'todo', done: false },
+  { id: 'T-1031', title: 'Enviar relatório de despesas', project: 'Fechamento mensal', who: 'Marina Costa', due: '02 out', status: 'done', done: true },
+  { id: 'T-1049', title: 'Triar portfólios recebidos', project: 'Contratação design', who: 'Marina Costa', due: '18 out', status: 'todo', done: false },
+  { id: 'T-1050', title: 'Atualizar página de preços', project: 'Lançamento Q4', who: 'Ana Dias', due: '21 out', status: 'todo', done: false },
+];
+const STATUS = {
+  todo: ['neutral', 'A fazer'], progress: ['running', 'Em andamento'], review: ['warning', 'Em revisão'], late: ['danger', 'Atrasada'], done: ['success', 'Concluída'],
+};
+
+function Th({ children, w }) {
+  return <th style={{ width: w, textAlign: 'left', padding: '0 12px 12px', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, color: 'var(--text-subtle)' }}>{children}</th>;
+}
+
+function TasksScreen({ notify }) {
+  const [tab, setTab] = React.useState('Tudo');
+  const [rows, setRows] = React.useState(SEED);
+  const [q, setQ] = React.useState('');
+  const [project, setProject] = React.useState();
+  const toggle = (id) => setRows(rows.map((r) => {
+    if (r.id !== id) return r;
+    const done = !r.done;
+    if (done) notify({ tone: 'success', title: 'Tarefa concluída.', description: r.title });
+    return { ...r, done, status: done ? 'done' : 'todo' };
+  }));
+  const visible = rows.filter((r) =>
+    (tab === 'Tudo' || (tab === 'Hoje' && r.due === 'Hoje') || (tab === 'Atrasadas' && r.status === 'late') || (tab === 'Concluídas' && r.done)) &&
+    (!project || r.project === project) && (r.title + r.project + r.id).toLowerCase().includes(q.toLowerCase()));
+  const open = rows.filter((r) => !r.done).length;
+  return (
+    <div>
+      <BosunPageHeader title="Tarefas" tabs={[{ value: 'Tudo', label: 'Tudo' }, { value: 'Hoje', label: 'Hoje', count: rows.filter((r) => r.due === 'Hoje').length }, { value: 'Atrasadas', label: 'Atrasadas', count: rows.filter((r) => r.status === 'late').length }, { value: 'Concluídas', label: 'Concluídas' }]}
+        tab={tab} onTab={setTab} right={<Button variant="primary" iconLeft="plus" onClick={() => notify({ tone: 'info', title: 'Nova tarefa criada em Rascunhos.' })}>Nova tarefa</Button>} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <Card tone="accent" title="Em aberto" actions={<IconButton variant="inverse" icon="arrow-up-right" label="Ver todas" />}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <Metric onAccent value={open} label="tarefas para você e sua equipe" />
+            <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 96 }}>
+              {[[40, 'bx-hatch bx-on-accent'], [72, ''], [56, 'bx-dots bx-on-accent'], [88, '']].map(([h, cls], i) => (
+                <div key={i} className={cls} style={{ width: 30, height: h, borderRadius: 15, background: cls ? undefined : i === 1 ? 'var(--abyss-900)' : 'rgba(255,255,255,.3)' }} />
+              ))}
+            </div>
+          </div>
+        </Card>
+        <Card title="Por projeto">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[['Lançamento Q4', 3], ['Fechamento mensal', 1], ['Rotina de operações', 1], ['Contratação design', 1]].map(([p, n]) => (
+              <button key={p} type="button" onClick={() => setProject(project === p ? undefined : p)} style={{ display: 'flex', alignItems: 'center', gap: 10, border: 0, padding: 0, background: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 13.5, color: project === p ? 'var(--text-accent)' : 'var(--text-body)' }}>
+                <span style={{ flex: 1, textAlign: 'left' }}>{p}</span>
+                <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--text-muted)' }}>{n}</span>
+              </button>
+            ))}
+          </div>
+        </Card>
+        <Card title="Carga da equipe">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <RingChart size={104} thickness={14} showValues={false} segments={[{ value: 3, color: 'var(--data-1)' }, { value: 2, color: 'var(--data-2)' }, { value: 2, color: 'var(--data-3)' }]} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[['Marina Costa', 3, 'var(--data-1)'], ['Rafael Lima', 2, 'var(--data-2)'], ['Ana Dias', 2, 'var(--data-3)']].map(([n, v, c]) => (
+                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />{n}<span style={{ color: 'var(--text-muted)' }}>{v}</span></div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+      <Card actions={<><IconButton variant="inverse" icon="list-filter" label="Filtros" /><IconButton icon="share" label="Exportar" /><IconButton icon="arrow-up-right" label="Abrir em tela cheia" /></>}
+        title={<div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: -6 }}>
+          <Input icon="search" size="sm" placeholder="Buscar tarefas" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: 320 }} />
+          <div style={{ flex: 1 }} />
+          <Select size="sm" placeholder="Projeto" value={project} onChange={setProject} options={['Lançamento Q4', 'Fechamento mensal', 'Rotina de operações', 'Contratação design']} />
+          <Select size="sm" placeholder="Responsável" options={['Marina Costa', 'Rafael Lima', 'Ana Dias']} />
+          <Select size="sm" placeholder="Prazo" options={['Hoje', 'Esta semana', 'Este mês']} />
+        </div>}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+          <thead><tr><Th w={44}></Th><Th>Tarefa</Th><Th w={200}>Projeto</Th><Th w={190}>Responsável</Th><Th w={110}>Prazo</Th><Th w={150}>Status</Th><Th w={52}></Th></tr></thead>
+          <tbody>
+            {visible.map((r) => {
+              const [tone, label] = STATUS[r.status];
+              return (
+                <tr key={r.id} style={{ borderTop: '1px solid var(--border-subtle)' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-raised)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}>
+                  <td style={{ padding: '14px 12px' }}><Checkbox checked={r.done} onChange={() => toggle(r.id)} /></td>
+                  <td style={{ padding: '14px 12px' }}>
+                    <div style={{ fontSize: 14, color: r.done ? 'var(--text-muted)' : 'var(--text-strong)', textDecoration: r.done ? 'line-through' : 'none' }}>{r.title}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-subtle)', marginTop: 2 }}>{r.id}</div>
+                  </td>
+                  <td style={{ padding: '14px 12px', fontSize: 13, color: 'var(--text-body)' }}>{r.project}</td>
+                  <td style={{ padding: '14px 12px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13 }}><Avatar name={r.who} size={26} />{r.who}</span></td>
+                  <td style={{ padding: '14px 12px', fontSize: 13, color: r.status === 'late' ? 'var(--status-danger)' : 'var(--text-body)' }}>{r.due}</td>
+                  <td style={{ padding: '14px 12px' }}><Badge tone={tone} dot>{label}</Badge></td>
+                  <td style={{ padding: '14px 12px' }}><IconButton size="sm" variant="ghost" icon="ellipsis" label="Mais ações" /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {visible.length === 0 && <div style={{ padding: '40px 0 16px', textAlign: 'center', fontSize: 14, color: 'var(--text-muted)' }}>Nenhuma tarefa por aqui. Ajuste os filtros ou crie uma nova tarefa.</div>}
+      </Card>
+    </div>
+  );
+}
+
+Object.assign(window, { BosunTasksScreen: TasksScreen });
+})();
+</script>
+<script type="text/babel" data-source="flows.jsx">
+// BOSUN webapp — Automações (flows list + flow detail)
+(() => {
+const { Card, IconButton, Badge, Icon, Button, Switch, Tabs } = window.BOSUNDesignSystem_c587fa;
+
+const FLOWS = [
+  { id: 'flow_8f2c', name: 'Resumo diário de vendas', trigger: 'Todos os dias, 8h', runs: 214, on: true, last: 'Concluído às 08:00' },
+  { id: 'flow_3a91', name: 'Triagem de e-mails de suporte', trigger: 'Novo e-mail em suporte@', runs: 1290, on: true, last: 'Executando agora' },
+  { id: 'flow_c07d', name: 'Lembrete de faturas vencidas', trigger: 'Toda segunda, 9h', runs: 32, on: true, last: 'Falhou há 2 dias' },
+  { id: 'flow_51be', name: 'Onboarding de clientes', trigger: 'Novo contrato assinado', runs: 18, on: false, last: 'Pausado' },
+];
+const STEPS = [
+  ['clock', 'Gatilho', 'Todos os dias às 8h'],
+  ['database', 'Buscar dados', 'Planilha “Vendas 2026”, aba Diário'],
+  ['sparkles', 'Gerar resumo', 'Totais, variação e destaques'],
+  ['send', 'Enviar', 'E-mail para equipe-comercial@'],
+];
+
+function stateOf(f) {
+  if (!f.on) return ['neutral', 'Pausado'];
+  if (f.last.startsWith('Executando')) return ['running', 'Em execução'];
+  if (f.last.startsWith('Falhou')) return ['danger', 'Falhou'];
+  return ['success', 'Ativo'];
+}
+
+function StepNode({ icon, title, body, state, last }) {
+  const color = state === 'done' ? 'var(--signal-400)' : state === 'running' ? 'var(--mist)' : 'var(--steel-500)';
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '44px minmax(0,1fr) auto', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', alignSelf: 'stretch' }}>
+        <span style={{ width: 44, height: 44, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          background: state === 'done' ? 'var(--surface-accent)' : 'var(--surface-raised)', color: state === 'done' ? 'var(--text-on-accent)' : color,
+          boxShadow: state === 'running' ? 'var(--shadow-glow)' : 'none', transition: 'background var(--dur-base), box-shadow var(--dur-base)' }}>
+          <Icon name={state === 'running' ? 'loader' : icon} size={18} style={state === 'running' ? { animation: 'bx-spin 1s linear infinite' } : undefined} />
+        </span>
+        {!last && <span style={{ flex: 1, width: 0, minHeight: 28, borderLeft: '1.5px dotted ' + (state === 'done' ? 'var(--signal-400)' : 'var(--steel-600)'), margin: '6px 0' }} />}
+      </div>
+      <div style={{ paddingTop: 4, paddingBottom: last ? 0 : 20 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 500, color: 'var(--text-strong)' }}>{title}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{body}</div>
+      </div>
+      <div style={{ paddingTop: 10, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-subtle)' }}>{state === 'done' ? 'ok' : state === 'running' ? '…' : ''}</div>
+    </div>
+  );
+}
+
+function FlowsScreen({ notify }) {
+  const [flows, setFlows] = React.useState(FLOWS);
+  const [sel, setSel] = React.useState(FLOWS[0].id);
+  const [run, setRun] = React.useState(-1); // index of running step, -1 idle, 4 = finished
+  const [log, setLog] = React.useState([['08:00:02', 'ok', 'flow_8f2c · etapa 4/4 · enviar · 212ms'], ['08:00:01', 'ok', 'flow_8f2c · etapa 3/4 · gerar-resumo · 1.4s'], ['08:00:00', 'ok', 'flow_8f2c · etapa 2/4 · buscar-dados · 380ms']]);
+  const flow = flows.find((f) => f.id === sel);
+  React.useEffect(() => {
+    if (run < 0 || run > 3) return;
+    const t = setTimeout(() => {
+      const now = new Date().toTimeString().slice(0, 8);
+      setLog((l) => [[now, 'ok', flow.id + ' · etapa ' + (run + 1) + '/4 · ' + STEPS[run][1].toLowerCase().replace(/ /g, '-') + ' · ' + (200 + Math.round(Math.random() * 900)) + 'ms'], ...l].slice(0, 6));
+      if (run === 3) notify({ tone: 'success', title: 'Fluxo concluído.', description: 'Todas as etapas foram executadas.' });
+      setRun(run + 1);
+    }, 900);
+    return () => clearTimeout(t);
+  }, [run]);
+  const stepState = (i) => (run < 0 ? 'done' : i < run ? 'done' : i === run ? 'running' : run > 3 ? 'done' : 'idle');
+  return (
+    <div>
+      <style>{'@keyframes bx-spin{to{transform:rotate(360deg)}}'}</style>
+      <BosunPageHeader title="Automações" tabs={['Todas', 'Ativas', 'Pausadas', 'Com falha']} tab="Todas"
+        right={<Button variant="primary" iconLeft="plus" onClick={() => notify({ tone: 'info', title: 'Escolha um gatilho para começar.' })}>Nova automação</Button>} />
+      <div style={{ display: 'grid', gridTemplateColumns: '400px minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {flows.map((f) => {
+            const [tone, label] = stateOf(f);
+            const on = f.id === sel;
+            return (
+              <div key={f.id} onClick={() => { setSel(f.id); setRun(-1); }} style={{ cursor: 'pointer', padding: 20, borderRadius: 24, background: on ? 'var(--surface-raised)' : 'var(--surface-card)',
+                boxShadow: on ? 'inset 0 0 0 1px var(--border-accent)' : 'var(--shadow-card)', transition: 'background var(--dur-fast)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 500, color: 'var(--text-strong)' }}>{f.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}><Icon name="zap" size={13} />{f.trigger}</div>
+                  </div>
+                  <span onClick={(e) => e.stopPropagation()}><Switch size="sm" checked={f.on} onChange={(v) => { setFlows(flows.map((x) => x.id === f.id ? { ...x, on: v, last: v ? 'Ativado agora' : 'Pausado' } : x)); notify({ tone: 'info', title: v ? 'Automação ativada.' : 'Automação pausada.', description: f.name }); }} /></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+                  <Badge tone={tone} dot>{label}</Badge>
+                  <span style={{ fontSize: 12, color: 'var(--text-subtle)' }}>{f.last}</span>
+                  <span style={{ flex: 1 }} />
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-subtle)' }}>{f.runs} execuções</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <Card title={flow.name} subtitle={<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{flow.id}</span>} titleSize={24}
+          actions={<><IconButton icon="pencil" label="Editar fluxo" /><IconButton icon="copy" label="Duplicar" /><IconButton icon="ellipsis" label="Mais" /></>}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 28px' }}>
+            <Button variant="primary" iconLeft={run >= 0 && run < 4 ? undefined : 'play'} loading={run >= 0 && run < 4} disabled={!flow.on} onClick={() => setRun(0)}>{run >= 0 && run < 4 ? 'Executando…' : 'Executar agora'}</Button>
+            <Button iconLeft="history">Histórico</Button>
+            {!flow.on && <Badge tone="warning" dot>Ative a automação para executar.</Badge>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 24 }}>
+            <div className="bx-grid" style={{ borderRadius: 18, background: 'var(--bg-sunken)', padding: 24 }}>
+              {STEPS.map(([ic, t, b], i) => <StepNode key={t} icon={ic} title={t} body={b} state={stepState(i)} last={i === STEPS.length - 1} />)}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 500, color: 'var(--text-strong)' }}>Registro de execução</span>
+                <Tabs variant="pill" items={['Hoje', '7 dias']} />
+              </div>
+              <div style={{ borderRadius: 18, background: 'var(--bg-sunken)', padding: '14px 18px', fontFamily: 'var(--font-mono)', fontSize: 12.5, lineHeight: 1.9, color: 'var(--text-body)', minHeight: 220 }}>
+                {log.map(([t, s, m], i) => <div key={i}><span style={{ color: 'var(--text-subtle)' }}>{t}</span>  <span style={{ color: 'var(--signal-400)' }}>✓</span> {m}</div>)}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                {[['99,1%', 'sucesso'], ['1,9s', 'duração média'], [String(flow.runs), 'execuções']].map(([v, l]) => (
+                  <div key={l} style={{ borderRadius: 16, background: 'var(--surface-raised)', padding: '14px 16px' }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 300, fontSize: 26, letterSpacing: '-0.03em', color: 'var(--text-strong)' }}>{v}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { BosunFlowsScreen: FlowsScreen });
+})();
+</script>
+<script type="text/babel" data-source="connect.jsx">
+// BOSUN webapp — Integrações (connections grid + permission dialog)
+(() => {
+const { Card, IconButton, Badge, Icon, Button, Dialog, Checkbox, Radio, Input } = window.BOSUNDesignSystem_c587fa;
+
+const TOOLS = [
+  { id: 'gcal', name: 'Google Agenda', icon: 'calendar', desc: 'Eventos e disponibilidade', state: 'warning', note: 'Acesso expira em 2 dias' },
+  { id: 'gmail', name: 'Gmail', icon: 'mail', desc: 'Leitura e envio de e-mails', state: 'connected', note: 'Sincronizado há 4 min' },
+  { id: 'sheets', name: 'Planilhas', icon: 'database', desc: 'Dados para relatórios', state: 'connected', note: 'Sincronizado há 1 h' },
+  { id: 'erp', name: 'ERP Financeiro', icon: 'layers', desc: 'Contas, notas e extratos', state: 'error', note: 'Credenciais inválidas' },
+  { id: 'chat', name: 'Chat da equipe', icon: 'message-square', desc: 'Avisos em canais', state: 'available' },
+  { id: 'drive', name: 'Drive', icon: 'folder', desc: 'Arquivos e pastas', state: 'available' },
+  { id: 'hooks', name: 'Webhooks', icon: 'webhook', desc: 'Eventos de qualquer sistema', state: 'available' },
+  { id: 'cal', name: 'Agenda pública', icon: 'calendar-clock', desc: 'Agendamentos de clientes', state: 'available' },
+];
+const BADGE = { connected: ['success', 'Conectada'], warning: ['warning', 'Atenção'], error: ['danger', 'Erro'], available: ['neutral', 'Disponível'] };
+
+function ToolCard({ t, onConnect, onFix }) {
+  const [tone, label] = BADGE[t.state];
+  const connected = t.state !== 'available';
+  return (
+    <Card title={t.name} subtitle={t.desc}
+      icon={<span style={{ width: 44, height: 44, borderRadius: '50%', background: connected ? 'var(--surface-accent-soft)' : 'var(--surface-raised)', color: connected ? 'var(--text-accent)' : 'var(--icon-default)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}><Icon name={t.icon} size={20} /></span>}
+      actions={<IconButton icon={connected ? 'settings' : 'plus'} label={connected ? 'Configurar' : 'Conectar'} variant={connected ? 'control' : 'accent'} onClick={() => (connected ? onFix(t) : onConnect(t))} />}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <Badge tone={tone} dot>{label}</Badge>
+        {t.note && <span style={{ fontSize: 12, color: t.state === 'error' ? 'var(--status-danger)' : 'var(--text-subtle)' }}>{t.note}</span>}
+      </div>
+    </Card>
+  );
+}
+
+function ConnectScreen({ notify }) {
+  const [tools, setTools] = React.useState(TOOLS);
+  const [dlg, setDlg] = React.useState(null);
+  const [access, setAccess] = React.useState('read');
+  const [q, setQ] = React.useState('');
+  const confirm = () => {
+    setTools(tools.map((x) => (x.id === dlg.id ? { ...x, state: 'connected', note: 'Conectada agora' } : x)));
+    notify({ tone: 'success', title: dlg.name + ' conectada.', description: access === 'read' ? 'Acesso somente leitura.' : 'Acesso de leitura e escrita.' });
+    setDlg(null);
+  };
+  const fix = (t) => {
+    if (t.state === 'error') notify({ tone: 'danger', title: 'Não foi possível conectar esta ferramenta.', description: 'Revise as credenciais e tente novamente.' });
+    else setDlg(t);
+  };
+  const shown = tools.filter((t) => t.name.toLowerCase().includes(q.toLowerCase()));
+  const connected = tools.filter((t) => t.state !== 'available');
+  return (
+    <div>
+      <BosunPageHeader title="Integrações" tabs={['Todas', 'Conectadas', 'Disponíveis']} tab="Todas"
+        right={<Input icon="search" size="md" placeholder="Buscar ferramenta" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: 280 }} />} />
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.04em', color: 'var(--text-subtle)', margin: '0 0 12px' }}>{connected.length} CONECTADAS · {tools.length - connected.length} DISPONÍVEIS</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
+        {shown.map((t) => <ToolCard key={t.id} t={t} onConnect={setDlg} onFix={fix} />)}
+      </div>
+      <Dialog open={!!dlg} onClose={() => setDlg(null)} width={520}
+        icon={dlg && <span style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--surface-raised)', color: 'var(--text-accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={dlg.icon} size={20} /></span>}
+        title={dlg ? 'Conectar ' + dlg.name : ''} description="Você decide quais informações esta integração pode acessar."
+        footer={<><Button onClick={() => setDlg(null)}>Cancelar</Button><Button variant="primary" iconLeft="shield-check" onClick={confirm}>Permitir acesso</Button></>}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <Radio name="Nível de acesso" value={access} onChange={setAccess} options={[
+            { value: 'read', label: 'Somente leitura', description: 'A BOSUN vê os dados, mas não altera nada.' },
+            { value: 'write', label: 'Leitura e escrita', description: 'Necessário para automações que criam ou editam itens.' },
+          ]} />
+          <div style={{ height: 1, background: 'var(--border-subtle)' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Checkbox label="Itens dos últimos 90 dias" defaultChecked />
+            <Checkbox label="Itens compartilhados com você" />
+            <Checkbox label="Metadados (títulos, datas, participantes)" defaultChecked />
+          </div>
+        </div>
+      </Dialog>
+    </div>
+  );
+}
+
+Object.assign(window, { BosunConnectScreen: ConnectScreen });
+})();
+</script>
+<script type="text/babel" data-source="login.jsx">
+// BOSUN webapp — Entrar (login)
+(() => {
+const { Wordmark, Input, Button, IconButton, Checkbox } = window.BOSUNDesignSystem_c587fa;
+
+const NODES = [[14, 44, 'Tarefas', 'var(--signal-400)'], [40, 24, 'Automações', 'var(--mist)'], [72, 36, 'Integrações', 'var(--ocean-300)'], [54, 56, 'Documentos', 'var(--steel-400)']];
+
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = React.useState('marina@costa.studio');
+  const [pw, setPw] = React.useState('');
+  const [show, setShow] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const submit = (e) => {
+    e.preventDefault();
+    if (pw.length < 4) { setErr('Senha incorreta. Tente novamente ou redefina sua senha.'); return; }
+    setErr(''); setBusy(true);
+    setTimeout(() => onLogin(), 700);
+  };
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1fr)', minHeight: '100vh', padding: 16, gap: 16, boxSizing: 'border-box' }}>
+      <div className="bx-grid" style={{ position: 'relative', overflow: 'hidden', borderRadius: 32, background: 'var(--bg-sunken)', padding: 48, display: 'flex', flexDirection: 'column' }}>
+        <Wordmark size={24} />
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+          <path d="M14 44 C 22 26, 32 22, 40 24 S 62 40, 72 36 M40 24 C 46 40, 50 50, 54 56" fill="none" stroke="var(--steel-600)" strokeDasharray="0.12 0.9" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1.5 }} />
+        </svg>
+        {NODES.map(([x, y, l, c]) => (
+          <div key={l} style={{ position: 'absolute', left: x + '%', top: y + '%', transform: 'translate(-8px, -50%)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ width: 16, height: 16, borderRadius: '50%', background: c, boxShadow: '0 0 0 6px rgba(244,247,250,.05)' }} />
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)', background: 'var(--surface-raised)', padding: '6px 12px', borderRadius: 999 }}>{l}</span>
+          </div>
+        ))}
+        <div style={{ marginTop: 'auto', position: 'relative', maxWidth: 560 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 56, lineHeight: 1.04, letterSpacing: '-0.035em' }}>
+            <span style={{ fontWeight: 300, color: 'var(--text-muted)' }}>Você define o rumo.</span><br />
+            <span style={{ fontWeight: 600, color: 'var(--text-strong)' }}>BOSUN organiza a operação.</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <form onSubmit={submit} style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ marginBottom: 10 }}>
+            <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text-strong)' }}>Entrar na BOSUN</h1>
+            <p style={{ margin: '8px 0 0', fontSize: 15, color: 'var(--text-muted)' }}>Acesse sua área de trabalho.</p>
+          </div>
+          <Input shape="rounded" size="lg" label="E-mail" type="email" icon="at-sign" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input shape="rounded" size="lg" label="Senha" type={show ? 'text' : 'password'} icon="lock" placeholder="Sua senha" value={pw} error={err}
+            onChange={(e) => setPw(e.target.value)} trailing={<IconButton size="sm" variant="ghost" icon={show ? 'eye-off' : 'eye'} label={show ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShow(!show)} style={{ marginRight: -8 }} />} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Checkbox label="Manter conectado" defaultChecked />
+            <a href="#" onClick={(e) => e.preventDefault()} style={{ fontSize: 13 }}>Esqueci minha senha</a>
+          </div>
+          <Button type="submit" variant="primary" size="lg" fullWidth loading={busy}>{busy ? 'Entrando…' : 'Entrar'}</Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-subtle)', fontSize: 12 }}><span style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />ou<span style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} /></div>
+          <Button size="lg" fullWidth iconLeft="key-round">Entrar com SSO</Button>
+          <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>Ainda não tem conta? <a href="#" onClick={(e) => e.preventDefault()}>Começar agora</a></p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { BosunLoginScreen: LoginScreen });
+})();
+</script>
+<script type="text/babel" data-source="app.jsx">
+// BOSUN webapp — app router
+(() => {
+const { Button } = window.BOSUNDesignSystem_c587fa;
+
+function App() {
+  const [authed, setAuthed] = React.useState(true);
+  const [route, setRoute] = React.useState('home');
+  const [palette, setPalette] = React.useState(false);
+  const [toasts, setToasts] = React.useState([]);
+  const dismiss = (id) => setToasts((ts) => ts.filter((t) => t.id !== id));
+  const notify = (t) => {
+    const id = Date.now() + Math.random();
+    setToasts((ts) => [{ ...t, id }, ...ts].slice(0, 3));
+    if (t.tone !== 'danger') setTimeout(() => dismiss(id), 5000);
+  };
+  const go = (r) => { setRoute(r); window.scrollTo(0, 0); };
+  React.useEffect(() => { localStorage.removeItem('bosun-kit-authed'); localStorage.removeItem('bosun-kit-route'); }, []);
+  React.useEffect(() => {
+    const k = (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette(true); } if (e.key === 'Escape') setPalette(false); };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, []);
+
+  if (!authed) return (
+    <>
+      <BosunLoginScreen onLogin={() => { setAuthed(true); go('home'); notify({ tone: 'success', title: 'Seu espaço de trabalho está pronto.' }); }} />
+      <BosunToastHost toasts={toasts} onDismiss={dismiss} />
+    </>
+  );
+
+  let screen;
+  if (route === 'tasks') screen = <BosunTasksScreen notify={notify} />;
+  else if (route === 'flows') screen = <BosunFlowsScreen notify={notify} />;
+  else if (route === 'connect') screen = <BosunConnectScreen notify={notify} />;
+  else if (route === 'docs') screen = (
+    <div>
+      <BosunPageHeader title="Documentos" tabs={['Recentes', 'Compartilhados', 'Modelos']} tab="Recentes" />
+      <BosunEmptyState icon="file-text" title="Nenhum documento ainda" body="Crie seu primeiro documento para começar. Ele fica disponível para tarefas e automações."
+        action={<Button variant="primary" iconLeft="plus" onClick={() => notify({ tone: 'info', title: 'Documento criado em Rascunhos.' })}>Novo documento</Button>} />
+    </div>
+  );
+  else screen = <BosunHomeScreen onNavigate={go} notify={notify} />;
+
+  return (
+    <div style={{ minHeight: '100vh' }}>
+      <BosunTopBar route={route} onNavigate={go} onSearch={() => setPalette(true)} onLogout={() => setAuthed(false)} />
+      <main style={{ maxWidth: 'var(--container-max)', margin: '0 auto', padding: '0 32px 48px' }} data-screen-label={route}>{screen}</main>
+      <BosunCommandPalette open={palette} onClose={() => setPalette(false)} onNavigate={go} />
+      <BosunToastHost toasts={toasts} onDismiss={dismiss} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+})();
+</script>
+</body></html>

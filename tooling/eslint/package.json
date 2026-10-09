@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./base": "./base.js",
+    "./design-system": "./design-system.js",
     "./next": "./next.js",
     "./playwright": "./playwright.js"
   },

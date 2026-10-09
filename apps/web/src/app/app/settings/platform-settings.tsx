@@ -2,12 +2,12 @@
 
 import type { PlatformSettingGroup, PlatformSettingSummary } from "@crm/core/platform";
 import { Button } from "@crm/ui/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
 import { Input } from "@crm/ui/components/input";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { FormEvent } from "react";
-import { toast } from "sonner";
 
 import { updatePlatformSettingAction } from "@/server/actions/platform";
 
@@ -131,7 +131,7 @@ function SelectInput({ id, field, current }: { id: string; field: FieldDef; curr
       id={id}
       name={field.path}
       defaultValue={typeof current === "string" ? current : ""}
-      className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
+      className="border-line shadow-control h-9 w-full rounded-md border bg-transparent px-3 text-sm"
     >
       <option value="">—</option>
       {field.options?.map((opt) => (
@@ -170,12 +170,13 @@ function FieldInput({
         name={field.path}
         type="checkbox"
         defaultChecked={current === true}
-        className="border-input mt-2 h-4 w-4 rounded border"
+        className="border-line mt-2 h-4 w-4 rounded-xs border"
       />
     );
   } else {
     control = (
       <Input
+        shape="rounded"
         id={id}
         name={field.path}
         type={field.secret ? "password" : field.kind === "number" ? "number" : "text"}
@@ -191,7 +192,7 @@ function FieldInput({
       <label className="text-sm font-medium" htmlFor={id}>
         {field.label}
         {summary.dbFields.includes(field.path) && (
-          <span className="text-muted-foreground ml-1 text-xs">{t("platform.fromDb")}</span>
+          <span className="text-ink-muted ml-1 text-xs">{t("platform.fromDb")}</span>
         )}
       </label>
       {control}
@@ -228,36 +229,37 @@ function GroupCard({ summary }: { summary: PlatformSettingSummary }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card
+      title={
+        <span className="flex items-center gap-2">
           {def.title}
           {summary.configured ? (
             <span className="text-success text-xs font-normal">{t("platform.configured")}</span>
           ) : (
-            <span className="text-muted-foreground text-xs font-normal">
+            <span className="text-ink-muted text-xs font-normal">
               {t("platform.notConfigured")}
             </span>
           )}
-        </CardTitle>
-        <CardDescription>{def.description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
-          {def.fields.map((field) => (
-            <FieldInput
-              key={field.path}
-              group={summary.group}
-              field={field}
-              summary={summary}
-              t={t}
-            />
-          ))}
-          <div className="sm:col-span-2">
-            <Button type="submit">{t("platform.saveGroup", { group: def.title })}</Button>
-          </div>
-        </form>
-      </CardContent>
+        </span>
+      }
+      subtitle={def.description}
+    >
+      <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
+        {def.fields.map((field) => (
+          <FieldInput
+            key={field.path}
+            group={summary.group}
+            field={field}
+            summary={summary}
+            t={t}
+          />
+        ))}
+        <div className="sm:col-span-2">
+          <Button variant="primary" type="submit">
+            {t("platform.saveGroup", { group: def.title })}
+          </Button>
+        </div>
+      </form>
     </Card>
   );
 }

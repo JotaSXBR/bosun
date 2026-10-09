@@ -2,27 +2,15 @@
 
 import type { DealCardRow, StageRow } from "@crm/core/leads";
 import { Button } from "@crm/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@crm/ui/components/dialog";
+import { Dialog } from "@crm/ui/components/dialog";
+import { IconButton } from "@crm/ui/components/icon-button";
 import { Input } from "@crm/ui/components/input";
 import { Label } from "@crm/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@crm/ui/components/select";
-import { PlusIcon, XIcon } from "lucide-react";
+import { Select } from "@crm/ui/components/select";
+import { toast } from "@crm/ui/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import { createDealAction, searchContactsAction, updateDealAction } from "@/server/actions/leads";
 import type { ContactPickRow } from "@/server/services";
@@ -49,23 +37,16 @@ function ContactSelect({ value, onChange }: { value: string; onChange: (id: stri
         placeholder={t("dealForm.searchContact")}
         aria-label={t("dealForm.searchContact")}
       />
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger aria-label={t("dealForm.contactAria")}>
-          <SelectValue placeholder={t("dealForm.selectContact")} />
-        </SelectTrigger>
-        <SelectContent>
-          {contacts.map((c) => (
-            <SelectItem key={c.id} value={c.id}>
-              {c.displayName ?? c.channelUserId}
-            </SelectItem>
-          ))}
-          {contacts.length === 0 && (
-            <div className="text-muted-foreground px-2 py-1.5 text-xs">
-              {t("dealForm.noContacts")}
-            </div>
-          )}
-        </SelectContent>
-      </Select>
+      <Select
+        options={contacts.map((c) => ({ value: c.id, label: c.displayName ?? c.channelUserId }))}
+        value={value || undefined}
+        onChange={onChange}
+        placeholder={t("dealForm.selectContact")}
+        aria-label={t("dealForm.contactAria")}
+      />
+      {contacts.length === 0 && (
+        <p className="text-ink-muted text-xs">{t("dealForm.noContacts")}</p>
+      )}
     </div>
   );
 }
@@ -112,6 +93,7 @@ function CustomAttrsFields({
       {attrs.map((row, index) => (
         <div key={index} className="flex gap-2">
           <Input
+            shape="rounded"
             value={row.key}
             onChange={(e) =>
               setAttrs(attrs.map((r, i) => (i === index ? { ...r, key: e.target.value } : r)))
@@ -121,6 +103,7 @@ function CustomAttrsFields({
             maxLength={100}
           />
           <Input
+            shape="rounded"
             value={row.value}
             onChange={(e) =>
               setAttrs(attrs.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)))
@@ -129,25 +112,24 @@ function CustomAttrsFields({
             className="flex-1"
             maxLength={500}
           />
-          <Button
+          <IconButton
             type="button"
             variant="ghost"
             size="sm"
-            className="size-9 p-0"
-            aria-label={t("dealForm.removeField")}
+            icon="x"
+            label={t("dealForm.removeField")}
             onClick={() => setAttrs(attrs.filter((_, i) => i !== index))}
-          >
-            <XIcon className="size-4" />
-          </Button>
+          />
         </div>
       ))}
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
+        iconLeft="plus"
         onClick={() => setAttrs([...attrs, { key: "", value: "" }])}
       >
-        <PlusIcon className="size-3.5" /> {t("dealForm.addField")}
+        {t("dealForm.addField")}
       </Button>
     </div>
   );
@@ -186,6 +168,7 @@ function DealFormFields({
       <div className="space-y-1.5">
         <Label htmlFor="deal-title">{t("dealForm.title")}</Label>
         <Input
+          shape="rounded"
           id="deal-title"
           value={form.title}
           onChange={(e) => setForm({ title: e.target.value })}
@@ -202,25 +185,17 @@ function DealFormFields({
         <div className="space-y-1.5">
           <Label htmlFor="deal-stage">{t("dealForm.stage")}</Label>
           <Select
-            value={form.stageId}
-            onValueChange={(stageId) => setForm({ stageId })}
+            options={stages.map((s) => ({ value: s.id, label: s.name }))}
+            value={form.stageId || undefined}
+            onChange={(stageId) => setForm({ stageId })}
             disabled={editing}
-          >
-            <SelectTrigger id="deal-stage">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {stages.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            id="deal-stage"
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="deal-value">{t("dealForm.value")}</Label>
           <Input
+            shape="rounded"
             id="deal-value"
             value={form.value}
             onChange={(e) => setForm({ value: e.target.value })}
@@ -303,18 +278,17 @@ export function DealFormDialog({
   const canSubmit = title.trim() && stageId && (editing || contactId) && !pending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{editing ? t("dealForm.editTitle") : t("dealForm.newTitle")}</DialogTitle>
-        </DialogHeader>
-        <DealFormFields editing={editing} stages={stages} form={form} setForm={setForm} />
-        <DialogFooter>
-          <Button onClick={submit} disabled={!canSubmit}>
-            {editing ? tc("save") : t("dealForm.createSubmit")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+    <Dialog
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={editing ? t("dealForm.editTitle") : t("dealForm.newTitle")}
+      footer={
+        <Button variant="primary" onClick={submit} disabled={!canSubmit}>
+          {editing ? tc("save") : t("dealForm.createSubmit")}
+        </Button>
+      }
+    >
+      <DealFormFields editing={editing} stages={stages} form={form} setForm={setForm} />
     </Dialog>
   );
 }

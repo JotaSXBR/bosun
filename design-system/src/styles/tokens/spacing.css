@@ -1,0 +1,48 @@
+/* BOSUN — spacing, radii, sizing, layout. 4px base grid. */
+:root{
+  --space-0:0;
+  --space-0-5:2px;
+  --space-1:4px;
+  --space-1-5:6px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:20px;
+  --space-6:24px;
+  --space-7:28px;
+  --space-8:32px;
+  --space-10:40px;
+  --space-12:48px;
+  --space-16:64px;
+  --space-20:80px;
+  --space-24:96px;
+  --space-32:128px;
+
+  --radius-xs:6px;
+  --radius-sm:10px;
+  --radius-md:14px;
+  --radius-lg:18px;
+  --radius-xl:24px;
+  --radius-2xl:32px;
+  --radius-pill:999px;
+  --radius-card:var(--radius-xl);
+  --radius-card-inner:var(--radius-lg);
+  --radius-notch:16px; /* concave fillet where a card's tab meets its body */
+
+  --control-xs:28px;
+  --control-sm:34px;
+  --control-md:42px;
+  --control-lg:50px;
+  --icon-btn:44px;
+  --icon-sm:16px;
+  --icon-md:20px;
+  --icon-lg:24px;
+  --stroke-icon:1.5;
+
+  --nav-height:76px;
+  --container-max:1440px;
+  --container-text:680px;
+  --gutter:24px;
+  --card-gap:16px;
+  --card-pad:24px;
+}

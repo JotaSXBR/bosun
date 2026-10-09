@@ -1,7 +1,7 @@
 "use client";
 
 import type { DealCardRow, LabelRow, StageRow } from "@crm/core/leads";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@crm/ui/components/dialog";
+import { Dialog } from "@crm/ui/components/dialog";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -30,25 +30,25 @@ function DealLabelsDialog({
   const t = useTranslations("leads");
   const router = useRouter();
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t("labelsDialogTitle", { title: deal.title })}</DialogTitle>
-        </DialogHeader>
-        <LabelPicker
-          allLabels={labels}
-          selectedIds={deal.labels.map((l) => l.id)}
-          canCreate={canManage}
-          triggerLabel={t("selectLabels")}
-          onSave={async (labelIds) => {
-            const result = await setDealLabelsAction({ dealId: deal.id, labelIds });
-            if (result.ok) router.refresh();
-            return result.ok
-              ? { ok: true }
-              : { ok: false, error: "error" in result ? result.error : undefined };
-          }}
-        />
-      </DialogContent>
+    <Dialog
+      open
+      onClose={onClose}
+      title={t("labelsDialogTitle", { title: deal.title })}
+      width={384}
+    >
+      <LabelPicker
+        allLabels={labels}
+        selectedIds={deal.labels.map((l) => l.id)}
+        canCreate={canManage}
+        triggerLabel={t("selectLabels")}
+        onSave={async (labelIds) => {
+          const result = await setDealLabelsAction({ dealId: deal.id, labelIds });
+          if (result.ok) router.refresh();
+          return result.ok
+            ? { ok: true }
+            : { ok: false, error: "error" in result ? result.error : undefined };
+        }}
+      />
     </Dialog>
   );
 }

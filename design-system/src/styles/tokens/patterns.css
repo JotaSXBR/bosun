@@ -1,0 +1,12 @@
+/* BOSUN — signature textures. Hatch = "planned / remaining", dots = "in motion / current", grid = precision backdrop.
+   Set --pattern-ink on the element (or a parent) to recolor. */
+:root{
+  --pattern-hatch-pitch:7px;
+  --pattern-dot-pitch:8px;
+  --pattern-grid-pitch:48px;
+}
+.bx-hatch{background-image:repeating-linear-gradient(135deg,var(--pattern-ink) 0 1.5px,transparent 1.5px var(--pattern-hatch-pitch));}
+.bx-hatch-h{background-image:repeating-linear-gradient(180deg,var(--pattern-ink) 0 1.5px,transparent 1.5px 6px);}
+.bx-dots{background-image:radial-gradient(circle,var(--pattern-ink) 1.25px,transparent 1.75px);background-size:var(--pattern-dot-pitch) var(--pattern-dot-pitch);}
+.bx-grid{background-image:linear-gradient(var(--border-subtle) 1px,transparent 1px),linear-gradient(90deg,var(--border-subtle) 1px,transparent 1px);background-size:var(--pattern-grid-pitch) var(--pattern-grid-pitch);}
+.bx-on-accent{--pattern-ink:var(--pattern-ink-on-accent);}

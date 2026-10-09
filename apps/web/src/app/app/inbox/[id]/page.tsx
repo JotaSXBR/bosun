@@ -3,7 +3,7 @@ import type { ConversationDetailRow } from "@crm/core/messaging";
 import { canInspectMessageHistory } from "@crm/core/messaging";
 import { hasPermission } from "@crm/permissions";
 import { Badge } from "@crm/ui/components/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@crm/ui/components/card";
+import { Card } from "@crm/ui/components/card";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
@@ -42,18 +42,18 @@ function TicketHeader({
 }) {
   const status = TICKET_STATUS[conversation.status];
   return (
-    <CardHeader className="space-y-2">
+    <div className="space-y-2">
       <div className="flex items-center justify-between gap-4">
-        <CardTitle>
+        <div className="font-display tracking-card text-ink-strong text-lg font-medium">
           #{conversation.ticketNumber} ·{" "}
           {conversation.contactDisplayName ?? conversation.contactChannelUserId}{" "}
           <PresenceIndicator conversationId={conversation.id} />
-        </CardTitle>
-        <Badge variant={status?.variant ?? "outline"}>
+        </div>
+        <Badge tone={status?.tone ?? "neutral"}>
           {ts.has(conversation.status) ? ts(conversation.status) : conversation.status}
         </Badge>
       </div>
-      <p className="text-muted-foreground text-sm">
+      <p className="text-ink-muted text-sm">
         {t("ticketSeq", {
           seq: conversation.ticketSeq,
           date: format.dateTime(conversation.createdAt, {
@@ -64,7 +64,7 @@ function TicketHeader({
         {conversation.assigneeName && <> · {conversation.assigneeName}</>}
         {conversation.sectorName && <> · {conversation.sectorName}</>}
       </p>
-    </CardHeader>
+    </div>
   );
 }
 
@@ -102,20 +102,20 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-8">
       <div className="flex items-center justify-between">
-        <Link href="/app/inbox" className="text-muted-foreground text-sm underline">
+        <Link href="/app/inbox" className="text-ink-muted text-sm underline">
           {t("backToList")}
         </Link>
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
-        <Card className="min-w-0 flex-1">
+        <Card bodyClassName="space-y-4" className="min-w-0 flex-1">
           <TicketHeader conversation={conversation} t={t} ts={ts} format={format} />
 
-          <CardContent className="space-y-4">
+          <>
             {conversation.precededById && (
               <Link
                 href={`/app/inbox/${conversation.precededById}`}
-                className="text-muted-foreground hover:text-foreground block rounded-md border border-dashed px-3 py-2 text-center text-xs"
+                className="text-ink-muted hover:text-ink block rounded-md border border-dashed px-3 py-2 text-center text-xs"
                 data-testid="previous-ticket"
               >
                 {t("previousTicket", {
@@ -152,7 +152,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             />
 
             {!isViewer && <Composer conversationId={conversation.id} disabled={!canWork} />}
-          </CardContent>
+          </>
         </Card>
 
         <ConversationLeadPanel

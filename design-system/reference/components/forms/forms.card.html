@@ -1,0 +1,33 @@
+<!-- @dsCard group="Components" viewport="700x320" name="Forms" subtitle="Input, Select, Checkbox, Radio, Switch" -->
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:24px;margin:0}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:18px}.lbl{font:500 11px/1 var(--font-mono);color:var(--text-subtle);letter-spacing:.04em;width:84px;flex-shrink:0}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const NS = window.BOSUNDesignSystem_c587fa;
+
+const { Input, Select, Checkbox, Radio, Switch } = NS;
+function App() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
+      <div className="col">
+        <Input icon="search" placeholder="Buscar conteúdo e ações" trailing={<kbd style={{ fontSize: 11, color: 'var(--text-subtle)', padding: '2px 6px', borderRadius: 6, border: '1px solid var(--border-default)' }}>⌘K</kbd>} />
+        <Input shape="rounded" label="Nome do projeto" defaultValue="Lançamento Q4" hint="Visível para toda a equipe." />
+        <Input shape="rounded" label="Chave de API" defaultValue="sk_live_••••" error="Credencial inválida. Revise e tente novamente." />
+      </div>
+      <div className="col">
+        <div className="row"><Select placeholder="Projeto" options={['Lançamento Q4', 'Operações', 'Financeiro']} /><Select defaultValue="Semanal" icon="calendar" options={['Diária', 'Semanal', 'Mensal']} /></div>
+        <div className="row" style={{ gap: 20 }}><Checkbox label="Ler eventos" defaultChecked /><Checkbox label="Criar eventos" /><Checkbox indeterminate label="Todos" /></div>
+        <Radio name="Acesso" defaultValue="read" options={[{ value: 'read', label: 'Somente leitura', description: 'A integração vê, mas não altera.' }, { value: 'write', label: 'Leitura e escrita' }]} />
+        <div className="row" style={{ gap: 24 }}><Switch label="Fluxo ativo" defaultChecked /><Switch size="sm" label="Notificar por e-mail" /></div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script></body></html>

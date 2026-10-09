@@ -1,0 +1,43 @@
+<!-- @dsCard group="Components" viewport="700x400" name="Surfaces" subtitle="Card (notched, accent, raised), Accordion, Dialog" -->
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:24px;margin:0}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:18px}.lbl{font:500 11px/1 var(--font-mono);color:var(--text-subtle);letter-spacing:.04em;width:84px;flex-shrink:0}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const NS = window.BOSUNDesignSystem_c587fa;
+
+const { Card, IconButton, Accordion, Dialog, Button, Metric, ProgressBar, Checkbox } = NS;
+function App() {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="col" style={{ gap: 16 }}>
+        <Card title="Prioridades de hoje" actions={<><IconButton icon="bell" label="Alertas" /><IconButton icon="arrow-up-right" label="Abrir" /></>}>
+          <Metric value="12" suffix="tarefas" label="para hoje · 4 concluídas" />
+        </Card>
+        <Card tone="accent" title="Fluxos ativos" actions={<IconButton variant="inverse" icon="arrow-up-right" label="Abrir" />}>
+          <Metric onAccent value="24" label="executando agora" />
+        </Card>
+      </div>
+      <Card title="Projetos" actions={<IconButton icon="arrow-up-right" label="Abrir" />}>
+        <Accordion items={[
+          { id: 'q4', title: 'Lançamento Q4', meta: '8 de 14 etapas', content: <ProgressBar value={57} size="md" /> },
+          { id: 'ops', title: 'Rotina de operações', content: 'Sem pendências.' },
+          { id: 'fin', title: 'Fechamento mensal', content: 'Sem pendências.' },
+        ]} />
+        <div style={{ marginTop: 14 }}><Button size="sm" iconLeft="plug" onClick={() => setOpen(true)}>Abrir diálogo</Button></div>
+      </Card>
+      <Dialog open={open} onClose={() => setOpen(false)} title="Conectar Google Agenda" description="Você decide quais informações esta integração pode acessar."
+        footer={<><Button onClick={() => setOpen(false)}>Cancelar</Button><Button variant="primary" onClick={() => setOpen(false)}>Permitir acesso</Button></>}>
+        <div className="col" style={{ gap: 12 }}><Checkbox label="Ler eventos" defaultChecked /><Checkbox label="Criar e editar eventos" /></div>
+      </Dialog>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script></body></html>
