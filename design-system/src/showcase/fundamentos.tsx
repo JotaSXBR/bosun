@@ -1,4 +1,4 @@
-import { cn } from "@crm/ui/lib/utils";
+import { cn } from "@crm/design-system/lib/utils";
 
 import { Icon, iconNames } from "../components/icon";
 import { Wordmark } from "../components/wordmark";

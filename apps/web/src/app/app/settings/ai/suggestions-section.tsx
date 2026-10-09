@@ -3,10 +3,10 @@
 import type { AgentRow } from "@crm/core/agents";
 import type { KnowledgeEntryRow } from "@crm/core/knowledge";
 import type { AgentSuggestionRow } from "@crm/core/suggestions";
-import { Badge } from "@crm/ui/components/badge";
-import { Button } from "@crm/ui/components/button";
-import { Card } from "@crm/ui/components/card";
-import { toast } from "@crm/ui/components/toast";
+import { Badge } from "@crm/design-system/components/badge";
+import { Button } from "@crm/design-system/components/button";
+import { Card } from "@crm/design-system/components/card";
+import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";

@@ -1,4 +1,4 @@
-import { cn } from "@crm/ui/lib/utils";
+import { cn } from "@crm/design-system/lib/utils";
 import type * as React from "react";
 
 const HEIGHTS = { sm: 6, md: 12, lg: 26 } as const;

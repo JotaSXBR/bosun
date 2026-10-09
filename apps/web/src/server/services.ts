@@ -9,6 +9,8 @@ import type { AuditLogRow, ListAuditEventsInput } from "@crm/core/audit";
 import { listAuditEvents } from "@crm/core/audit";
 import type { MemoryEntryRow } from "@crm/core/brain";
 import { listBrainEntries, listStaleBrainEntries } from "@crm/core/brain";
+import type { ContactListRow } from "@crm/core/contacts";
+import { listOrgContacts } from "@crm/core/contacts";
 import type { ChannelConnectionRow } from "@crm/core/integrations";
 import { listChannelConnectionsForTenant } from "@crm/core/integrations";
 import type { KnowledgeEntryRow } from "@crm/core/knowledge";
@@ -165,6 +167,25 @@ export async function searchOrgContacts(
   query?: string,
 ): Promise<ContactPickRow[]> {
   return searchContacts(getDb(), ctx, query);
+}
+
+export type { ContactListRow };
+
+export async function listContactsPage(
+  ctx: TenantContext,
+  query?: string,
+): Promise<ContactListRow[]> {
+  return listOrgContacts(getDb(), ctx, { query });
+}
+
+export type WahaConnectionPick = Pick<ChannelConnectionRow, "id" | "name">;
+
+/** WAHA connections able to start outbound conversations (connected only). */
+export async function listWahaConnections(ctx: TenantContext): Promise<WahaConnectionPick[]> {
+  const connections = await listChannelConnectionsForTenant(getDb(), ctx);
+  return connections
+    .filter((c) => c.kind === "waha" && c.status === "connected")
+    .map(({ id, name }) => ({ id, name }));
 }
 
 export type { DealRow };

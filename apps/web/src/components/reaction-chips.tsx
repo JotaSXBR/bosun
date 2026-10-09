@@ -1,7 +1,7 @@
 "use client";
 
 import type { MessageReactionView } from "@crm/core/messaging";
-import { cn } from "@crm/ui/lib/utils";
+import { cn } from "@crm/design-system/lib/utils";
 
 import { useAction } from "@/lib/use-action";
 import { reactToMessageAction } from "@/server/actions/chat";

@@ -1,15 +1,15 @@
 "use client";
 
 import type { DealCardRow, StageRow } from "@crm/core/leads";
-import { Button } from "@crm/ui/components/button";
+import { Button } from "@crm/design-system/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@crm/ui/components/dropdown-menu";
-import { IconButton } from "@crm/ui/components/icon-button";
-import { cn } from "@crm/ui/lib/utils";
+} from "@crm/design-system/components/dropdown-menu";
+import { IconButton } from "@crm/design-system/components/icon-button";
+import { cn } from "@crm/design-system/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useTranslations } from "next-intl";

@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@crm/ui/lib/utils";
+import { cn } from "@crm/design-system/lib/utils";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import * as React from "react";

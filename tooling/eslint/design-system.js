@@ -21,13 +21,13 @@ export const designSystemImports = {
   patterns: [
     {
       group: [
-        "@crm/ui/src/**",
+        "@crm/design-system/src/**",
         "**/design-system/src/**",
         "**/design-system/reference/**",
         "**/design-system/assets/**",
       ],
       message:
-        "Import the design system through @crm/ui package exports (components/*, templates/*, lib/*, hooks/*) — never internals or reference files.",
+        "Import the design system through @crm/design-system package exports (components/*, templates/*, lib/*, hooks/*) — never internals or reference files.",
     },
   ],
 };

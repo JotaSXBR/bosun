@@ -1,7 +1,7 @@
 import { NotFoundError } from "@crm/core";
 import type { FunnelRow } from "@crm/core/leads";
+import { PageHeader } from "@crm/design-system/templates/page-header";
 import { hasPermission } from "@crm/permissions";
-import { PageHeader } from "@crm/ui/templates/page-header";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 

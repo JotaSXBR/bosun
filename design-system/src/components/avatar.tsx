@@ -1,4 +1,4 @@
-import { cn } from "@crm/ui/lib/utils";
+import { cn } from "@crm/design-system/lib/utils";
 import type * as React from "react";
 
 const SIZES = { xs: 24, sm: 32, md: 40, lg: 48, xl: 72 } as const;

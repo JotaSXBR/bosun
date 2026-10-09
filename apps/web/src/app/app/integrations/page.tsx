@@ -1,7 +1,7 @@
-import { Badge } from "@crm/ui/components/badge";
-import { Card } from "@crm/ui/components/card";
-import { EmptyState } from "@crm/ui/templates/empty-state";
-import { PageHeader } from "@crm/ui/templates/page-header";
+import { Badge } from "@crm/design-system/components/badge";
+import { Card } from "@crm/design-system/components/card";
+import { EmptyState } from "@crm/design-system/templates/empty-state";
+import { PageHeader } from "@crm/design-system/templates/page-header";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";

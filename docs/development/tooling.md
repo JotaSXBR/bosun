@@ -78,7 +78,7 @@ size/complexity warn tier on `**/src/**` (`complexity` 12, `max-depth` 4,
   `src/server/*` (e.g. `services.ts`) and `@crm/core` services.
 - `packages/core`: module internals can't cross-import (`src/modules/*`),
   pre-existing rule.
-- Design system: `apps/web` imports `@crm/ui` only through its package
+- Design system: `apps/web` imports `@crm/design-system` only through its package
   exports — never `design-system/{src,reference,assets}` internals — and
   `.tsx` in `apps/web`/`design-system` can't carry raw hex/px or non-DS fonts
   (`@crm/eslint-config/design-system`; see `design-system-lint.md`).

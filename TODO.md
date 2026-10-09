@@ -133,11 +133,9 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   Meta em `/app/integrations` ainda exige `appSecret`/`verifyToken` no
   client — relaxar p/ "opcional — usa plataforma" quando o grupo `meta`
   estiver configurado (backend já aceita vazio e faz o merge).
-  **CI pendente**: o e2e em CI roda `pnpm dev` sem `.env` →
-  `encryptJson` falha sem `CHANNEL_CREDENTIALS_KEY` → wizard save
-  quebra. Fix: declarar uma key de teste fixa (64 hex, não-secreta) no
-  `env:` do `ci.yml` (mesmo padrão do `BETTER_AUTH_SECRET`) — bloqueado
-  por escopo do brief na época; aprovar e aplicar.
+  ~~**CI pendente**~~ resolvido: `ci.yml` já declara
+  `CHANNEL_CREDENTIALS_KEY` de teste fixa (64 hex) no `env:` global
+  (mesmo padrão do `BETTER_AUTH_SECRET`) — a entrada estava desatualizada.
 - **P1 — i18n**: ✅ entregue — `next-intl@4.14.9` com locale pt-BR fixo
   (sem `[locale]` na rota), catálogo `apps/web/messages/pt-BR.json`,
   `getTranslations`/`useTranslations` + `getFormatter`/`useFormatter` em
@@ -237,7 +235,7 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `getSession` com `cache()` (layout + página na mesma request);
   `design-system-export/` apagado. Ver `design-system/README.md`, ADR
   0017, `docs/product/vision.md` (conceito BOSUN). **Pendências pós-entrega**: (a) **prioridade mínima** —
-  renomear o pacote `@crm/ui` → `@crm/design-system` (pasta já é
+  renomear o pacote `@crm/ui` → `@crm/design-system` ✅ (feito neste ciclo — pasta já era
   `design-system/`; auditabilidade, decisão do usuário); (b) migrar
   ícones `lucide-react` do app para `<Icon>` (DS tem 104 ícones; traço
   1.5 já alinhado via CSS); (c) toggle de tema / light no app real
@@ -251,11 +249,15 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `@crm/core`); (i) feature de notificações — o sino do top bar hoje abre
   só o estado vazio; (j) `AuthLayout` usa colunas iguais (o kit usa
   1.15fr/1fr — sem token de grid para a proporção).
-- **P2 — Contatos: criação manual + conversa outbound-first** (decisão
-  2026-10-08): hoje `contacts` só nasce via ingest; precisa form "novo
-  contato" + fluxo de nova conversa (WAHA envia pra número novo, sem
-  janela 24h oficial). Destrava também o gap do e2e de deals. Importação
-  (CSV/Google Contacts) = futuro.
+- **P2 — Contatos: criação manual + conversa outbound-first** ✅
+  entregue (2026-10-09): módulo `@crm/core/contacts` (telefone
+  internacional estrito `+<país>…` → `channelUserId` `@c.us`, e-mail em
+  `metadata`, dedup por org), `/app/contacts` (lista + busca + criar),
+  `NewConversationDialog` no inbox/contatos (WAHA conectada only, ticket
+  nasce `in_progress`/me → 1ª mensagem pelo composer — Meta Cloud e
+  site_chat fora), "novo contato" inline no ContactSelect do deal form.
+  Permissões: `messaging:read` lista, `messaging:write` cria/abre.
+  Importação (CSV/Google Contacts) = futuro.
 - **Decisão — round-robin descartado** (2026-10-08): atribuição segue manual
   da fila; quando agentes IA entrarem, roteamento é via intake
   `open`|`pending` (pending = IA atende) — não por rodízio de agentes.

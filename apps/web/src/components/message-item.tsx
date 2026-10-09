@@ -3,7 +3,7 @@
 import type { MessageContent, MessageWithAuthorRow } from "@crm/core/messaging";
 import type { OrgMember } from "@crm/core/organizations";
 import type { TeamWithMembers } from "@crm/core/teams";
-import { cn } from "@crm/ui/lib/utils";
+import { cn } from "@crm/design-system/lib/utils";
 import Image from "next/image";
 import { getFormatter, getTranslations } from "next-intl/server";
 

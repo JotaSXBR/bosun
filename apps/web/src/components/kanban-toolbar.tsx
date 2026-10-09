@@ -1,8 +1,8 @@
 "use client";
 
 import type { FunnelRow } from "@crm/core/leads";
-import { Button } from "@crm/ui/components/button";
-import { Select } from "@crm/ui/components/select";
+import { Button } from "@crm/design-system/components/button";
+import { Select } from "@crm/design-system/components/select";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 

@@ -13,9 +13,9 @@
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
-    "ui": "@crm/ui/components",
-    "lib": "@crm/ui/lib",
-    "hooks": "@crm/ui/hooks"
+    "ui": "@crm/design-system/components",
+    "lib": "@crm/design-system/lib",
+    "hooks": "@crm/design-system/hooks"
   },
   "iconLibrary": "lucide"
 }

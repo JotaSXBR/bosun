@@ -1,5 +1,5 @@
-import { type IconName, iconPaths } from "@crm/ui/lib/icon-paths";
-import { cn } from "@crm/ui/lib/utils";
+import { type IconName, iconPaths } from "@crm/design-system/lib/icon-paths";
+import { cn } from "@crm/design-system/lib/utils";
 import type * as React from "react";
 
 /** Lucide line icon, 1.5px stroke by default. Use the kebab-case Lucide name. */

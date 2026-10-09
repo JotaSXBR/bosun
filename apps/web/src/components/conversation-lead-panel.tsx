@@ -1,15 +1,15 @@
 "use client";
 
 import type { LabelRow } from "@crm/core/leads";
-import { Badge } from "@crm/ui/components/badge";
-import { Button } from "@crm/ui/components/button";
-import { Card } from "@crm/ui/components/card";
-import { Dialog } from "@crm/ui/components/dialog";
-import { Input } from "@crm/ui/components/input";
-import { Label } from "@crm/ui/components/label";
-import { Select } from "@crm/ui/components/select";
-import { toast } from "@crm/ui/components/toast";
-import { cn } from "@crm/ui/lib/utils";
+import { Badge } from "@crm/design-system/components/badge";
+import { Button } from "@crm/design-system/components/button";
+import { Card } from "@crm/design-system/components/card";
+import { Dialog } from "@crm/design-system/components/dialog";
+import { Input } from "@crm/design-system/components/input";
+import { Label } from "@crm/design-system/components/label";
+import { Select } from "@crm/design-system/components/select";
+import { toast } from "@crm/design-system/components/toast";
+import { cn } from "@crm/design-system/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

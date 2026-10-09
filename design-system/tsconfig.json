@@ -4,7 +4,7 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "paths": {
-      "@crm/ui/*": ["./src/*"]
+      "@crm/design-system/*": ["./src/*"]
     }
   },
   "include": ["src"]

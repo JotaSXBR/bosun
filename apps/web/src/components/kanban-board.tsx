@@ -1,7 +1,7 @@
 "use client";
 
 import type { BoardData, DealCardRow, FunnelRow, LabelRow, StageRow } from "@crm/core/leads";
-import { toast } from "@crm/ui/components/toast";
+import { toast } from "@crm/design-system/components/toast";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import {
   closestCorners,

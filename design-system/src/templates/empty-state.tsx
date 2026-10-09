@@ -1,4 +1,4 @@
-import { cn } from "@crm/ui/lib/utils";
+import { cn } from "@crm/design-system/lib/utils";
 import type * as React from "react";
 
 import { Icon, type IconName } from "../components/icon";

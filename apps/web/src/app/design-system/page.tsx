@@ -1,4 +1,4 @@
-import { Showcase } from "@crm/ui/showcase";
+import { Showcase } from "@crm/design-system/showcase";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 

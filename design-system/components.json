@@ -11,11 +11,11 @@
     "prefix": ""
   },
   "aliases": {
-    "components": "@crm/ui/components",
-    "utils": "@crm/ui/lib/utils",
-    "ui": "@crm/ui/components",
-    "lib": "@crm/ui/lib",
-    "hooks": "@crm/ui/hooks"
+    "components": "@crm/design-system/components",
+    "utils": "@crm/design-system/lib/utils",
+    "ui": "@crm/design-system/components",
+    "lib": "@crm/design-system/lib",
+    "hooks": "@crm/design-system/hooks"
   },
   "iconLibrary": "lucide"
 }

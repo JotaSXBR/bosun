@@ -1,9 +1,9 @@
 import { NotFoundError } from "@crm/core";
 import type { ConversationDetailRow } from "@crm/core/messaging";
 import { canInspectMessageHistory } from "@crm/core/messaging";
+import { Badge } from "@crm/design-system/components/badge";
+import { Card } from "@crm/design-system/components/card";
 import { hasPermission } from "@crm/permissions";
-import { Badge } from "@crm/ui/components/badge";
-import { Card } from "@crm/ui/components/card";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";

@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@crm/ui/components/button";
-import { Textarea } from "@crm/ui/components/textarea";
-import { toast } from "@crm/ui/components/toast";
-import { cn } from "@crm/ui/lib/utils";
+import { Button } from "@crm/design-system/components/button";
+import { Textarea } from "@crm/design-system/components/textarea";
+import { toast } from "@crm/design-system/components/toast";
+import { cn } from "@crm/design-system/lib/utils";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";

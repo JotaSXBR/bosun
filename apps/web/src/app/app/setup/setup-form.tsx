@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@crm/ui/components/button";
-import { Card } from "@crm/ui/components/card";
-import { Input } from "@crm/ui/components/input";
-import { toast } from "@crm/ui/components/toast";
+import { Button } from "@crm/design-system/components/button";
+import { Card } from "@crm/design-system/components/card";
+import { Input } from "@crm/design-system/components/input";
+import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { FormEvent } from "react";

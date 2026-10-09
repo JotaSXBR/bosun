@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@crm/ui/components/button";
+import { Button } from "@crm/design-system/components/button";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 

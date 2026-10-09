@@ -2,11 +2,11 @@
 
 import type { OrgMember } from "@crm/core/organizations";
 import type { TeamWithMembers } from "@crm/core/teams";
-import { Button } from "@crm/ui/components/button";
-import { Card } from "@crm/ui/components/card";
-import { Input } from "@crm/ui/components/input";
-import { Select } from "@crm/ui/components/select";
-import { toast } from "@crm/ui/components/toast";
+import { Button } from "@crm/design-system/components/button";
+import { Card } from "@crm/design-system/components/card";
+import { Input } from "@crm/design-system/components/input";
+import { Select } from "@crm/design-system/components/select";
+import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";

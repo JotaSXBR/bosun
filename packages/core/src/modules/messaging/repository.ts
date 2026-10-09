@@ -170,6 +170,8 @@ export async function findOrCreateTicket(
     channelConnectionId: string;
     contactId: string;
     externalId: string;
+    assigneeId?: string | null;
+    status?: string;
   },
 ): Promise<{ conversation: ConversationRow; created: boolean }> {
   const existing = await findActiveTicket(executor, values.channelConnectionId, values.externalId);
@@ -228,6 +230,28 @@ export async function applyInboundStatusTransition(
     .set({ status: "in_progress", updatedAt: new Date() })
     .where(eq(conversations.id, conversationId))
     .returning();
+  return row;
+}
+
+/** Tenant-scoped contact lookup for ticket creation (call inside withTenant). */
+export async function findContactForTicket(
+  executor: DbExecutor,
+  contactId: string,
+): Promise<ContactRow | undefined> {
+  const [row] = await executor.select().from(contacts).where(eq(contacts.id, contactId)).limit(1);
+  return row;
+}
+
+/** Tenant-scoped connection lookup (call inside withTenant). */
+export async function findConnectionById(
+  executor: DbExecutor,
+  connectionId: string,
+): Promise<ChannelConnectionRow | undefined> {
+  const [row] = await executor
+    .select()
+    .from(channelConnections)
+    .where(eq(channelConnections.id, connectionId))
+    .limit(1);
   return row;
 }
 

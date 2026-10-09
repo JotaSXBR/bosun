@@ -37,6 +37,13 @@ export const sendOutboundInput = z.object({
 });
 export type SendOutboundInput = z.input<typeof sendOutboundInput>;
 
+/** Outbound-first ticket: open a conversation with a contact on a connection. */
+export const startOutboundConversationInput = z.object({
+  channelConnectionId: z.uuid(),
+  contactId: z.uuid(),
+});
+export type StartOutboundConversationInput = z.input<typeof startOutboundConversationInput>;
+
 /** Internal note — visible to the team, never sent to the provider. */
 export const internalNoteInput = z.object({
   conversationId: z.uuid(),

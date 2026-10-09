@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@crm/ui/components/button";
-import { Input } from "@crm/ui/components/input";
-import { toast } from "@crm/ui/components/toast";
+import { Button } from "@crm/design-system/components/button";
+import { Input } from "@crm/design-system/components/input";
+import { toast } from "@crm/design-system/components/toast";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 

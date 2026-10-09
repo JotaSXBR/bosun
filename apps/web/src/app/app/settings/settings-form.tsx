@@ -1,8 +1,8 @@
 "use client";
 
 import type { OrganizationSettingsRow } from "@crm/core/organizations";
-import { Button } from "@crm/ui/components/button";
-import { Card } from "@crm/ui/components/card";
+import { Button } from "@crm/design-system/components/button";
+import { Card } from "@crm/design-system/components/card";
 import {
   Form,
   FormControl,
@@ -11,10 +11,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@crm/ui/components/form";
-import { Input } from "@crm/ui/components/input";
-import { Textarea } from "@crm/ui/components/textarea";
-import { toast } from "@crm/ui/components/toast";
+} from "@crm/design-system/components/form";
+import { Input } from "@crm/design-system/components/input";
+import { Textarea } from "@crm/design-system/components/textarea";
+import { toast } from "@crm/design-system/components/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

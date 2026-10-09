@@ -6,7 +6,7 @@ description: >-
   ("Seu mundo digital, sob comando."). Precise grids, tonal surfaces, one
   Verde sinal accent, notched module cards, hatch/dot data language.
   Normative token values for every Bosun UI; implemented in design-system/
-  (package @crm/ui). Dark is the default theme; keys prefixed `light-` are the
+  (package @crm/design-system). Dark is the default theme; keys prefixed `light-` are the
   [data-theme="light"] overrides.
 colors:
   # Roles
@@ -638,7 +638,7 @@ decoration inside work areas. No photos behind UI, no decorative gradients.
 ## Components
 
 Implemented in `design-system/src/components/` (import
-`@crm/ui/components/<name>`); every component consumes only tokens and ships
+`@crm/design-system/components/<name>`); every component consumes only tokens and ships
 default, hover, active, focus-visible, disabled and — where it applies —
 loading, error, empty and selected states. Live specimens: `/design-system`
 (dev only). Usage: `design-system/COMPONENTS.md`.
@@ -756,7 +756,7 @@ overridable by props.
 
 - **Where things live:** tokens `design-system/src/styles/tokens/*.css`
   (plain CSS, dark on `:root`, light on `[data-theme="light"]`); Tailwind
-  entry `design-system/src/styles/globals.css` (`@crm/ui/globals.css`);
+  entry `design-system/src/styles/globals.css` (`@crm/design-system/globals.css`);
   library map `design-system/README.md`; visual references
   `design-system/reference/` (open `index.html`).
 - **Theme:** `<html data-theme="dark">`; any subtree can be an island with

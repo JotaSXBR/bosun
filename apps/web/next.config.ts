@@ -19,8 +19,8 @@ const nextConfig: NextConfig = {
     "@crm/config",
     "@crm/core",
     "@crm/db",
+    "@crm/design-system",
     "@crm/permissions",
-    "@crm/ui",
   ],
   headers() {
     return Promise.resolve([

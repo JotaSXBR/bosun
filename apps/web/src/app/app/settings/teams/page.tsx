@@ -1,5 +1,5 @@
+import { PageHeader } from "@crm/design-system/templates/page-header";
 import { hasPermission } from "@crm/permissions";
-import { PageHeader } from "@crm/ui/templates/page-header";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 

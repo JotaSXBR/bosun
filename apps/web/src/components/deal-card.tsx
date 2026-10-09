@@ -9,9 +9,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@crm/ui/components/dropdown-menu";
-import { IconButton } from "@crm/ui/components/icon-button";
-import { cn } from "@crm/ui/lib/utils";
+} from "@crm/design-system/components/dropdown-menu";
+import { IconButton } from "@crm/design-system/components/icon-button";
+import { cn } from "@crm/design-system/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations } from "next-intl";

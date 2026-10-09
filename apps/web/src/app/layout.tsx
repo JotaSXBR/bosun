@@ -1,6 +1,6 @@
-import "@crm/ui/globals.css";
+import "@crm/design-system/globals.css";
 
-import { Toaster } from "@crm/ui/components/toast";
+import { Toaster } from "@crm/design-system/components/toast";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";

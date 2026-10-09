@@ -3,7 +3,7 @@
 // Interactive islands inside the (server-rendered) message thread:
 // per-message menu (react/reply/edit/delete), edited-history and
 // "ver original" expanders. Mutations are server actions → router.refresh().
-import { cn } from "@crm/ui/lib/utils";
+import { cn } from "@crm/design-system/lib/utils";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 

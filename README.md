@@ -42,7 +42,7 @@ demo org `Demo`: `owner@crm.local`, `admin@crm.local`, `manager@crm.local`, `age
 
 - `apps/web` — Next.js 16 app (`@crm/web`)
 - `packages/{config,db,permissions,core,auth}` — domain/platform packages
-- `design-system/` — BOSUN design system, package `@crm/ui` (tokens,
+- `design-system/` — BOSUN design system, package `@crm/design-system` (tokens,
   components, templates, reference HTMLs; contract in `DESIGN.md`)
 - `packages/{observability,channels,billing,storage,email,ai,automation}` —
   provider abstractions (adapters isolated behind factories)

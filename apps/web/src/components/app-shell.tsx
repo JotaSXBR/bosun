@@ -4,11 +4,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@crm/ui/components/dropdown-menu";
-import { IconButton } from "@crm/ui/components/icon-button";
-import { AppTopBar } from "@crm/ui/templates/app-top-bar";
-import { CommandPalette, useCommandShortcut } from "@crm/ui/templates/command-palette";
-import { UserMenu } from "@crm/ui/templates/user-menu";
+} from "@crm/design-system/components/dropdown-menu";
+import { IconButton } from "@crm/design-system/components/icon-button";
+import { AppTopBar } from "@crm/design-system/templates/app-top-bar";
+import { CommandPalette, useCommandShortcut } from "@crm/design-system/templates/command-palette";
+import { UserMenu } from "@crm/design-system/templates/user-menu";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -19,6 +19,7 @@ import { authClient } from "@/lib/auth-client";
 const MODULES = [
   { id: "home", href: "/app", icon: "house", key: "home" },
   { id: "inbox", href: "/app/inbox", icon: "inbox", key: "inbox" },
+  { id: "contacts", href: "/app/contacts", icon: "users", key: "contacts" },
   { id: "deals", href: "/app/deals", icon: "folder-kanban", key: "deals" },
   { id: "integrations", href: "/app/integrations", icon: "plug", key: "integrations" },
   { id: "settings", href: "/app/settings", icon: "settings", key: "settings" },

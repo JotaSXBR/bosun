@@ -1,14 +1,16 @@
 import type { ConversationView } from "@crm/core/messaging";
-import { Badge } from "@crm/ui/components/badge";
-import { Card } from "@crm/ui/components/card";
-import { cn } from "@crm/ui/lib/utils";
-import { EmptyState } from "@crm/ui/templates/empty-state";
-import { PageHeader } from "@crm/ui/templates/page-header";
+import { Badge } from "@crm/design-system/components/badge";
+import { Card } from "@crm/design-system/components/card";
+import { cn } from "@crm/design-system/lib/utils";
+import { EmptyState } from "@crm/design-system/templates/empty-state";
+import { PageHeader } from "@crm/design-system/templates/page-header";
+import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 
+import { NewConversationButton } from "@/components/new-conversation-button";
 import { TICKET_STATUS } from "@/lib/ticket-status";
-import { listConversations } from "@/server/services";
+import { listConversations, listWahaConnections } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
 
 // Reads the session + database → must never be prerendered at build time.
@@ -27,11 +29,18 @@ export default async function InboxPage({
   const ctx = await requireTenantContext();
   const { view: raw } = await searchParams;
   const view: ConversationView = VIEWS.some((v) => v === raw) ? (raw as ConversationView) : "queue";
-  const conversations = await listConversations(ctx, view);
+  const canWrite = hasPermission(ctx.role, { messaging: ["write"] });
+  const [conversations, connections] = await Promise.all([
+    listConversations(ctx, view),
+    listWahaConnections(ctx),
+  ]);
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <PageHeader title={t("title")} />
+      <PageHeader
+        title={t("title")}
+        right={canWrite ? <NewConversationButton connections={connections} /> : undefined}
+      />
 
       <nav className="flex gap-1 border-b" aria-label={t("viewsAria")}>
         {VIEWS.map((v) => (

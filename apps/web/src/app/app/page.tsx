@@ -1,5 +1,5 @@
-import { Card } from "@crm/ui/components/card";
-import { PageHeader } from "@crm/ui/templates/page-header";
+import { Card } from "@crm/design-system/components/card";
+import { PageHeader } from "@crm/design-system/templates/page-header";
 import { getTranslations } from "next-intl/server";
 
 import { listMyOrganizations, listRecentAuditEvents } from "@/server/services";

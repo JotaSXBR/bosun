@@ -32,6 +32,8 @@ export {
   renderOffHoursMessage,
 } from "./offhours";
 export { addInternalNote, sendChannelMessage, sendOutboundMessage } from "./outbound";
+export type { StartOutboundResult } from "./outbound-first";
+export { startOutboundConversation } from "./outbound-first";
 export type {
   ConversationDetailRow,
   ConversationListRow,
@@ -55,6 +57,7 @@ export type {
   ReactMessageInput,
   SendChannelInput,
   SendOutboundInput,
+  StartOutboundConversationInput,
   TransferConversationInput,
 } from "./schemas";
 export {
@@ -69,6 +72,7 @@ export {
   reactMessageInput,
   sendChannelInput,
   sendOutboundInput,
+  startOutboundConversationInput,
   transferConversationInput,
 } from "./schemas";
 export type { ConnectionRef, IngestedEvent, WebhookIngestResult } from "./service";

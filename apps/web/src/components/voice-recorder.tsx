@@ -2,8 +2,8 @@
 
 // WhatsApp-style voice notes: record → listen to a preview → re-record,
 // discard or send. Sent as voiceNote → WAHA sendVoice (PTT bubble).
-import { Button } from "@crm/ui/components/button";
-import { toast } from "@crm/ui/components/toast";
+import { Button } from "@crm/design-system/components/button";
+import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";

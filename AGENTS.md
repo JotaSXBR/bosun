@@ -43,7 +43,7 @@ UI (React) → Server Action / Route Handler → @crm/core service → repositor
 - `packages/channels|billing|storage|email|ai` — provider abstractions;
   provider-specific code lives only in `src/adapters/*`.
 - `packages/automation` — pg-boss tasks + enqueue helpers (in-process, ADR 0016).
-- `design-system/` — package `@crm/ui` (moved from `packages/ui`, ADR 0017):
+- `design-system/` — package `@crm/design-system` (moved from `packages/ui`, ADR 0017):
   BOSUN tokens, components, templates, showcase, reference HTMLs.
 - `tooling/*` — shared tsconfig/eslint/prettier.
 - `research/` — external reference material (e.g. vibe-coding-toolkit),
@@ -97,7 +97,7 @@ staged files) — skipped automatically under `CI=true`.
   work. Change a token there first, then in
   `design-system/src/styles/tokens/*.css` — `tokens.test.ts` fails on drift.
 - New UI comes from the library in `design-system/`
-  (`@crm/ui/components/<name>`, `@crm/ui/templates/<name>`). Never hardcode
+  (`@crm/design-system/components/<name>`, `@crm/design-system/templates/<name>`). Never hardcode
   color, font, font size, spacing, radius or shadow: use only the Tailwind
   vocabulary mapped to tokens (`bg-surface`, `text-ink-muted`, `border-line`,
   `rounded-card`, `shadow-pop`… — table in DESIGN.md → Implementation). Lint

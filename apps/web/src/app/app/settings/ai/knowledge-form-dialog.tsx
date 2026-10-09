@@ -1,11 +1,11 @@
 "use client";
 
-import { Button } from "@crm/ui/components/button";
-import { Dialog } from "@crm/ui/components/dialog";
-import { Input } from "@crm/ui/components/input";
-import { Label } from "@crm/ui/components/label";
-import { Select } from "@crm/ui/components/select";
-import { Textarea } from "@crm/ui/components/textarea";
+import { Button } from "@crm/design-system/components/button";
+import { Dialog } from "@crm/design-system/components/dialog";
+import { Input } from "@crm/design-system/components/input";
+import { Label } from "@crm/design-system/components/label";
+import { Select } from "@crm/design-system/components/select";
+import { Textarea } from "@crm/design-system/components/textarea";
 import { useTranslations } from "next-intl";
 
 export function KnowledgeFormDialog({

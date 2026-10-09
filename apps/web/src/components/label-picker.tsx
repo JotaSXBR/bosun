@@ -2,17 +2,17 @@
 
 import type { LabelRow, PaletteColor } from "@crm/core/leads";
 import { COLOR_PALETTE } from "@crm/core/leads/schemas";
-import { Button } from "@crm/ui/components/button";
+import { Button } from "@crm/design-system/components/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@crm/ui/components/dropdown-menu";
-import { Input } from "@crm/ui/components/input";
-import { toast } from "@crm/ui/components/toast";
-import { cn } from "@crm/ui/lib/utils";
+} from "@crm/design-system/components/dropdown-menu";
+import { Input } from "@crm/design-system/components/input";
+import { toast } from "@crm/design-system/components/toast";
+import { cn } from "@crm/design-system/lib/utils";
 import { CheckIcon, TagIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";

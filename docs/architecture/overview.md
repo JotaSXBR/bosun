@@ -39,7 +39,7 @@ surface for packages.
 
 ## Where things live
 
-- Frontend: `apps/web/src/app` + `@crm/ui` components.
+- Frontend: `apps/web/src/app` + `@crm/design-system` components.
 - Backend: Server Actions in `apps/web/src/server`, domain services in
   `packages/core/src/modules`.
 - Database: schema/migrations in `packages/db`, local Postgres via

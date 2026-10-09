@@ -1,7 +1,7 @@
 "use client";
 
 import type { DealCardRow, LabelRow, StageRow } from "@crm/core/leads";
-import { Dialog } from "@crm/ui/components/dialog";
+import { Dialog } from "@crm/design-system/components/dialog";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 

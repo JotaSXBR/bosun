@@ -1,4 +1,4 @@
-import { PageHeader } from "@crm/ui/templates/page-header";
+import { PageHeader } from "@crm/design-system/templates/page-header";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 

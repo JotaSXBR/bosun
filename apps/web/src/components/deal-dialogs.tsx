@@ -1,55 +1,20 @@
 "use client";
 
 import type { DealCardRow, StageRow } from "@crm/core/leads";
-import { Button } from "@crm/ui/components/button";
-import { Dialog } from "@crm/ui/components/dialog";
-import { IconButton } from "@crm/ui/components/icon-button";
-import { Input } from "@crm/ui/components/input";
-import { Label } from "@crm/ui/components/label";
-import { Select } from "@crm/ui/components/select";
-import { toast } from "@crm/ui/components/toast";
+import { Button } from "@crm/design-system/components/button";
+import { Dialog } from "@crm/design-system/components/dialog";
+import { IconButton } from "@crm/design-system/components/icon-button";
+import { Input } from "@crm/design-system/components/input";
+import { Label } from "@crm/design-system/components/label";
+import { Select } from "@crm/design-system/components/select";
+import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
-import { createDealAction, searchContactsAction, updateDealAction } from "@/server/actions/leads";
-import type { ContactPickRow } from "@/server/services";
-
-function ContactSelect({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  const t = useTranslations("leads");
-  const [query, setQuery] = useState("");
-  const [contacts, setContacts] = useState<ContactPickRow[]>([]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void searchContactsAction(query || undefined).then((r) => {
-        if (r.ok) setContacts(r.data);
-      });
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  return (
-    <div className="space-y-2">
-      <Input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={t("dealForm.searchContact")}
-        aria-label={t("dealForm.searchContact")}
-      />
-      <Select
-        options={contacts.map((c) => ({ value: c.id, label: c.displayName ?? c.channelUserId }))}
-        value={value || undefined}
-        onChange={onChange}
-        placeholder={t("dealForm.selectContact")}
-        aria-label={t("dealForm.contactAria")}
-      />
-      {contacts.length === 0 && (
-        <p className="text-ink-muted text-xs">{t("dealForm.noContacts")}</p>
-      )}
-    </div>
-  );
-}
+import { NewContactDialog } from "@/components/contact-dialogs";
+import { ContactSelect } from "@/components/contact-select";
+import { createDealAction, updateDealAction } from "@/server/actions/leads";
 
 function toReais(valueCents: number): string {
   return valueCents > 0 ? (valueCents / 100).toFixed(2).replace(".", ",") : "";
@@ -163,6 +128,9 @@ function DealFormFields({
   setForm: (patch: Partial<DealFormState>) => void;
 }) {
   const t = useTranslations("leads");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [contactBump, setContactBump] = useState(0);
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
@@ -178,7 +146,15 @@ function DealFormFields({
       {!editing && (
         <div className="space-y-1.5">
           <Label>{t("dealForm.contact")}</Label>
-          <ContactSelect value={form.contactId} onChange={(contactId) => setForm({ contactId })} />
+          <ContactSelect
+            value={form.contactId}
+            onChange={(contactId) => setForm({ contactId })}
+            refreshKey={contactBump}
+            onCreateClick={(query) => {
+              setCreateName(query);
+              setCreateOpen(true);
+            }}
+          />
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
@@ -205,6 +181,15 @@ function DealFormFields({
         </div>
       </div>
       <CustomAttrsFields attrs={form.attrs} setAttrs={(attrs) => setForm({ attrs })} />
+      <NewContactDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        initialName={createName}
+        onCreated={(id) => {
+          setForm({ contactId: id });
+          setContactBump((b) => b + 1);
+        }}
+      />
     </div>
   );
 }

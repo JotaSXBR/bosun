@@ -1,7 +1,7 @@
 "use client";
 
-import { Label } from "@crm/ui/components/label";
-import { cn } from "@crm/ui/lib/utils";
+import { Label } from "@crm/design-system/components/label";
+import { cn } from "@crm/design-system/lib/utils";
 import type { Label as LabelPrimitive } from "radix-ui";
 import { Slot } from "radix-ui";
 import * as React from "react";

@@ -1,6 +1,6 @@
+import { Card } from "@crm/design-system/components/card";
+import { PageHeader } from "@crm/design-system/templates/page-header";
 import { hasPermission } from "@crm/permissions";
-import { Card } from "@crm/ui/components/card";
-import { PageHeader } from "@crm/ui/templates/page-header";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 

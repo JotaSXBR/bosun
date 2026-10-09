@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@crm/ui/components/button";
-import { Card } from "@crm/ui/components/card";
+import { Button } from "@crm/design-system/components/button";
+import { Card } from "@crm/design-system/components/card";
 import {
   Form,
   FormControl,
@@ -9,9 +9,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@crm/ui/components/form";
-import { Input } from "@crm/ui/components/input";
-import { toast } from "@crm/ui/components/toast";
+} from "@crm/design-system/components/form";
+import { Input } from "@crm/design-system/components/input";
+import { toast } from "@crm/design-system/components/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { useState } from "react";

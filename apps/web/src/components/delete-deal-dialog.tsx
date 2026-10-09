@@ -1,9 +1,9 @@
 "use client";
 
 import type { DealCardRow } from "@crm/core/leads";
-import { Button } from "@crm/ui/components/button";
-import { Dialog } from "@crm/ui/components/dialog";
-import { toast } from "@crm/ui/components/toast";
+import { Button } from "@crm/design-system/components/button";
+import { Dialog } from "@crm/design-system/components/dialog";
+import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
