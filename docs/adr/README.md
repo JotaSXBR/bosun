@@ -18,6 +18,7 @@
 | 0014 | [Product model](0014-product-model.md)                                 |
 | 0015 | [CI/CD: Actions → GHCR → Coolify](0015-ci-cd-deploy.md)                |
 | 0016 | [Background jobs — pg-boss](0016-background-jobs-pg-boss.md)           |
+| 0017 | [Design system BOSUN](0017-design-system-bosun.md)                     |
 
 ## Template
 

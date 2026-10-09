@@ -207,16 +207,50 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   adiado (v1 usa `revalidatePath`); e2e de criar deal depende de criação
   manual de contato (não existe UI — hoje contato só nasce via ingest);
   audit só em create/delete/link (moves são high-frequency).
-- **P1 — Design system provisório**: ✅ aplicado — dark-first
-  (fundo preto, accent laranja, cantos retos `--radius:0`), Chakra
-  Petch + IBM Plex Mono via `next/font`, `class="dark"` fixo no
-  `<html>` em `apps/web/src/app/layout.tsx`, tokens em
-  `packages/ui/src/styles/globals.css`. **Pendências**: o `:root`
-  light fornecido é stub (bordas brancas sobre fundo branco —
-  inutilizável); sem theme toggle (decidido dark-único por ora);
-  dark `--input` diverge do fornecido (era preto puro = inputs
-  invisíveis, virou hairline `--border`). Se quiser light real:
-  refazer tokens light + `next-themes` toggle.
+- **P1 — Design system provisório**: ⛔ substituído pelo DS BOSUN
+  (2026-10-08, item abaixo / ADR 0017). Histórico: dark-first (fundo
+  preto, accent laranja, cantos retos `--radius:0`), Chakra Petch + IBM
+  Plex Mono via `next/font`, `class="dark"` fixo no `<html>`, tokens em
+  `packages/ui/src/styles/globals.css`; light fornecido era stub; sem
+  theme toggle.
+- **P1 — Design system BOSUN**: ✅ concluído (2026-10-09) — dump do
+  Claude Design triado; `packages/ui` → `design-system/` (pacote `@crm/ui`
+  mantido); `DESIGN.md` na raiz = contrato + fonte da verdade dos tokens
+  (formato Google Labs) + `tokens.test.ts` drift test (9 asserts verdes);
+  tokens de extensão + animações DS em `globals.css`; 24 componentes do DS
+  com a API do dump (Radix por baixo) + dropdown/form/label/textarea
+  restilizados; toast próprio sobre host Sonner (`sonner.tsx` removido,
+  `next-themes` fora do pacote); vocabulário Tailwind próprio (sem nomes
+  shadcn nos componentes novos); fontes Manrope/Inter/JetBrains Mono via
+  `next/font`; showcase `/design-system` (dev only, temas
+  escuro/claro/lado a lado); HTMLs de referência em
+  `design-system/reference/` (kits com JSX inline → abrem via `file://`);
+  lint de aderência portado (`tooling/eslint/design-system.js`, ver
+  `docs/development/design-system-lint.md`). 2ª etapa (2026-10-09):
+  todos os call sites de `apps/web` na API do DS (sem `sonner` direto,
+  aliases shadcn removidos, resets `--text|radius|shadow|tracking-*`);
+  6 templates (`AppTopBar`, `UserMenu`, `PageHeader`, `CommandPalette` +
+  ⌘K, `EmptyState`, `AuthLayout`); shell do `/app` (Início, Atendimento,
+  Negócios, Integrações, Configurações + paleta + sino + menu da conta);
+  sign-in/sign-up/onboarding no layout do kit; `COMPONENTS.md`; Better
+  Auth `rateLimit` só em produção (3 req/10s derrubava o e2e local);
+  `getSession` com `cache()` (layout + página na mesma request);
+  `design-system-export/` apagado. Ver `design-system/README.md`, ADR
+  0017, `docs/product/vision.md` (conceito BOSUN). **Pendências pós-entrega**: (a) **prioridade mínima** —
+  renomear o pacote `@crm/ui` → `@crm/design-system` (pasta já é
+  `design-system/`; auditabilidade, decisão do usuário); (b) migrar
+  ícones `lucide-react` do app para `<Icon>` (DS tem 104 ícones; traço
+  1.5 já alinhado via CSS); (c) toggle de tema / light no app real
+  (tokens light prontos); (d) landing pública a partir do website kit
+  (fora de escopo por decisão); (e) white-label por tenant sobre os
+  tokens CSS; (f) logo oficial — hoje `Wordmark`; (g) login: "Manter
+  conectado", "Esqueci minha senha" (Better Auth já tem
+  `sendResetPassword`, falta a página) e SSO — omitidos do layout do kit
+  por não existirem (decisão do usuário, 2026-10-09); (h) Início com
+  métricas reais no formato do dashboard do kit (exige leituras novas em
+  `@crm/core`); (i) feature de notificações — o sino do top bar hoje abre
+  só o estado vazio; (j) `AuthLayout` usa colunas iguais (o kit usa
+  1.15fr/1fr — sem token de grid para a proporção).
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
   business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB

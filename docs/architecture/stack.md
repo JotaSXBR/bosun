@@ -26,7 +26,7 @@ Esta tabela é a fonte de verdade das versões. Ao atualizar uma dependência pr
 | Next.js             | 16.3.8 | App Router, Route Handlers, Server Actions. Turbopack padrão. `middleware.ts` foi renomeado para `proxy.ts`. |
 | React / React DOM   | 19.3.0 | Exigido pelo Next 16.                                                                                        |
 | Tailwind CSS        | 4.3.3  | Config CSS-first, `@tailwindcss/postcss`.                                                                    |
-| shadcn (CLI)        | 4.21.1 | Suporte oficial a monorepo (`components.json` em `apps/web` e `packages/ui`).                                |
+| shadcn (CLI)        | 4.21.1 | Suporte oficial a monorepo (`components.json` em `apps/web` e `design-system/`).                             |
 | React Hook Form     | 7.89.0 | Forms.                                                                                                       |
 | Zod                 | 4.6.5  | Validação (forms, env, payloads de webhook e de jobs). Compatível com AI SDK, `@hookform/resolvers`.         |
 | @hookform/resolvers | 5.9.1  | Integração RHF + Zod 4.                                                                                      |

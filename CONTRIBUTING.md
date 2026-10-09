@@ -49,3 +49,5 @@ will approve the CI run for first-time contributors — this is normal.
 - Domain logic lives in `@crm/core` services; UI stays thin.
 - Provider SDKs only inside `packages/*/src/adapters/`.
 - Server Actions return `{ ok: true, ... } | { ok: false, error }`.
+- UI is built from the design system (`DESIGN.md`, `design-system/`); no
+  hardcoded colors, fonts, sizes, spacing or radii — lint enforces it.

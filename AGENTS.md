@@ -43,7 +43,8 @@ UI (React) → Server Action / Route Handler → @crm/core service → repositor
 - `packages/channels|billing|storage|email|ai` — provider abstractions;
   provider-specific code lives only in `src/adapters/*`.
 - `packages/automation` — pg-boss tasks + enqueue helpers (in-process, ADR 0016).
-- `packages/ui` — shadcn components.
+- `design-system/` — package `@crm/ui` (moved from `packages/ui`, ADR 0017):
+  BOSUN tokens, components, templates, showcase, reference HTMLs.
 - `tooling/*` — shared tsconfig/eslint/prettier.
 - `research/` — external reference material (e.g. vibe-coding-toolkit),
   gitignored; read for ideas, never edit or import from it.
@@ -88,6 +89,29 @@ staged files) — skipped automatically under `CI=true`.
   `translatePgErrors`, typed `PgError`s) — drizzle wraps driver errors on
   `cause`, so never read `.code`/`.constraint_name`/cause-chains at call
   sites (lint-enforced in `packages/core`).
+
+## Design system
+
+- `DESIGN.md` (repo root, versioned) is the visual contract and the **source
+  of truth for tokens** (Google Labs DESIGN.md format). Read it before any UI
+  work. Change a token there first, then in
+  `design-system/src/styles/tokens/*.css` — `tokens.test.ts` fails on drift.
+- New UI comes from the library in `design-system/`
+  (`@crm/ui/components/<name>`, `@crm/ui/templates/<name>`). Never hardcode
+  color, font, font size, spacing, radius or shadow: use only the Tailwind
+  vocabulary mapped to tokens (`bg-surface`, `text-ink-muted`, `border-line`,
+  `rounded-card`, `shadow-pop`… — table in DESIGN.md → Implementation). Lint
+  enforces it (`@shadcn/lint` + `tooling/eslint/design-system.js`).
+- Library map: `design-system/README.md`. Usage per component:
+  `design-system/COMPONENTS.md`. Visual references (open in a browser):
+  `design-system/reference/index.html`. Live showcase: `/design-system`
+  (dev only).
+- Copy is pt-BR, "você", sentence case, short sentences with a clear verb, no
+  emoji; nautical words only in brand moments. No logo exists — use
+  `<Wordmark />`, never draw a symbol. App strings still go through
+  next-intl; library defaults are pt-BR and overridable by props.
+- Theme: the app is dark-only (`<html data-theme="dark">`);
+  `[data-theme="light"]` islands exist for the showcase/marketing.
 
 ## Database & migrations
 
@@ -156,6 +180,20 @@ staged files) — skipped automatically under `CI=true`.
   boss isn't started. Register queue+work(+schedule) in `boss.ts`. Jobs run
   in-process — no worker tier (see `docs/development/jobs-pg-boss.md`).
 
+- **New UI component**: check `design-system/COMPONENTS.md` and the
+  showcase first — extend before adding. Otherwise add
+  `design-system/src/components/<kebab>.tsx` (Radix primitive underneath when
+  behavior is non-trivial, `cva` variants, DS utilities only), covering
+  default/hover/active/focus-visible (`shadow-focus`)/disabled plus
+  loading/error/empty/selected where they apply; spread rest props on the
+  interactive root so the showcase's `data-preview` states work. Then add a
+  showcase section (`design-system/src/showcase/`) and its usage to
+  `COMPONENTS.md`. The prop/variant contract is the component's TS type
+  (strict typecheck replaces the dump's per-prop allowlists);
+  `tooling/eslint/design-system.js` covers what TS can't see (raw hex/px,
+  non-DS fonts, imports of DS internals). A missing token goes into
+  DESIGN.md + tokens CSS + `@theme` in `globals.css` in the same change.
+
 ## Running locally
 
 `pnpm install` → `cp .env.example .env` → `pnpm infra:up` → `pnpm db:migrate`
@@ -166,6 +204,7 @@ External integrations are optional; the app boots with only the required env.
 
 ## Further reading
 
+`DESIGN.md` + `design-system/README.md` (visual contract + library map),
 `docs/architecture/` (overview, multi-tenancy, providers, realtime,
 observability, security, stack), `docs/adr/`, `docs/domains/`,
 `docs/database/`, `docs/development/` (incl. `cicd.md` —

@@ -41,7 +41,9 @@ demo org `Demo`: `owner@crm.local`, `admin@crm.local`, `manager@crm.local`, `age
 ## Layout
 
 - `apps/web` — Next.js 16 app (`@crm/web`)
-- `packages/{config,db,permissions,core,auth,ui}` — domain/platform packages
+- `packages/{config,db,permissions,core,auth}` — domain/platform packages
+- `design-system/` — BOSUN design system, package `@crm/ui` (tokens,
+  components, templates, reference HTMLs; contract in `DESIGN.md`)
 - `packages/{observability,channels,billing,storage,email,ai,automation}` —
   provider abstractions (adapters isolated behind factories)
 - `tooling/{typescript,eslint,prettier}` — shared configs
@@ -56,3 +58,5 @@ demo org `Demo`: `owner@crm.local`, `admin@crm.local`, `manager@crm.local`, `age
 - `docs/development/` — getting started, testing, jobs, workflow, CI/CD +
   Coolify deployment
 - `AGENTS.md` — rules for AI agents/contributors
+- `DESIGN.md` — visual contract and design tokens (source of truth);
+  `design-system/README.md` maps the library, `/design-system` shows it (dev)

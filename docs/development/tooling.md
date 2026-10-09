@@ -5,14 +5,14 @@ rejected alternatives live in [docs/adr/0013](../adr/0013-engineering-tooling-re
 
 ## Topology
 
-| Layer       | Tool                        | Where                                                              | Command                                         |
-| ----------- | --------------------------- | ------------------------------------------------------------------ | ----------------------------------------------- |
-| Lint        | ESLint 9 flat config        | `tooling/eslint` (`base.js`, `next.js`, `playwright.js`)           | `pnpm lint` → `eslint .` per package via turbo  |
-| Typecheck   | TypeScript 6 `tsc --noEmit` | `tooling/typescript` (`base`/`library`/`nextjs` presets)           | `pnpm typecheck`                                |
-| Format      | Prettier                    | `tooling/prettier` (`@crm/prettier-config` via `.prettierrc.json`) | `pnpm format` / `pnpm format:check`             |
-| Unit tests  | Vitest                      | `*.test.ts` next to sources                                        | `pnpm test`                                     |
-| Integration | Vitest (`.int.test.ts`)     | real Postgres/RustFS                                               | `pnpm test:integration` (needs `pnpm infra:up`) |
-| E2E         | Playwright (`*.spec.ts`)    | `apps/web/e2e`                                                     | `pnpm test:e2e`                                 |
+| Layer       | Tool                        | Where                                                                        | Command                                         |
+| ----------- | --------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------- |
+| Lint        | ESLint 9 flat config        | `tooling/eslint` (`base.js`, `next.js`, `playwright.js`, `design-system.js`) | `pnpm lint` → `eslint .` per package via turbo  |
+| Typecheck   | TypeScript 6 `tsc --noEmit` | `tooling/typescript` (`base`/`library`/`nextjs` presets)                     | `pnpm typecheck`                                |
+| Format      | Prettier                    | `tooling/prettier` (`@crm/prettier-config` via `.prettierrc.json`)           | `pnpm format` / `pnpm format:check`             |
+| Unit tests  | Vitest                      | `*.test.ts` next to sources                                                  | `pnpm test`                                     |
+| Integration | Vitest (`.int.test.ts`)     | real Postgres/RustFS                                                         | `pnpm test:integration` (needs `pnpm infra:up`) |
+| E2E         | Playwright (`*.spec.ts`)    | `apps/web/e2e`                                                               | `pnpm test:e2e`                                 |
 
 Every workspace package gets the shared config by importing it —
 `import base from "@crm/eslint-config/base"` — and optionally stacking local
@@ -78,6 +78,10 @@ size/complexity warn tier on `**/src/**` (`complexity` 12, `max-depth` 4,
   `src/server/*` (e.g. `services.ts`) and `@crm/core` services.
 - `packages/core`: module internals can't cross-import (`src/modules/*`),
   pre-existing rule.
+- Design system: `apps/web` imports `@crm/ui` only through its package
+  exports — never `design-system/{src,reference,assets}` internals — and
+  `.tsx` in `apps/web`/`design-system` can't carry raw hex/px or non-DS fonts
+  (`@crm/eslint-config/design-system`; see `design-system-lint.md`).
 - e2e files are _not_ in the test-file relaxation globs — `*.spec.ts` runs
   under `@playwright/test`, not vitest, and gets the playwright rules plus
   the normal error tier.

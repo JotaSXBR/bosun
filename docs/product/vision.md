@@ -44,3 +44,42 @@ what of this lands when.
   proposes configuration — nothing is auto-applied without approval.
 - Flat pricing; the tenant brings their own LLM key (BYOK).
 - White-label deep enough to resell (logo/name, theme, custom domain later).
+
+## Brand concept — BOSUN (design system, 2026-10-08)
+
+The design system (`DESIGN.md`, `design-system/`) carries the long-term
+concept of the product. Customer operations (inbox, deals, integrations, AI
+agents) is the first set of modules of a broader idea:
+
+- **Positioning:** "Seu mundo digital, sob comando." — a modular **work
+  environment on the web** ("sistema operacional de trabalho na web" as a
+  concept only: it runs in the browser, nothing to install, it never replaces
+  the computer's OS). "Ferramentas dispersas viram um ambiente de trabalho
+  conectado."
+- **Metaphor:** the bosun (_contramestre_) turns the captain's direction into
+  coordinated daily execution. The user sets the course; the platform
+  coordinates tools, flows and people.
+- **Pillars** (the bar every module is judged against):
+  - **Clareza** — show what matters and what the next action is.
+  - **Coordenação** — connect capabilities, don't just place them side by side.
+  - **Autonomia** — each person organizes their own environment.
+  - **Confiança** — states, results and problems without ambiguity.
+  - **Evolução** — the platform grows with new needs.
+- **Module architecture:** modules that work together inside one shell
+  (`ModuleNav`). Today: Início, Atendimento (inbox), Negócios (deals),
+  Integrações, Configurações. The brand's reference set adds Tarefas,
+  Documentos, Automações (flows), Indicadores and Assist (AI) — directional,
+  not committed scope; `roadmap.md` stays the source of what lands when.
+- **Permission-first integrations:** "Você decide quais informações esta
+  integração pode acessar." — matches the observer-first, approve-before-apply
+  stance above.
+- **Audience** (aligned with "Who"): independent professionals, entrepreneurs
+  and small teams sharing one environment with per-person permissions.
+- **Voice:** calm, competent, objective; pt-BR, "você", sentence case;
+  nautical words only in brand moments (onboarding, login, campaigns). Full
+  rules in `DESIGN.md` → Content & Voice.
+
+Commercial module names (BOSUN Home, Tasks, Docs, Flow, Connect, Insights,
+Assist) belong to marketing; the app uses plain words. A public landing page
+built from the brand's website reference is **not** in scope yet (decided
+2026-10-08).
