@@ -251,6 +251,14 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `@crm/core`); (i) feature de notificações — o sino do top bar hoje abre
   só o estado vazio; (j) `AuthLayout` usa colunas iguais (o kit usa
   1.15fr/1fr — sem token de grid para a proporção).
+- **P2 — Contatos: criação manual + conversa outbound-first** (decisão
+  2026-10-08): hoje `contacts` só nasce via ingest; precisa form "novo
+  contato" + fluxo de nova conversa (WAHA envia pra número novo, sem
+  janela 24h oficial). Destrava também o gap do e2e de deals. Importação
+  (CSV/Google Contacts) = futuro.
+- **Decisão — round-robin descartado** (2026-10-08): atribuição segue manual
+  da fila; quando agentes IA entrarem, roteamento é via intake
+  `open`|`pending` (pending = IA atende) — não por rodízio de agentes.
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
   business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB
