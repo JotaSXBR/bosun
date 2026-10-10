@@ -18,6 +18,7 @@
   },
   "ticketStatus": {
     "open": "Na fila",
+    "pending": "Pendente",
     "in_progress": "Em atendimento",
     "waiting_customer": "Aguardando cliente",
     "resolved": "Resolvido",
@@ -29,16 +30,33 @@
     "viewsAria": "Views da inbox",
     "newMessage": "Nova mensagem",
     "views": {
+      "pending": "Automático",
       "queue": "Fila",
       "mine": "Minhas",
-      "inbox": "Todas",
-      "resolved": "Resolvidas"
+      "all": "Todas",
+      "snoozed": "Adiados",
+      "closed": "Fechadas"
     },
     "empty": {
+      "pending": "Nenhum ticket em atendimento automático.",
       "queue": "Nenhum ticket aguardando atendimento.",
       "mine": "Você não tem tickets em atendimento.",
-      "inbox": "Nenhuma conversa ainda.",
-      "resolved": "Nenhum ticket resolvido ainda."
+      "all": "Nenhuma conversa ainda.",
+      "snoozed": "Nenhum ticket adiado.",
+      "closed": "Nenhum ticket fechado ainda."
+    },
+    "notFound": "Conversa não encontrada.",
+    "selectConversation": "Selecione uma conversa para atender.",
+    "entryQueue": "Fila de entrada",
+    "awaitingReply": "Aguardando resposta",
+    "snoozedUntil": "Adiado até {date}",
+    "filters": {
+      "search": "Buscar por nome, número ou ticket…",
+      "channel": "Canal",
+      "allChannels": "Todos os canais",
+      "sector": "Setor",
+      "allSectors": "Todos os setores",
+      "awaiting": "Aguardando resposta"
     },
     "ticketSeq": "{seq}º atendimento deste contato · aberto em {date}",
     "previousTicket": "↑ Ticket anterior{number} — ver histórico",
@@ -115,7 +133,14 @@
     "pickup": "Assumir",
     "waiting": "Aguardando cliente",
     "inProgress": "Em atendimento",
-    "resolve": "Resolver"
+    "resolve": "Resolver",
+    "snooze": "Adiar",
+    "snoozePlaceholder": "Adiar por…",
+    "snooze1h": "1 hora",
+    "snoozeTomorrow": "Até amanhã às 9h",
+    "snoozeWeek": "1 semana",
+    "snoozedUntil": "Adiado até {date}",
+    "resume": "Retomar"
   },
   "contacts": {
     "title": "Contatos",

@@ -30,11 +30,13 @@ import type {
   ConversationDetailRow,
   ConversationListRow,
   ConversationView,
+  ListConversationsInput,
   MessageWithAuthorRow,
 } from "@crm/core/messaging";
 import {
   getConversationDetail,
   getConversationLastInboundAt,
+  listConversationCounts as svcListConversationCounts,
   listConversationMessages,
   listTenantConversations,
 } from "@crm/core/messaging";
@@ -74,9 +76,15 @@ export async function listChannelConnections(ctx: TenantContext): Promise<Channe
 
 export async function listConversations(
   ctx: TenantContext,
-  view?: ConversationView,
+  input?: ListConversationsInput,
 ): Promise<ConversationListRow[]> {
-  return listTenantConversations(getDb(), ctx, { view: view ?? "inbox" });
+  return listTenantConversations(getDb(), ctx, input);
+}
+
+export async function listConversationCounts(
+  ctx: TenantContext,
+): Promise<Record<ConversationView, number>> {
+  return svcListConversationCounts(getDb(), ctx);
 }
 
 export async function getConversation(
@@ -188,6 +196,16 @@ export async function listWahaConnections(ctx: TenantContext): Promise<WahaConne
   return connections
     .filter((c) => c.kind === "waha" && c.status === "connected")
     .map(({ id, name }) => ({ id, name }));
+}
+
+export type ConnectedChannelPick = Pick<ChannelConnectionRow, "id" | "name" | "kind">;
+
+/** Every connected channel — the inbox channel filter's option set. */
+export async function listConnectedChannels(ctx: TenantContext): Promise<ConnectedChannelPick[]> {
+  const connections = await listChannelConnectionsForTenant(getDb(), ctx);
+  return connections
+    .filter((c) => c.status === "connected")
+    .map(({ id, name, kind }) => ({ id, name, kind }));
 }
 
 export type { DealRow };

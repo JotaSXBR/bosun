@@ -296,7 +296,7 @@ describe("inbox views", () => {
     expect(mine.map((c) => c.id)).toContain(claimed.id);
     expect(mine.find((c) => c.id === claimed.id)?.assigneeName).toBe("IT User");
 
-    const resolved = await listTenantConversations(db, ctx(orgA, "agent"), { view: "resolved" });
+    const resolved = await listTenantConversations(db, ctx(orgA, "agent"), { view: "closed" });
     expect(resolved.every((c) => c.status === "resolved")).toBe(true);
     expect(resolved.length).toBeGreaterThan(0);
   });

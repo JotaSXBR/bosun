@@ -1,12 +1,21 @@
 import { z } from "zod";
 
-/** Inbox views: full list, the open queue, the agent's own tickets, history. */
-export const conversationView = z.enum(["inbox", "queue", "mine", "resolved"]);
+/**
+ * Inbox views — the tabs of the workbench (spec docs/product/inbox.md):
+ * `pending` intake futuro, `queue` open+unassigned, `mine` own active,
+ * `all` every active, `snoozed` deferred, `closed` resolved+closed.
+ */
+export const conversationView = z.enum(["pending", "queue", "mine", "all", "snoozed", "closed"]);
 export type ConversationView = z.infer<typeof conversationView>;
 
 export const listConversationsInput = z.object({
-  view: conversationView.default("inbox"),
+  view: conversationView.default("queue"),
   limit: z.number().int().min(1).max(100).default(50),
+  search: z.string().trim().min(1).max(100).optional(),
+  channelConnectionId: z.uuid().optional(),
+  sectorId: z.uuid().optional(),
+  /** Last message inbound — the cheap "unread" signal (no read cursor yet). */
+  awaitingReply: z.boolean().optional(),
 });
 
 export type ListConversationsInput = z.input<typeof listConversationsInput>;
@@ -22,6 +31,13 @@ export const conversationIdInput = z.object({
   conversationId: z.uuid(),
 });
 export type ConversationIdInput = z.input<typeof conversationIdInput>;
+
+/** Defer a ticket — `until` in the future; `null` resumes it immediately. */
+export const snoozeConversationInput = z.object({
+  conversationId: z.uuid(),
+  until: z.coerce.date().nullable(),
+});
+export type SnoozeConversationInput = z.input<typeof snoozeConversationInput>;
 
 /** Exactly one target: a user (assign + in_progress) or a team (queue). */
 export const transferConversationInput = z.union([

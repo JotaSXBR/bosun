@@ -137,6 +137,9 @@ export const conversations = pgTable(
     resolvedAt: timestamp({ withTimezone: true }),
     // Who closed it — audit + reopen window logic (cleared on reopen).
     resolvedById: uuid().references(() => users.id, { onDelete: "set null" }),
+    // Deferred ticket — leaves every work view until the instant passes
+    // (lazy un-snooze; no sweep job).
+    snoozedUntil: timestamp({ withTimezone: true }),
     firstResponseAt: timestamp({ withTimezone: true }),
     lastMessageAt: timestamp({ withTimezone: true }),
     metadata: jsonb().notNull().default({}),
@@ -153,9 +156,10 @@ export const conversations = pgTable(
     index("conversations_org_status_idx").on(t.organizationId, t.status),
     index("conversations_org_sector_idx").on(t.organizationId, t.sectorId),
     index("conversations_org_assignee_idx").on(t.organizationId, t.assigneeId),
+    index("conversations_org_snoozed_idx").on(t.organizationId, t.snoozedUntil),
     check(
       "conversations_status_check",
-      sql`${t.status} in ('open', 'in_progress', 'waiting_customer', 'resolved', 'closed')`,
+      sql`${t.status} in ('pending', 'open', 'in_progress', 'waiting_customer', 'resolved', 'closed')`,
     ),
     pgPolicy("conversations_tenant_isolation", {
       for: "all",

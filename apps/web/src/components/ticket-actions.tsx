@@ -7,7 +7,7 @@ import { Button } from "@crm/design-system/components/button";
 import { Select } from "@crm/design-system/components/select";
 import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import {
@@ -17,6 +17,7 @@ import {
   resumeTicketAction,
   setConversationInProgressAction,
   setConversationWaitingAction,
+  snoozeConversationAction,
   transferConversationAction,
 } from "@/server/actions/messaging";
 
@@ -105,7 +106,10 @@ export function TicketActions({
       )}
 
       {canWork && ownsTicket && (
-        <WorkButtons conversation={conversation} pending={pending} run={run} t={t} />
+        <>
+          <WorkButtons conversation={conversation} pending={pending} run={run} t={t} />
+          <SnoozeControl conversation={conversation} pending={pending} run={run} t={t} />
+        </>
       )}
 
       {canWork && (
@@ -182,5 +186,86 @@ function WorkButtons({
         {t("resolve")}
       </Button>
     </>
+  );
+}
+
+const SNOOZE_PRESET_KEY = {
+  "1h": "snooze1h",
+  tomorrow: "snoozeTomorrow",
+  week: "snoozeWeek",
+} as const;
+
+function snoozeTarget(preset: keyof typeof SNOOZE_PRESET_KEY): Date {
+  const now = new Date();
+  if (preset === "1h") return new Date(now.getTime() + 3_600_000);
+  if (preset === "tomorrow") {
+    const d = new Date(now);
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }
+  return new Date(now.getTime() + 7 * 86_400_000);
+}
+
+/** Defer out of every work view; "Retomar" clears an active snooze early. */
+function SnoozeControl({
+  conversation,
+  pending,
+  run,
+  t,
+}: {
+  conversation: ConversationDetailRow;
+  pending: boolean;
+  run: (action: Promise<ActionResult>) => void;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const format = useFormatter();
+  const [preset, setPreset] = useState<keyof typeof SNOOZE_PRESET_KEY>();
+  const [mountedAt] = useState(() => Date.now());
+  const conversationId = conversation.id;
+  const snoozedUntil = conversation.snoozedUntil ? new Date(conversation.snoozedUntil) : null;
+
+  if (snoozedUntil && snoozedUntil.getTime() > mountedAt) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-ink-muted text-sm">
+          {t("snoozedUntil", {
+            date: format.dateTime(snoozedUntil, { dateStyle: "short", timeStyle: "short" }),
+          })}
+        </span>
+        <Button
+          variant="secondary"
+          disabled={pending}
+          onClick={() => run(snoozeConversationAction({ conversationId, until: null }))}
+        >
+          {t("resume")}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Select
+        options={(Object.keys(SNOOZE_PRESET_KEY) as (keyof typeof SNOOZE_PRESET_KEY)[]).map(
+          (p) => ({ value: p, label: t(SNOOZE_PRESET_KEY[p]) }),
+        )}
+        value={preset}
+        onChange={(v) => setPreset(v as keyof typeof SNOOZE_PRESET_KEY)}
+        placeholder={t("snoozePlaceholder")}
+        aria-label={t("snooze")}
+        disabled={pending}
+        className="w-44"
+      />
+      <Button
+        variant="secondary"
+        disabled={pending || !preset}
+        onClick={() =>
+          preset && run(snoozeConversationAction({ conversationId, until: snoozeTarget(preset) }))
+        }
+      >
+        {t("snooze")}
+      </Button>
+    </div>
   );
 }

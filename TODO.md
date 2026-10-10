@@ -46,6 +46,18 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
     `metadata.system="off_hours"`, `{proximo_atendimento}` interpolado,
     dedup via `messages_off_hours_day_idx`). Ver
     `docs/product/domain-model.md` + `rules.md`.
+    **Slice 6 entregue — E1 fila operacional** (`docs/product/inbox.md`):
+    workbench 3 painéis em `/app/inbox` (lista | thread | ficha do lead);
+    tabs Automático/Fila/Minhas/Todas/Adiados/Fechadas com contadores
+    (`listConversationViewCounts`); filtros server-side (busca, setor,
+    canal — só quando >1 conexão, "aguardando resposta" = última msg
+    inbound); seções Entrada→setores na Fila; seleção via `?c=`; snooze
+    (`snoozed_until` + `pending` no check de status, Adiar 1h/amanhã/
+    semana + Retomar, retorno lazy sem job); `[id]` redirecta pra `?c=`.
+    Refs: DeskcommCRM (fila), MariaOS (painel/chat), Synthor (produto).
+    Próximas etapas: E2 ficha+cadastro de contato, E3 chat power-ups
+    (botão direito, macros `/`, busca no thread, toggle sendSeen),
+    E4 lista "não virou negócio".
 - **P1 — WAHA chat features (brief 2)**: implementado — ticks cinza/azul
   (`message.ack`), reações (`message_reactions` + chips/picker), edição
   com histórico (`message_edits`, janela 15min), apagado híbrido por papel

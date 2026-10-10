@@ -225,6 +225,11 @@
   --blur-glass: var(--blur-glass);
 }
 
+/* Workbench surfaces (inbox): full viewport minus the top bar. */
+@utility h-workbench {
+  height: calc(100dvh - var(--nav-height));
+}
+
 @utility duration-instant {
   transition-duration: var(--dur-instant);
 }

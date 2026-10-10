@@ -11,6 +11,7 @@ import type { ConversationDetailRow, ConversationListRow, MessageWithAuthorRow }
 import {
   getConversationDetail as repoGetConversationDetail,
   listConversations,
+  listConversationViewCounts,
   listMessages,
 } from "./reads";
 import {
@@ -26,7 +27,12 @@ import {
   upsertContact,
   upsertMessageReaction,
 } from "./repository";
-import type { ConversationIdInput, ListConversationsInput, ListMessagesInput } from "./schemas";
+import type {
+  ConversationIdInput,
+  ConversationView,
+  ListConversationsInput,
+  ListMessagesInput,
+} from "./schemas";
 import { conversationIdInput, listConversationsInput, listMessagesInput } from "./schemas";
 
 const { conversations } = schema;
@@ -364,7 +370,20 @@ export async function listTenantConversations(
     view: parsed.view,
     limit: parsed.limit,
     userId: ctx.userId,
+    search: parsed.search,
+    channelConnectionId: parsed.channelConnectionId,
+    sectorId: parsed.sectorId,
+    awaitingReply: parsed.awaitingReply,
   });
+}
+
+/** Per-tab counters for the inbox workbench. Requires messaging:read. */
+export async function listConversationCounts(
+  db: Database,
+  ctx: TenantContext,
+): Promise<Record<ConversationView, number>> {
+  assertPermission(ctx, { messaging: ["read"] });
+  return listConversationViewCounts(db, ctx.organizationId, ctx.userId);
 }
 
 /** Roles allowed to inspect revoked originals and edit history. */

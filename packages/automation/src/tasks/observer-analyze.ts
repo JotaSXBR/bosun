@@ -44,7 +44,7 @@ async function pickConversationId(
 ): Promise<string | null> {
   if (conversationId) return conversationId;
   const resolved = await listConversations(db, organizationId, {
-    view: "resolved",
+    view: "closed",
     limit: MANUAL_CANDIDATES,
     userId: "",
   });

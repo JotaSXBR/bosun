@@ -162,6 +162,13 @@
       "when": 1791639181350,
       "tag": "0022_lowly_whirlwind",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791651245449,
+      "tag": "0023_far_korath",
+      "breakpoints": true
     }
   ]
 }

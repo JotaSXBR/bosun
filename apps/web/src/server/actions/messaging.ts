@@ -6,6 +6,7 @@ import type {
   ConversationIdInput,
   InternalNoteInput,
   SendOutboundInput,
+  SnoozeConversationInput,
   TransferConversationInput,
 } from "@crm/core/messaging";
 import {
@@ -16,6 +17,7 @@ import {
   resumeTicket,
   sendOutboundMessage,
   setConversationInProgress,
+  setConversationSnooze,
   setConversationWaiting,
   transferConversation,
 } from "@crm/core/messaging";
@@ -107,6 +109,19 @@ export async function setConversationInProgressAction(
     return { ok: true, id: conv.id };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível retomar o atendimento.") };
+  }
+}
+
+export async function snoozeConversationAction(
+  input: SnoozeConversationInput,
+): Promise<MessagingActionResult> {
+  const ctx = await requireTenantContext();
+  try {
+    const conv = await setConversationSnooze(getDb(), ctx, input);
+    revalidateInbox();
+    return { ok: true, id: conv.id };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível adiar o ticket.") };
   }
 }
 

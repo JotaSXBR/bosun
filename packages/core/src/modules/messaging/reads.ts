@@ -4,6 +4,7 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { ConversationRow, MessageRow } from "./repository";
+import type { ConversationView } from "./schemas";
 
 const { contacts, conversations, messageReactions, messages, teams, users } = schema;
 
@@ -14,6 +15,8 @@ export type ConversationListRow = ConversationRow & {
   assigneeName: string | null;
   sectorName: string | null;
   lastMessagePreview: string | null;
+  /** Last message inbound — the "needs reply" dot on the row. */
+  awaitingReply: boolean;
 };
 
 /** One stored reaction — reactorKey is the channel id or the user uuid. */
@@ -49,32 +52,68 @@ export type ConversationDetailRow = ConversationRow & {
   precededTicketSeq: number | null;
 };
 
+const ACTIVE_STATUSES = sql`${conversations.status} not in ('resolved', 'closed')`;
+const TERMINAL_STATUSES = sql`${conversations.status} in ('resolved', 'closed')`;
+/** Deferred rows leave the work views until the instant passes — lazy un-snooze. */
+const NOT_SNOOZED = sql`(${conversations.snoozedUntil} is null or ${conversations.snoozedUntil} <= now())`;
+const SNOOZED = sql`(${conversations.snoozedUntil} > now())`;
+/** Correlated scalar — the latest message's direction ('inbound' = awaiting reply). */
+const LAST_MSG_DIRECTION_SQL = sql<
+  string | null
+>`(select m.direction from ${messages} m where m.conversation_id = ${conversations.id} order by m.sent_at desc nulls last, m.created_at desc limit 1)`;
+
+/** Search across contact name, channel user id (phone), external id and ticket #. */
+function searchFilter(search: string | undefined) {
+  if (!search) return undefined;
+  const pattern = `%${search}%`;
+  return sql`(${contacts.displayName} ilike ${pattern} or ${contacts.channelUserId} ilike ${pattern} or ${conversations.externalId} ilike ${pattern} or ${conversations.ticketNumber}::text ilike ${pattern})`;
+}
+
 /**
- * Inbox views. `queue` = open tickets with no assignee, oldest waiting first;
- * `mine` = the agent's active tickets; `resolved` = closed-ticket history.
+ * Inbox views (spec docs/product/inbox.md). Snoozed rows only appear in
+ * `snoozed`; ordering surfaces the longest wait where the queue works it.
  */
 export async function listConversations(
   db: Database,
   organizationId: string,
-  opts: { view: "inbox" | "queue" | "mine" | "resolved"; limit: number; userId: string },
+  opts: {
+    view: ConversationView;
+    limit: number;
+    userId: string;
+    search?: string;
+    channelConnectionId?: string;
+    sectorId?: string;
+    awaitingReply?: boolean;
+  },
 ): Promise<ConversationListRow[]> {
-  const filter =
-    opts.view === "queue"
-      ? and(eq(conversations.status, "open"), isNull(conversations.assigneeId))
-      : opts.view === "mine"
-        ? and(
-            eq(conversations.assigneeId, opts.userId),
-            sql`${conversations.status} not in ('resolved', 'closed')`,
-          )
-        : opts.view === "resolved"
-          ? sql`${conversations.status} in ('resolved', 'closed')`
-          : undefined;
+  const viewFilter =
+    opts.view === "pending"
+      ? eq(conversations.status, "pending")
+      : opts.view === "queue"
+        ? and(eq(conversations.status, "open"), isNull(conversations.assigneeId), NOT_SNOOZED)
+        : opts.view === "mine"
+          ? and(eq(conversations.assigneeId, opts.userId), ACTIVE_STATUSES, NOT_SNOOZED)
+          : opts.view === "snoozed"
+            ? and(ACTIVE_STATUSES, SNOOZED)
+            : opts.view === "closed"
+              ? TERMINAL_STATUSES
+              : and(ACTIVE_STATUSES, NOT_SNOOZED);
+  const filters = and(
+    viewFilter,
+    searchFilter(opts.search),
+    opts.channelConnectionId
+      ? eq(conversations.channelConnectionId, opts.channelConnectionId)
+      : undefined,
+    opts.sectorId ? eq(conversations.sectorId, opts.sectorId) : undefined,
+    opts.awaitingReply ? sql`${LAST_MSG_DIRECTION_SQL} = 'inbound'` : undefined,
+  );
   const order =
-    opts.view === "queue"
-      ? asc(conversations.lastMessageAt)
-      : opts.view === "resolved"
-        ? desc(conversations.resolvedAt)
-        : desc(conversations.lastMessageAt);
+    opts.view === "closed"
+      ? desc(conversations.resolvedAt)
+      : opts.view === "all"
+        ? desc(conversations.lastMessageAt)
+        : // Work views: longest wait first — fresh tickets (null) sit at the top.
+          sql`${conversations.lastMessageAt} asc nulls first`;
   const rows = await withTenant(db, organizationId, (tx) =>
     tx
       .select({
@@ -88,16 +127,38 @@ export async function listConversations(
         lastMessagePreview: sql<
           string | null
         >`(select coalesce(m.content ->> 'text', m.content ->> 'caption', '[' || (m.content ->> 'type') || ']') from ${messages} m where m.conversation_id = ${conversations.id} order by m.sent_at desc nulls last, m.created_at desc limit 1)`,
+        awaitingReply: sql<boolean>`${LAST_MSG_DIRECTION_SQL} = 'inbound'`,
       })
       .from(conversations)
       .innerJoin(contacts, eq(contacts.id, conversations.contactId))
       .leftJoin(users, eq(users.id, conversations.assigneeId))
       .leftJoin(teams, eq(teams.id, conversations.sectorId))
-      .where(filter)
+      .where(filters)
       .orderBy(order)
       .limit(opts.limit),
   );
   return rows.map(({ conversation, ...rest }) => ({ ...conversation, ...rest }));
+}
+
+/** Per-tab counters — one grouped scan, no N queries. */
+export async function listConversationViewCounts(
+  db: Database,
+  organizationId: string,
+  userId: string,
+): Promise<Record<ConversationView, number>> {
+  const [row] = await withTenant(db, organizationId, (tx) =>
+    tx
+      .select({
+        pending: sql<number>`(count(*) filter (where ${conversations.status} = 'pending'))::int`,
+        queue: sql<number>`(count(*) filter (where ${conversations.status} = 'open' and ${conversations.assigneeId} is null and ${NOT_SNOOZED}))::int`,
+        mine: sql<number>`(count(*) filter (where ${conversations.assigneeId} = ${userId} and ${ACTIVE_STATUSES} and ${NOT_SNOOZED}))::int`,
+        all: sql<number>`(count(*) filter (where ${ACTIVE_STATUSES} and ${NOT_SNOOZED}))::int`,
+        snoozed: sql<number>`(count(*) filter (where ${ACTIVE_STATUSES} and ${SNOOZED}))::int`,
+        closed: sql<number>`(count(*) filter (where ${TERMINAL_STATUSES}))::int`,
+      })
+      .from(conversations),
+  );
+  return row ?? { pending: 0, queue: 0, mine: 0, all: 0, snoozed: 0, closed: 0 };
 }
 
 const MESSAGE_PREVIEW_SQL = sql<
