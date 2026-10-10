@@ -329,16 +329,25 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   PRs #1 e #2 foram criadas via `gh` fallback). Diagnosticar se é
   transporte/sessão do MCP local. Regra atual: MCP primeiro, `gh` CLI como
   fallback em operações de pull request após a primeira falha (AGENTS.md).
-- **P3 — Promover warns a error** — contagem **zerada** em
-  `chore/lint-warnings` (PR separado): `prefer-nullish-coalescing`,
-  `no-unnecessary-condition`, `complexity` e `max-statements` resolvidos
-  via refactor (mapa de predicados em `isConfigured`, handlers por evento
-  nos parsers de webhook, helpers extraídos em `seed`/`organization`).
-  Falta só flipar warn→error no eslint-config quando o PR mergear —
-  workflow em `docs/development/tooling.md`.
+- **P3 — Promover warns a error** — o orçamento de warns agora vive em
+  `docs/development/code-quality-standard.md` §2.3 (contagem medida por
+  regra, 2026-10-10; promoção quando a contagem zerar). Nota: o branch
+  `chore/lint-warnings` citado aqui antes não mergeou — as contagens
+  atuais ainda mostram violações (`max-statements` 68,
+  `no-unnecessary-condition` 4, `prefer-nullish-coalescing` 1);
+  `complexity` está zerado e já virou `error` na config.
 
 ## Concluído
 
+- **Padrão de qualidade por pesquisa externa** ✅ 2026-10-10 —
+  `docs/development/code-quality-standard.md` (§1 fontes, §2 adoção/contagens).
+  `tooling/eslint/base.js` reescrito: `eslint-config-prettier`, sonarjs
+  cognitive-complexity, família de complexidade/tamanho com defaults da doc,
+  `stylisticTypeChecked` medido regra a regra, subset security low-FP,
+  fronteiras `no-restricted-imports` consolidadas, `react/no-multi-comp`;
+  `playwright.js` → `flat/recommended`; tsconfig +5 flags strict
+  (`noImplicitReturns` deferido, 1 violação). Lint 0 erros; warns são os
+  orçamentos medidos do §2.3.
 - **Fix — globMatch do workflow hook** ✅ 2026-10-05 — `dir/**` só casava
   filhos diretos (replaces encadeados remontavam o `*` inserido por `.*`).
   `.devin/hooks/workflow.mjs` agora usa placeholders `\x01`/`\x02`; `**`

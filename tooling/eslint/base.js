@@ -1,8 +1,11 @@
 import eslint from "@eslint/js";
+import eslintConfigPrettier from "eslint-config-prettier";
 import vitest from "@vitest/eslint-plugin";
 import drizzle from "eslint-plugin-drizzle";
+import react from "eslint-plugin-react";
 import security from "eslint-plugin-security";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
+import sonarjs from "eslint-plugin-sonarjs";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -35,6 +38,7 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
+  tseslint.configs.stylisticTypeChecked,
   {
     languageOptions: {
       parserOptions: {
@@ -62,6 +66,21 @@ export default tseslint.config(
       ],
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
+      // stylisticTypeChecked preset — measured rule by rule 2026-10 across all
+      // 14 workspaces. Pure-preference rules with a real codebase convention
+      // already settled are off (not warn — nothing to fix):
+      //   consistent-type-definitions: 89 — repo standardized on `type`
+      //   array-type: 16 — `T[]` vs `Array<T>` is style, not quality
+      "@typescript-eslint/consistent-type-definitions": "off",
+      "@typescript-eslint/array-type": "off",
+      // Defect-adjacent stylistic rules with existing violations — warn
+      // budgets until the counts reach zero (counts recorded in the standard
+      // doc): no-empty-function 16, dot-notation 13,
+      // non-nullable-type-assertion-style 9, prefer-includes 1.
+      "@typescript-eslint/no-empty-function": "warn",
+      "@typescript-eslint/dot-notation": "warn",
+      "@typescript-eslint/non-nullable-type-assertion-style": "warn",
+      "@typescript-eslint/prefer-includes": "warn",
       // Always-a-bug tier (all files, JS and TS alike).
       "no-var": "error",
       "prefer-const": "error",
@@ -101,17 +120,31 @@ export default tseslint.config(
   },
   {
     // Security lint over application source only (not config/scripts/tests —
-    // tests intentionally hit some of these patterns).
+    // tests intentionally hit some of these patterns). Low-false-positive
+    // subset: the plugin's own README warns the full recommended preset
+    // "finds a lot of false positives which need triage by a human".
     files: ["**/src/**/*.{ts,tsx}"],
     plugins: { security },
     rules: {
+      // Trojan-source class (unicode bidi / invisible glyphs) — real CVE
+      // vector, near-zero false positives.
+      "security/detect-bidi-characters": "error",
+      "security/detect-invisible-characters": "error",
       "security/detect-eval-with-expression": "error",
+      "security/detect-child-process": "error",
+      "security/detect-buffer-noassert": "error",
+      "security/detect-new-buffer": "error",
       "security/detect-pseudoRandomBytes": "error",
+      // Heuristic ReDoS detector — kept as warn; flagged patterns need human
+      // triage (README's own caveat).
       "security/detect-unsafe-regex": "warn",
-      "security/detect-child-process": "warn",
       // Deliberately NOT enabled: security/detect-object-injection fires on
       // every obj[variable] access — noUncheckedIndexedAccess already forces
       // handling of the resulting undefined, so the rule is pure noise here.
+      // detect-non-literal-* / detect-possible-timing-attacks are the
+      // high-false-positive half of the preset; detect-no-csrf-* and
+      // detect-disable-mustache-escape target Express/Mustache stacks we
+      // don't use.
     },
   },
   {
@@ -127,18 +160,95 @@ export default tseslint.config(
   },
   {
     // Size/complexity budget — refactoring pressure, not a hard gate. Each
-    // rule is "warn" until its violation count reaches zero, then it can be
-    // promoted to "error". See docs/development/tooling.md.
+    // threshold is the rule's documented default; the canonical NIST target
+    // for cyclomatic complexity is 10 (NIST SP 500-235 §2.5). Every rule is
+    // "warn" until its violation count reaches zero, then it is promoted to
+    // "error" — see docs/development/code-quality-standard.md.
     files: ["**/src/**/*.{ts,tsx}"],
+    plugins: { sonarjs },
     rules: {
-      complexity: ["warn", 12],
-      "max-depth": ["warn", 4],
-      "max-params": ["warn", 4],
-      "max-statements": ["warn", 20],
-      "max-nested-callbacks": ["warn", 3],
-      "max-lines-per-function": ["warn", { max: 150, skipBlankLines: true, skipComments: true }],
-      // Hard stop on file size — largest source file is ~320 lines today.
-      "max-lines": ["error", { max: 350, skipBlankLines: true, skipComments: true }],
+      // Understandability (hard to follow) — SonarSource default.
+      "sonarjs/cognitive-complexity": ["warn", 15],
+      // Testability (min tests for full path coverage) — ESLint default.
+      // Zero violations measured 2026-10 → error.
+      complexity: ["error", 20],
+      "max-depth": ["error", 4],
+      "max-params": ["warn", 3],
+      // Too much in one place.
+      "max-statements": ["warn", { max: 10 }],
+      // Zero violations measured 2026-10 → error.
+      "max-nested-callbacks": ["error", 10],
+      "max-lines-per-function": ["warn", { max: 50, skipBlankLines: true, skipComments: true }],
+      "max-lines": ["warn", { max: 300, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  // Import boundaries. NOTE: in flat config, when two config objects set the
+  // same rule on the same file the LAST object's options replace the
+  // earlier ones — patterns are not merged. Each scope below therefore
+  // repeats the full pattern list it needs.
+  {
+    // Package internals are private: cross-package imports resolve through
+    // each package's index exports (package.json "exports"), never into
+    // src/, dist/, or adapters/. Dependency direction is app → packages:
+    // nothing may reach back into the web app. Applies to the import
+    // specifier, so it works from any workspace CWD.
+    files: ["**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@crm/*/src/**", "@crm/*/dist/**", "@crm/*/adapters/**"],
+              message:
+                "Deep imports into package internals are not allowed. Import via the package's index exports.",
+            },
+            {
+              group: ["@crm/web", "@crm/web/**", "apps/**"],
+              message: "Dependency direction is app → packages. Packages must not import the app.",
+            },
+            {
+              regex: "^(\\.\\./)+apps/",
+              message: "Dependency direction is app → packages. Packages must not import the app.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // src/ files additionally may not import provider adapters — those are
+    // constructed only inside their package's registry factory
+    // (create*Provider in src/registry.ts). Repeats the general patterns so
+    // this scope's rule options don't silently replace them.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/registry.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@crm/*/src/**", "@crm/*/dist/**", "@crm/*/adapters/**"],
+              message:
+                "Deep imports into package internals are not allowed. Import via the package's index exports.",
+            },
+            {
+              group: ["@crm/web", "@crm/web/**", "apps/**"],
+              message: "Dependency direction is app → packages. Packages must not import the app.",
+            },
+            {
+              regex: "^(\\.\\./)+apps/",
+              message: "Dependency direction is app → packages. Packages must not import the app.",
+            },
+            {
+              regex: "(^|/)adapters(/|$)",
+              message:
+                "Provider adapters are constructed only inside src/registry.ts (create*Provider). Import the registry or the provider interface instead.",
+            },
+          ],
+        },
+      ],
     },
   },
   {
@@ -166,6 +276,16 @@ export default tseslint.config(
     },
   },
   {
+    // One component per file — small stateless helpers may colocate
+    // (ignoreStateless); a second stateful component may not.
+    files: ["**/*.tsx"],
+    plugins: { react },
+    settings: { react: { version: "detect" } },
+    rules: {
+      "react/no-multi-comp": ["warn", { ignoreStateless: true }],
+    },
+  },
+  {
     // Test files get relaxed size limits (describe/it nesting and long
     // arrange sections are normal) and mock-friendly typings. This block and
     // the vitest block MUST stay last — they override earlier blocks for
@@ -177,12 +297,19 @@ export default tseslint.config(
       "max-lines-per-function": "off",
       "max-nested-callbacks": "off",
       "no-console": "off",
-      "max-lines": ["warn", { max: 350, skipBlankLines: true, skipComments: true }],
+      "max-lines": ["warn", { max: 300, skipBlankLines: true, skipComments: true }],
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/unbound-method": "off",
-      "vitest/no-focused-tests": "error",
-      "vitest/no-disabled-tests": "warn",
-      "vitest/no-commented-out-tests": "warn",
+      ...vitest.configs.recommended.rules,
+      // Vitest's expect takes an optional message as arg 2
+      // (vitest.dev/api/expect) — the rule's default maxArgs:1 predates that.
+      "vitest/valid-expect": ["error", { maxArgs: 2 }],
+      // 7 existing violations (all guarded by a preceding assertion or
+      // optional-field semantics) — warn budget until the count is zero.
+      "vitest/no-conditional-expect": "warn",
     },
   },
+  // Prettier owns formatting; this disables any lint rule that could fight
+  // it (docs: prettier.io/docs/integrating-with-linters). Must stay last.
+  eslintConfigPrettier,
 );
