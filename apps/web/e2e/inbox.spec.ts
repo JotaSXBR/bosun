@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("inbox renders the four ticket views for an authenticated org member", async ({ page }) => {
+test("inbox renders the six ticket views for an authenticated org member", async ({ page }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const email = `e2e-inbox-${suffix}@crm.local`;
 
@@ -16,7 +16,7 @@ test("inbox renders the four ticket views for an authenticated org member", asyn
   await page.waitForURL("**/app");
 
   await page.goto("/app/inbox");
-  for (const label of ["Fila", "Minhas", "Todas", "Resolvidas"]) {
+  for (const label of ["Automático", "Fila", "Minhas", "Todas", "Adiados", "Fechadas"]) {
     await expect(page.getByRole("link", { name: label })).toBeVisible();
   }
   await expect(page.getByText("Nenhum ticket aguardando atendimento.")).toBeVisible();
