@@ -15,6 +15,7 @@ import { Composer } from "@/components/composer";
 import { ConversationLeadPanel } from "@/components/conversation-lead-panel";
 import { DraftCard } from "@/components/draft-card";
 import { MessageItem } from "@/components/message-item";
+import { NudgeCard } from "@/components/nudge-card";
 import { PresenceIndicator } from "@/components/presence-indicator";
 import { TicketActions } from "@/components/ticket-actions";
 import { TICKET_STATUS } from "@/lib/ticket-status";
@@ -23,12 +24,13 @@ import {
   getConversationDeal,
   getConversationLabels,
   getLastInboundAt,
-  listConversationDrafts,
+  hasLlmCredential,
   listFunnelsWithStages,
   listMembers,
   listMessages,
   listOrgLabels,
   listSectors,
+  listThreadCardsForConversation,
 } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
 
@@ -107,15 +109,16 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   // Drafts only render on a workable thread — a pending card on a
   // resolved ticket would sit disabled forever.
   const showDrafts = canWork && hasPermission(ctx.role, { messaging: ["write"] });
-  const [drafts, lastInboundAt] = showDrafts
+  const [cards, lastInboundAt, hasCredential] = showDrafts
     ? await Promise.all([
-        listConversationDrafts(ctx, id).catch((error: unknown) => {
-          captureException(error, { action: "listConversationDrafts" });
+        listThreadCardsForConversation(ctx, id).catch((error: unknown) => {
+          captureException(error, { action: "listThreadCardsForConversation" });
           return [];
         }),
         getLastInboundAt(ctx, id),
+        hasLlmCredential(ctx),
       ])
-    : [[] as AgentSuggestionRow[], null];
+    : [[] as AgentSuggestionRow[], null, false];
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-8">
@@ -170,17 +173,27 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             />
 
             {showDrafts &&
-              drafts.map((draft) => (
-                <DraftCard
-                  key={draft.id}
-                  suggestionId={draft.id}
-                  body={draftPayloadSchema.safeParse(draft.payload).data?.body ?? ""}
-                  rationale={draft.rationale}
-                  stale={lastInboundAt !== null && lastInboundAt > draft.createdAt}
-                />
-              ))}
+              cards.map((card) =>
+                card.targetType === "nudge" ? (
+                  <NudgeCard key={card.id} suggestionId={card.id} rationale={card.rationale} />
+                ) : (
+                  <DraftCard
+                    key={card.id}
+                    suggestionId={card.id}
+                    body={draftPayloadSchema.safeParse(card.payload).data?.body ?? ""}
+                    rationale={card.rationale}
+                    stale={lastInboundAt !== null && lastInboundAt > card.createdAt}
+                  />
+                ),
+              )}
 
-            {!isViewer && <Composer conversationId={conversation.id} disabled={!canWork} />}
+            {!isViewer && (
+              <Composer
+                conversationId={conversation.id}
+                disabled={!canWork}
+                draftsEnabled={hasCredential}
+              />
+            )}
           </>
         </Card>
 

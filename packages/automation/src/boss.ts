@@ -8,6 +8,7 @@ import { channelReconcileHandler } from "./tasks/channel-messages-reconcile";
 import { closeResolvedTicketsHandler } from "./tasks/close-resolved-tickets";
 import { generateDraftHandler } from "./tasks/generate-draft";
 import { observerAnalyzeHandler } from "./tasks/observer-analyze";
+import { observerScanHandler } from "./tasks/observer-scan";
 import { organizationOnboardingHandler } from "./tasks/organization-onboarding";
 import { processChannelEventHandler } from "./tasks/process-channel-event";
 
@@ -21,6 +22,7 @@ export const QUEUES = {
   observerAnalyze: "observer-analyze",
   brainStaleSweep: "brain-stale-sweep",
   generateDraft: "generate-draft",
+  observerScan: "observer-scan",
 } as const;
 
 let boss: PgBoss | undefined;
@@ -104,6 +106,13 @@ async function start(env: ServerEnv): Promise<PgBoss> {
   await instance.work(QUEUES.generateDraft, async (jobs) => {
     for (const job of jobs) await generateDraftHandler(job.data);
   });
+  await instance.work(QUEUES.observerScan, async (jobs) => {
+    for (const job of jobs) await observerScanHandler(job.data);
+  });
+  // Interval-mode observer sweep — the per-org cadence lives in
+  // organization_settings.observer_interval_minutes; the cron tick is just
+  // the polling granularity.
+  await instance.schedule(QUEUES.observerScan, "*/5 * * * *");
   // Flag expired canon memory entries for human review once a day.
   await instance.schedule(QUEUES.brainStaleSweep, "15 3 * * *");
 

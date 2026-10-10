@@ -4,7 +4,7 @@ import { getServerEnv } from "@crm/config";
 import type { TenantContext } from "@crm/core";
 import { findAgentByKind } from "@crm/core/agents";
 import { createLlmCredential } from "@crm/core/ai";
-import { listDrafts } from "@crm/core/drafts";
+import { listThreadCards } from "@crm/core/drafts";
 import type { ConnectionRef } from "@crm/core/messaging";
 import { ingestChannelEvent } from "@crm/core/messaging";
 import type { Database } from "@crm/db";
@@ -169,7 +169,7 @@ describe("generateDraftHandler", () => {
     );
     expect(result.drafted).toBe(true);
 
-    const pending = await listDrafts(db, ctx(orgB, "admin"), convId);
+    const pending = await listThreadCards(db, ctx(orgB, "admin"), convId);
     expect(pending).toHaveLength(1);
     expect((pending[0]!.payload as { body: string }).body).toContain("5 dias úteis");
 
@@ -206,7 +206,7 @@ describe("generateDraftHandler", () => {
       },
     );
 
-    const pending = await listDrafts(db, ctx(orgB, "admin"), convId);
+    const pending = await listThreadCards(db, ctx(orgB, "admin"), convId);
     expect(pending).toHaveLength(1);
     expect((pending[0]!.payload as { body: string }).body).toBe("Nova versão do rascunho.");
   });

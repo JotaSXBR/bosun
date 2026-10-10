@@ -2,7 +2,7 @@ import type { Database } from "@crm/db";
 import { withTenant } from "@crm/db";
 import { captureException } from "@crm/observability";
 
-import { DomainError, NotFoundError } from "../../errors";
+import { AuthorizationError, DomainError, NotFoundError } from "../../errors";
 import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
@@ -20,6 +20,19 @@ import { createAgentInput, updateAgentInput } from "./schemas";
 
 function nameTaken(): never {
   throw new DomainError("AGENT_NAME_TAKEN", "An agent with this name already exists");
+}
+
+/**
+ * System-role agents run the platform pipelines — their config is
+ * owner-only (docs/product/ai-agents.md). Org agents incl. 'drafter'
+ * stay `ai:manage`.
+ */
+const SYSTEM_AGENT_KINDS = new Set(["observer"]);
+
+function assertAgentEditable(ctx: TenantContext, kind: string): void {
+  if (SYSTEM_AGENT_KINDS.has(kind) && ctx.role !== "owner" && !ctx.isPlatformAdmin) {
+    throw new AuthorizationError("Only the org owner can edit system agents");
+  }
 }
 
 /** Audit is post-commit best-effort — a logging failure must not fail the mutation. */
@@ -69,6 +82,7 @@ export async function updateAgent(
   const agent = await withTenant(db, ctx.organizationId, async (tx) => {
     const existing = await findAgentById(tx, ctx.organizationId, parsed.agentId);
     if (!existing) throw new NotFoundError("Agent", parsed.agentId);
+    assertAgentEditable(ctx, existing.kind);
     const { agentId: _, ...fields } = parsed;
     let updated: AgentRow | undefined;
     try {
@@ -94,6 +108,7 @@ export async function deleteAgentById(
   await withTenant(db, ctx.organizationId, async (tx) => {
     const existing = await findAgentById(tx, ctx.organizationId, agentId);
     if (!existing) throw new NotFoundError("Agent", agentId);
+    assertAgentEditable(ctx, existing.kind);
     await deleteAgent(tx, existing.id);
   });
   audit(db, ctx, "agent.deleted", agentId);

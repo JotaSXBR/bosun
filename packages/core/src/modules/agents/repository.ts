@@ -83,6 +83,29 @@ export async function insertAgentOnce(
   return row ?? null;
 }
 
+/**
+ * Lazy singleton for dedicated agents ('drafter', 'observer'…): reads the
+ * per-org row, inserts `defaults` on first use, and falls back to the
+ * winner's row when the lazy-create races on `agents_org_kind_unique`.
+ */
+export async function findOrCreateAgentByKind(
+  executor: DbExecutor,
+  organizationId: string,
+  kind: string,
+  defaults: Omit<InsertAgentValues, "organizationId" | "kind">,
+): Promise<AgentRow> {
+  const existing = await findAgentByKind(executor, organizationId, kind);
+  if (existing) return existing;
+  const values = { ...defaults, organizationId, kind };
+  const created = await insertAgentOnce(executor, values);
+  if (created) return created;
+  const winner = await findAgentByKind(executor, organizationId, kind);
+  if (winner) return winner;
+  // A different unique constraint fired (e.g. agents_org_name_idx on a
+  // user-created agent with the same name) — surface the real violation.
+  return insertAgent(executor, values);
+}
+
 export async function updateAgent(
   executor: DbExecutor,
   agentId: string,

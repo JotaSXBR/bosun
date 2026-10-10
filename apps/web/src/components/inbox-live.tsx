@@ -21,6 +21,7 @@ export function InboxLive() {
   const t = useTranslations("inbox");
   const tAi = useTranslations("settings.ai.suggestions");
   const tDrafts = useTranslations("drafts");
+  const tNudges = useTranslations("nudges");
   const router = useRouter();
   const [hasNew, setHasNew] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -34,6 +35,8 @@ export function InboxLive() {
         // just signals; config suggestions get the settings link.
         if (event.targetType === "draft") {
           toast.info(tDrafts("newDraftToast"));
+        } else if (event.targetType === "nudge") {
+          toast.info(tNudges("newNudgeToast"));
         } else {
           toast.info(tAi("newSuggestion"), {
             action: (
@@ -50,7 +53,7 @@ export function InboxLive() {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = setTimeout(() => setHasNew(false), INDICATOR_MS);
     });
-  }, [router, tAi, tDrafts]);
+  }, [router, tAi, tDrafts, tNudges]);
 
   if (!hasNew) return null;
   return (

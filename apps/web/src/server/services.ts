@@ -4,14 +4,14 @@ import type { TenantContext } from "@crm/core";
 import type { AgentRow } from "@crm/core/agents";
 import { listAgents } from "@crm/core/agents";
 import type { LlmCredentialPublic } from "@crm/core/ai";
-import { listLlmCredentials } from "@crm/core/ai";
+import { hasOrgLlmCredentials, listLlmCredentials } from "@crm/core/ai";
 import type { AuditLogRow, ListAuditEventsInput } from "@crm/core/audit";
 import { listAuditEvents } from "@crm/core/audit";
 import type { MemoryEntryRow } from "@crm/core/brain";
 import { listBrainEntries, listStaleBrainEntries } from "@crm/core/brain";
 import type { ContactListRow } from "@crm/core/contacts";
 import { listOrgContacts } from "@crm/core/contacts";
-import { listDrafts } from "@crm/core/drafts";
+import { listThreadCards } from "@crm/core/drafts";
 import type { ChannelConnectionRow } from "@crm/core/integrations";
 import { listChannelConnectionsForTenant } from "@crm/core/integrations";
 import type { KnowledgeEntryRow } from "@crm/core/knowledge";
@@ -50,7 +50,7 @@ import type { AgentSuggestionRow } from "@crm/core/suggestions";
 import { listAgentSuggestions } from "@crm/core/suggestions";
 import type { TeamWithMembers } from "@crm/core/teams";
 import { listTeams } from "@crm/core/teams";
-import { getDb } from "@crm/db";
+import { getDb, withTenant } from "@crm/db";
 
 /**
  * Server-side composition helpers: the only place UI code may reach @crm/core
@@ -198,6 +198,13 @@ export async function listOrgLlmCredentials(ctx: TenantContext): Promise<LlmCred
   return listLlmCredentials(getDb(), ctx);
 }
 
+/** Boolean credential probe for UI gating — never decrypts the keys. */
+export async function hasLlmCredential(ctx: TenantContext): Promise<boolean> {
+  return withTenant(getDb(), ctx.organizationId, (tx) =>
+    hasOrgLlmCredentials(tx, ctx.organizationId),
+  );
+}
+
 export async function listOrgAgents(ctx: TenantContext): Promise<AgentRow[]> {
   return listAgents(getDb(), ctx);
 }
@@ -218,14 +225,14 @@ export async function listOrgStaleBrainEntries(ctx: TenantContext): Promise<Memo
   return listStaleBrainEntries(getDb(), ctx);
 }
 
-// --- AI drafts -------------------------------------------------------------
+// --- AI thread cards (drafts + nudges) --------------------------------------
 
-/** Pending draft suggestions for the conversation thread (messaging:write). */
-export async function listConversationDrafts(
+/** Pending thread cards for the conversation (messaging:write). */
+export async function listThreadCardsForConversation(
   ctx: TenantContext,
   conversationId: string,
 ): Promise<AgentSuggestionRow[]> {
-  return listDrafts(getDb(), ctx, conversationId);
+  return listThreadCards(getDb(), ctx, conversationId);
 }
 
 /** Last inbound timestamp — draft staleness, independent of the listed window. */

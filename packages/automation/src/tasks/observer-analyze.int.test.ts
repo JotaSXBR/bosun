@@ -6,6 +6,7 @@ import { createLlmCredential } from "@crm/core/ai";
 import { createDraftSuggestion } from "@crm/core/drafts";
 import type { ConnectionRef } from "@crm/core/messaging";
 import { ingestChannelEvent, resolveConversation } from "@crm/core/messaging";
+import { updateObserverSettings } from "@crm/core/organizations";
 import { listAgentSuggestions } from "@crm/core/suggestions";
 import type { Database } from "@crm/db";
 import { createDb, schema, sql, withTenant } from "@crm/db";
@@ -250,5 +251,39 @@ describe("observerAnalyzeHandler", () => {
       { analyze: fakeAnalyze },
     );
     expect(result.analyzed).toBe(true);
+  });
+
+  it("observer-mode gate: 'off'/'interval' skip the on_close path, force bypasses", async () => {
+    const convId = await resolvedConversation(orgA, connA, "gated@c.us");
+    const admin = ctx(orgA, "admin");
+    const defaults = {
+      observerIntervalMinutes: 15,
+      observerIdleMinutes: 15,
+      observerAutoDraft: false,
+    };
+
+    await updateObserverSettings(db, admin, { aiObserverMode: "off", ...defaults });
+    const off = await observerAnalyzeHandler(
+      { organizationId: orgA, conversationId: convId },
+      { analyze: fakeAnalyze },
+    );
+    expect(off.skipped).toBe(true);
+    expect(off.analyzed).toBe(false);
+
+    await updateObserverSettings(db, admin, { aiObserverMode: "interval", ...defaults });
+    const interval = await observerAnalyzeHandler(
+      { organizationId: orgA, conversationId: convId },
+      { analyze: fakeAnalyze },
+    );
+    expect(interval.skipped).toBe(true);
+
+    // Manual "analisar agora" is a conscious spend — force bypasses the gate.
+    const forced = await observerAnalyzeHandler(
+      { organizationId: orgA, conversationId: convId, force: true },
+      { analyze: fakeAnalyze },
+    );
+    expect(forced.analyzed).toBe(true);
+
+    await updateObserverSettings(db, admin, { aiObserverMode: "on_close", ...defaults });
   });
 });

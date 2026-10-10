@@ -1,5 +1,5 @@
 import type { Database, DbExecutor } from "@crm/db";
-import { schema } from "@crm/db";
+import { schema, sql } from "@crm/db";
 import { and, eq } from "drizzle-orm";
 
 const { organizationMembers, organizations, organizationSettings, users } = schema;
@@ -98,6 +98,10 @@ export async function upsertSettings(
     timezone?: string;
     locale?: string;
     ticketReopenWindowHours?: number;
+    aiObserverMode?: string;
+    observerIntervalMinutes?: number;
+    observerIdleMinutes?: number;
+    observerAutoDraft?: boolean;
   },
 ): Promise<OrganizationSettingsRow> {
   const [row] = await executor
@@ -110,4 +114,45 @@ export async function upsertSettings(
     .returning();
   if (!row) throw new Error("organization_settings upsert returned no row");
   return row;
+}
+
+export type ObserverScanOrg = {
+  organizationId: string;
+  intervalMinutes: number;
+  idleMinutes: number;
+  autoDraft: boolean;
+};
+
+/**
+ * Observer-scan due list (cron every 5 min): orgs in `interval` mode whose
+ * per-org cadence elapsed since the last scan. Cross-tenant by design —
+ * call inside withServiceAccess; interval mode requires an explicit
+ * settings row, so orgs that never opted in never appear.
+ */
+export async function listObserverScanDue(executor: DbExecutor): Promise<ObserverScanOrg[]> {
+  return executor
+    .select({
+      organizationId: organizationSettings.organizationId,
+      intervalMinutes: organizationSettings.observerIntervalMinutes,
+      idleMinutes: organizationSettings.observerIdleMinutes,
+      autoDraft: organizationSettings.observerAutoDraft,
+    })
+    .from(organizationSettings)
+    .where(
+      and(
+        eq(organizationSettings.aiObserverMode, "interval"),
+        sql`${organizationSettings.observerLastScanAt} is null or ${organizationSettings.observerLastScanAt} < now() - make_interval(mins => ${organizationSettings.observerIntervalMinutes})`,
+      ),
+    );
+}
+
+/** Stamps the scan watermark — a failed org still advances its own cadence. */
+export async function markObserverScanAt(
+  executor: DbExecutor,
+  organizationId: string,
+): Promise<void> {
+  await executor
+    .update(organizationSettings)
+    .set({ observerLastScanAt: new Date() })
+    .where(eq(organizationSettings.organizationId, organizationId));
 }

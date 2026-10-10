@@ -182,7 +182,11 @@ export async function rejectSuggestionAction(suggestionId: string): Promise<AiAc
 export async function analyzeNowAction(): Promise<AiActionResult> {
   const ctx = await requireTenantContext();
   try {
-    await enqueueObserverAnalyze({ organizationId: ctx.organizationId, actorUserId: ctx.userId });
+    await enqueueObserverAnalyze({
+      organizationId: ctx.organizationId,
+      actorUserId: ctx.userId,
+      force: true,
+    });
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível iniciar a análise.") };

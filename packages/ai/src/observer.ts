@@ -85,6 +85,8 @@ export type ObserverInput = {
   agents: ObserverAgentSummary[];
   knowledge: Array<{ id: string; title: string }>;
   brain?: ObserverBrainContext;
+  /** Org's `kind='observer'` agent prompt — appended to the system prompt. */
+  observerPersona?: string;
 };
 
 export type ObserverResult = {
@@ -146,10 +148,13 @@ export async function analyzeConversation(input: ObserverInput): Promise<Observe
       }`
     : "";
 
+  const persona = input.observerPersona?.trim();
   const result = await generateObject({
     model: input.model,
     schema: observerResultSchema,
-    system: SYSTEM_PROMPT,
+    system: persona
+      ? `${SYSTEM_PROMPT}\n\nPersona do observador desta organização:\n${persona}`
+      : SYSTEM_PROMPT,
     prompt: `## Conversa resolvida\n${transcript || "(vazia)"}\n\n## Agentes atuais\n${agents || "(nenhum)"}\n\n## Conhecimento atual\n${knowledge || "(nenhum)"}${brain}`,
   });
 

@@ -8,7 +8,7 @@ import { DomainError, NotFoundError } from "../../errors";
 import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
-import { findAgentByKind, insertAgent, insertAgentOnce } from "../agents";
+import { findOrCreateAgentByKind } from "../agents";
 import { recordAuditEvent } from "../audit";
 import { sendOutboundMessage } from "../messaging";
 import type { AgentSuggestionRow } from "../suggestions";
@@ -16,12 +16,13 @@ import { findSuggestionById, insertSuggestion, markSuggestionReviewed } from "..
 import {
   claimPendingDraft,
   DRAFT_TARGET_TYPE,
-  listPendingDraftsForConversation,
+  listPendingThreadCards,
+  NUDGE_TARGET_TYPE,
   releaseDraftClaim,
-  supersedePendingDrafts,
+  supersedePendingThreadCards,
 } from "./repository";
-import type { DraftPayload } from "./schemas";
-import { draftPayloadSchema, requestDraftInput } from "./schemas";
+import type { DraftPayload, ReviewNudgeInput } from "./schemas";
+import { draftPayloadSchema, requestDraftInput, reviewNudgeInput } from "./schemas";
 
 /** Audit is post-commit best-effort — a logging failure must not fail the mutation. */
 function audit(db: Database, ctx: TenantContext, action: string, suggestionId: string): void {
@@ -55,16 +56,28 @@ async function reviewedDraftState(
   throw new DomainError("DRAFT_ALREADY_REVIEWED", current.status);
 }
 
-/** Requires messaging:write — viewers never see drafts. */
-export async function listDrafts(
+/** Requires messaging:write — viewers never see thread cards (drafts or nudges). */
+export async function listThreadCards(
   db: Database,
   ctx: TenantContext,
   conversationId: string,
 ): Promise<AgentSuggestionRow[]> {
   assertPermission(ctx, { messaging: ["write"] });
   return withTenant(db, ctx.organizationId, (tx) =>
-    listPendingDraftsForConversation(tx, ctx.organizationId, conversationId),
+    listPendingThreadCards(tx, ctx.organizationId, conversationId),
   );
+}
+
+/** Unique-violation fallback — return the winner's pending card. */
+async function pendingThreadCard(
+  db: Database,
+  organizationId: string,
+  conversationId: string,
+): Promise<AgentSuggestionRow | null> {
+  const [existing] = await withTenant(db, organizationId, (tx) =>
+    listPendingThreadCards(tx, organizationId, conversationId),
+  );
+  return existing ?? null;
 }
 
 /**
@@ -86,7 +99,7 @@ export async function createDraftSuggestion(
   const payload = draftPayloadSchema.parse(input.payload);
   try {
     return await withTenant(db, organizationId, async (tx) => {
-      await supersedePendingDrafts(tx, organizationId, input.conversationId);
+      await supersedePendingThreadCards(tx, organizationId, input.conversationId);
       const row = await insertSuggestion(tx, {
         organizationId,
         targetType: DRAFT_TARGET_TYPE,
@@ -108,12 +121,103 @@ export async function createDraftSuggestion(
     // Concurrent generation won the pending-slot race — return its row
     // instead of surfacing a constraint error to the caller.
     if (!isUniqueViolation(error)) throw error;
-    const [existing] = await withTenant(db, organizationId, (tx) =>
-      listPendingDraftsForConversation(tx, organizationId, input.conversationId),
-    );
+    const existing = await pendingThreadCard(db, organizationId, input.conversationId);
     if (!existing) throw error;
     return existing;
   }
+}
+
+/**
+ * System path — the observer-scan job calls this when the deterministic
+ * predicate fires (assigned human idle past the threshold, last message
+ * inbound). The nudge card carries no reply text; its "Gerar" action
+ * produces a real draft on demand.
+ */
+export async function createNudgeSuggestion(
+  db: Database,
+  organizationId: string,
+  input: { conversationId: string; rationale: string; idleMinutes?: number },
+): Promise<AgentSuggestionRow> {
+  try {
+    return await withTenant(db, organizationId, async (tx) => {
+      const row = await insertSuggestion(tx, {
+        organizationId,
+        targetType: NUDGE_TARGET_TYPE,
+        payload: { idleMinutes: input.idleMinutes ?? null },
+        rationale: input.rationale,
+        sourceConversationId: input.conversationId,
+        proposedBy: null,
+      });
+      await emitDomainEvent(tx, {
+        type: "agent_suggestion.created",
+        organizationId,
+        suggestionId: row.id,
+        conversationId: input.conversationId,
+        targetType: NUDGE_TARGET_TYPE,
+      });
+      return row;
+    });
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    const existing = await pendingThreadCard(db, organizationId, input.conversationId);
+    if (!existing) throw error;
+    return existing;
+  }
+}
+
+/** Requires messaging:write — the action layer reads the nudge's conversation. */
+export async function findNudgeById(
+  db: Database,
+  ctx: TenantContext,
+  suggestionId: string,
+): Promise<AgentSuggestionRow> {
+  assertPermission(ctx, { messaging: ["write"] });
+  const row = await withTenant(db, ctx.organizationId, (tx) =>
+    findSuggestionById(tx, ctx.organizationId, suggestionId),
+  );
+  if (row?.targetType !== NUDGE_TARGET_TYPE) {
+    throw new NotFoundError("Nudge", suggestionId);
+  }
+  return row;
+}
+
+/**
+ * Requires messaging:write. "approved" is the nudge's "Gerar sugestão"
+ * action — the server action enqueues generate-draft BEFORE calling this
+ * so a skipped enqueue leaves the nudge pending; "rejected" dismisses.
+ */
+export async function reviewNudge(
+  db: Database,
+  ctx: TenantContext,
+  input: ReviewNudgeInput,
+): Promise<AgentSuggestionRow> {
+  assertPermission(ctx, { messaging: ["write"] });
+  const { suggestionId, action } = reviewNudgeInput.parse(input);
+  const reviewed = await withTenant(db, ctx.organizationId, async (tx) => {
+    const suggestion = await findSuggestionById(tx, ctx.organizationId, suggestionId);
+    if (suggestion?.targetType !== NUDGE_TARGET_TYPE) {
+      throw new NotFoundError("Nudge", suggestionId);
+    }
+    if (suggestion.status !== "pending") {
+      if (suggestion.status === action) return suggestion;
+      throw new DomainError("NUDGE_ALREADY_REVIEWED", suggestion.status);
+    }
+    const row = await markSuggestionReviewed(tx, suggestionId, {
+      status: action,
+      reviewedBy: ctx.userId,
+    });
+    if (!row) throw new NotFoundError("Nudge", suggestionId);
+    await emitDomainEvent(tx, {
+      type: "agent_suggestion.reviewed",
+      organizationId: ctx.organizationId,
+      suggestionId,
+      conversationId: suggestion.sourceConversationId ?? undefined,
+      targetType: NUDGE_TARGET_TYPE,
+    });
+    return row;
+  });
+  audit(db, ctx, `agent_nudge.${action}`, suggestionId);
+  return reviewed;
 }
 
 /**
@@ -213,30 +317,34 @@ export async function rejectDraft(
  * the regular agents settings UI (`ai:manage`).
  */
 export async function findOrCreateDrafter(db: Database, organizationId: string) {
-  return withTenant(db, organizationId, async (tx) => {
-    const existing = await findAgentByKind(tx, organizationId, "drafter");
-    if (existing) return existing;
-    const values = {
-      organizationId,
+  return withTenant(db, organizationId, (tx) =>
+    findOrCreateAgentByKind(tx, organizationId, "drafter", {
       name: "Drafter",
       specialty: "Sugestões de resposta para revisão humana",
       status: "active",
-      kind: "drafter",
       systemPrompt:
         "Você escreve rascunhos de resposta no tom da empresa: cordial, direto, " +
         "sem jargão técnico com o cliente. Trate o cliente por 'você'.",
       toolsAllowlist: [],
-    };
-    const created = await insertAgentOnce(tx, values);
-    if (created) return created;
-    // Lost the lazy-create race on agents_org_kind_unique — the winner's
-    // row is committed and visible to this fresh read.
-    const winner = await findAgentByKind(tx, organizationId, "drafter");
-    if (winner) return winner;
-    // A different unique constraint fired (e.g. agents_org_name_idx on a
-    // user-created "Drafter" agent) — surface the real violation.
-    return insertAgent(tx, values);
-  });
+    }),
+  );
+}
+
+/**
+ * The org's observer — dedicated `kind='observer'` agent row, lazily
+ * created on first analysis. Owner-only editable (system agent gate in
+ * agents/service.ts); its `systemPrompt`/`modelRef` steer the job.
+ */
+export async function findOrCreateObserver(db: Database, organizationId: string) {
+  return withTenant(db, organizationId, (tx) =>
+    findOrCreateAgentByKind(tx, organizationId, "observer", {
+      name: "Observer",
+      specialty: "Análise pós-atendimento e aprendizado operacional",
+      status: "active",
+      systemPrompt: "",
+      toolsAllowlist: [],
+    }),
+  );
 }
 
 /** Validates a composer-side draft request (enqueue boundary). */

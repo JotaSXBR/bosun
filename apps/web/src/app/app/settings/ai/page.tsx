@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import {
+  getOrgSettings,
   listOrgAgents,
   listOrgBrainEntries,
   listOrgKnowledge,
@@ -20,6 +21,7 @@ import { AnalyzeButton } from "./analyze-button";
 import { BrainSection } from "./brain-section";
 import { CredentialsSection } from "./credentials-section";
 import { KnowledgeSection } from "./knowledge-section";
+import { ObserverSection } from "./observer-section";
 import { SuggestionsSection } from "./suggestions-section";
 
 // Reads the session + database → must never be prerendered at build time.
@@ -47,15 +49,18 @@ export default async function AiSettingsPage() {
   }
 
   const canManage = hasPermission(ctx.role, { ai: ["manage"] });
-  const [credentials, agents, knowledge, suggestions, brain, stale, sectors] = await Promise.all([
-    listOrgLlmCredentials(ctx),
-    listOrgAgents(ctx),
-    listOrgKnowledge(ctx),
-    listOrgSuggestions(ctx),
-    listOrgBrainEntries(ctx),
-    listOrgStaleBrainEntries(ctx),
-    listSectors(ctx),
-  ]);
+  const isOwner = ctx.role === "owner" || ctx.isPlatformAdmin;
+  const [credentials, agents, knowledge, suggestions, brain, stale, sectors, settings] =
+    await Promise.all([
+      listOrgLlmCredentials(ctx),
+      listOrgAgents(ctx),
+      listOrgKnowledge(ctx),
+      listOrgSuggestions(ctx),
+      listOrgBrainEntries(ctx),
+      listOrgStaleBrainEntries(ctx),
+      listSectors(ctx),
+      getOrgSettings(ctx),
+    ]);
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
@@ -78,7 +83,12 @@ export default async function AiSettingsPage() {
         canManage={canManage}
       />
       <CredentialsSection credentials={credentials} canManage={canManage} />
-      <AgentsSection agents={agents} canManage={canManage} />
+      <ObserverSection
+        settings={settings}
+        canManage={canManage}
+        hasCredential={credentials.length > 0}
+      />
+      <AgentsSection agents={agents} canManage={canManage} isOwner={isOwner} />
       <KnowledgeSection entries={knowledge} canManage={canManage} />
       <BrainSection
         entries={brain}

@@ -177,11 +177,12 @@ export const agentSuggestions = pgTable(
   },
   (t) => [
     index("agent_suggestions_org_status_idx").on(t.organizationId, t.status),
-    // At most one pending draft per conversation — the invariant the
-    // supersede+insert pair in createDraftSuggestion relies on.
-    uniqueIndex("agent_suggestions_pending_draft_idx")
+    // At most one pending thread card per conversation — the invariant the
+    // supersede+insert pairs rely on (draft and nudge share the slot: a
+    // nudge never sits next to a draft card).
+    uniqueIndex("agent_suggestions_pending_thread_card_idx")
       .on(t.sourceConversationId)
-      .where(sql`${t.targetType} = 'draft' and ${t.status} = 'pending'`),
+      .where(sql`${t.targetType} in ('draft', 'nudge') and ${t.status} = 'pending'`),
     pgPolicy("agent_suggestions_tenant_isolation", {
       for: "all",
       to: crmAppRole,

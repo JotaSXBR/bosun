@@ -1,11 +1,12 @@
 import type { ObserverInput, ObserverResult } from "@crm/ai";
 import { analyzeConversation, resolveLanguageModel } from "@crm/ai";
-import { listAgentRows } from "@crm/core/agents";
+import { listAgentRows, modelRefSchema } from "@crm/core/agents";
 import { llmProviderSchema, recordUsageEvents, resolveOrgLlmCredentials } from "@crm/core/ai";
 import { listCanonEntries, memoryProposalSchema } from "@crm/core/brain";
-import { DRAFT_TARGET_TYPE } from "@crm/core/drafts";
+import { DRAFT_TARGET_TYPE, findOrCreateObserver } from "@crm/core/drafts";
 import { listKnowledgeRows } from "@crm/core/knowledge";
 import { getConversationRow, listConversations, listRecentMessages } from "@crm/core/messaging";
+import { findSettings } from "@crm/core/organizations";
 import {
   createSystemSuggestions,
   listPendingByTargetType,
@@ -26,6 +27,8 @@ export const observerAnalyzePayload = z.object({
   conversationId: z.uuid().optional(),
   /** Who clicked "analyze now" — identity only, never trusted for auth. */
   actorUserId: z.uuid().optional(),
+  /** Manual "analyze now" — bypasses the observer-mode gate (conscious click). */
+  force: z.boolean().optional(),
 });
 
 export type ObserverAnalyzePayload = z.infer<typeof observerAnalyzePayload>;
@@ -78,6 +81,19 @@ export async function observerAnalyzeHandler(
   const db = getDb();
   const organizationId = parsed.organizationId;
 
+  // Observer-mode gate (docs/product/ai-agents.md): post-resolve analysis
+  // runs on `on_close` (and `realtime` when it ships); `interval` orgs get
+  // nudges from observer-scan instead; `off` runs nothing. A manual
+  // trigger (force) always runs — the click is a conscious spend.
+  const mode = await withTenant(
+    db,
+    organizationId,
+    async (tx) => (await findSettings(tx, organizationId))?.aiObserverMode ?? "on_close",
+  );
+  if (!parsed.force && mode !== "on_close" && mode !== "realtime") {
+    return { analyzed: false, suggestions: 0, skipped: true };
+  }
+
   const conversationId = await pickConversationId(db, organizationId, parsed.conversationId);
   if (!conversationId) return { analyzed: false, suggestions: 0, skipped: true };
 
@@ -125,7 +141,17 @@ export async function observerAnalyzeHandler(
     return { analyzed: false, suggestions: 0, skipped: true };
   }
 
-  const messages = await listRecentMessages(db, organizationId, conversationId, TRANSCRIPT_LIMIT);
+  // The org's observer agent steers the run: its systemPrompt appends to
+  // the base prompt and its modelRef overrides the credential's model when
+  // the provider matches (a different provider's model can't use this key).
+  const [observer, messages] = await Promise.all([
+    findOrCreateObserver(db, organizationId),
+    listRecentMessages(db, organizationId, conversationId, TRANSCRIPT_LIMIT),
+  ]);
+  const observerModelRef = (() => {
+    const parsed_ = modelRefSchema.safeParse(observer.modelRef);
+    return parsed_.success ? parsed_.data : null;
+  })();
   const transcript = messages.map((m) => {
     const content = m.content as { text?: string; caption?: string; type?: string };
     return {
@@ -155,6 +181,8 @@ export async function observerAnalyzeHandler(
         cred,
         teamId: prepared.teamId,
         contactId: prepared.contactId,
+        observerModelRef,
+        observerPersona: observer.systemPrompt,
       },
       { transcript, agents, knowledge, brain: prepared.brain, analyze: deps?.analyze },
     );
@@ -181,10 +209,24 @@ async function runCredentialAttempt(
     cred: Credential;
     teamId: string | null;
     contactId: string | null;
+    /** Observer agent's modelRef — overrides the credential model on provider match. */
+    observerModelRef: { provider: string; modelId: string } | null;
+    observerPersona: string;
   },
-  input: Omit<ObserverInput, "model"> & Pick<ObserverAnalyzeDeps, "analyze">,
+  input: Omit<ObserverInput, "model" | "observerPersona"> & Pick<ObserverAnalyzeDeps, "analyze">,
 ): Promise<{ ok: true; suggestions: number } | { ok: false; error: unknown }> {
-  const { db, organizationId, conversationId, cred, teamId, contactId } = scope;
+  const {
+    db,
+    organizationId,
+    conversationId,
+    cred,
+    teamId,
+    contactId,
+    observerModelRef,
+    observerPersona,
+  } = scope;
+  const provider = llmProviderSchema.parse(cred.provider);
+  const modelId = observerModelRef?.provider === provider ? observerModelRef.modelId : cred.model;
   const startedAt = Date.now();
   const record = (status: "ok" | "error", tokensIn = 0, tokensOut = 0) =>
     withTenant(db, organizationId, (tx) =>
@@ -193,7 +235,7 @@ async function runCredentialAttempt(
           credentialId: cred.id,
           callKind: "observer",
           provider: cred.provider,
-          model: cred.model,
+          model: modelId,
           tokensIn,
           tokensOut,
           latencyMs: Date.now() - startedAt,
@@ -204,8 +246,8 @@ async function runCredentialAttempt(
   try {
     const model = resolveLanguageModel(
       {
-        provider: llmProviderSchema.parse(cred.provider),
-        modelId: cred.model,
+        provider,
+        modelId,
         routing: { zdr: cred.zdr, sessionId: conversationId },
       },
       keysFor(cred),
@@ -217,6 +259,7 @@ async function runCredentialAttempt(
       agents,
       knowledge,
       brain,
+      observerPersona,
     });
     await record("ok", result.tokensIn, result.tokensOut);
     const created = await createSystemSuggestions(db, organizationId, [

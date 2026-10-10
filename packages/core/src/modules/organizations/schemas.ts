@@ -26,3 +26,19 @@ export const updateOrgSettingsInput = z.object({
   ticketReopenWindowHours: z.number().int().min(1).max(168).optional(),
 });
 export type UpdateOrgSettingsInput = z.input<typeof updateOrgSettingsInput>;
+
+/**
+ * Observer modes (docs/product/ai-agents.md). `realtime` is schema-valid
+ * but the UI keeps it disabled until the observer tool loop ships.
+ */
+export const observerModeSchema = z.enum(["off", "on_close", "interval", "realtime"]);
+export type ObserverMode = z.infer<typeof observerModeSchema>;
+
+export const updateObserverSettingsInput = z.object({
+  aiObserverMode: observerModeSchema,
+  // Scan cadence and idle threshold — minutes, sane operational bounds.
+  observerIntervalMinutes: z.number().int().min(5).max(120),
+  observerIdleMinutes: z.number().int().min(5).max(120),
+  observerAutoDraft: z.boolean(),
+});
+export type UpdateObserverSettingsInput = z.input<typeof updateObserverSettingsInput>;

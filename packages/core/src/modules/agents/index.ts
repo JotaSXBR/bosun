@@ -2,6 +2,7 @@ export type { AgentRow, InsertAgentValues } from "./repository";
 export {
   findAgentById,
   findAgentByKind,
+  findOrCreateAgentByKind,
   insertAgent,
   insertAgentOnce,
   listAgents as listAgentRows,

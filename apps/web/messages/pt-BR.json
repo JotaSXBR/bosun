@@ -100,6 +100,7 @@
     "draftSuggest": "Sugerir resposta",
     "draftImprove": "Melhorar resposta",
     "draftImproveHint": "Escreva algo primeiro para melhorar",
+    "draftNoCredential": "Configure uma credencial de IA em Configurações > IA",
     "draftRequested": "Gerando sugestão — o rascunho aparece aqui em instantes."
   },
   "tickets": {
@@ -459,6 +460,25 @@
       "restricted": "Configurações de IA disponíveis para owner, admin, manager e viewer.",
       "analyzeNow": "Analisar agora",
       "analyzeStarted": "Análise iniciada — sugestões aparecem aqui quando prontas.",
+      "observer": {
+        "title": "Observador",
+        "description": "O que a IA faz sozinha: aprender ao resolver tickets ou vigiar clientes esperando.",
+        "mode": "Modo",
+        "modeHint": "\"Analisar agora\" e os botões de sugestão funcionam em qualquer modo.",
+        "modeOff": "Desligado — nenhuma chamada de IA automática",
+        "modeOnClose": "Ao resolver — analisa o ticket e propõe melhorias",
+        "modeInterval": "Por intervalo — alerta quando o cliente espera demais",
+        "modeRealtime": "Tempo real (em breve — custo maior)",
+        "interval": "Intervalo entre varreduras (min)",
+        "intervalHint": "De 5 a 120 minutos.",
+        "idle": "Cliente esperando há (min)",
+        "idleHint": "Tempo sem resposta humana antes do alerta.",
+        "autoDraft": "Gerar rascunho direto (em vez de só alertar)",
+        "autoDraftHint": "O rascunho consome tokens da sua credencial a cada varredura.",
+        "noCredential": "Sem credencial de IA configurada — o observador fica desligado até você adicionar uma.",
+        "save": "Salvar",
+        "saved": "Observador salvo."
+      },
       "credentials": {
         "title": "Credenciais LLM",
         "description": "Chaves da organização (BYOK). O observador usa a cadeia por prioridade; sem credencial ativa, ele fica desligado.",
@@ -633,5 +653,13 @@
     "reject": "Descartar",
     "approvedToast": "Resposta enviada.",
     "newDraftToast": "Nova sugestão de resposta"
+  },
+  "nudges": {
+    "title": "Cliente aguardando",
+    "badge": "Sem resposta",
+    "generate": "Gerar sugestão",
+    "dismiss": "Dispensar",
+    "generatingToast": "Gerando sugestão…",
+    "newNudgeToast": "Cliente aguardando resposta"
   }
 }

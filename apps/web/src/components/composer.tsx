@@ -72,6 +72,8 @@ function ComposerToolbar({
   onEmoji,
   onAttach,
   onRequestDraft,
+  draftsEnabled,
+  draftsDisabledHint,
   recorder,
   hint,
   attachTitle,
@@ -85,6 +87,9 @@ function ComposerToolbar({
   onEmoji: (emoji: string) => void;
   onAttach: () => void;
   onRequestDraft: (mode: "suggest" | "improve") => void;
+  /** No BYOK credential → draft buttons disabled with an explanatory hint. */
+  draftsEnabled: boolean;
+  draftsDisabledHint: string;
   recorder: React.ReactNode;
   hint: string;
 }) {
@@ -112,8 +117,9 @@ function ComposerToolbar({
             type="button"
             variant="ghost"
             size="sm"
-            disabled={disabled}
+            disabled={disabled || !draftsEnabled}
             onClick={() => onRequestDraft("suggest")}
+            title={draftsEnabled ? undefined : draftsDisabledHint}
             data-testid="draft-suggest"
           >
             {t("draftSuggest")}
@@ -122,9 +128,11 @@ function ComposerToolbar({
             type="button"
             variant="ghost"
             size="sm"
-            disabled={disabled || !hasText}
+            disabled={disabled || !draftsEnabled || !hasText}
             onClick={() => onRequestDraft("improve")}
-            title={hasText ? undefined : t("draftImproveHint")}
+            title={
+              draftsEnabled ? (hasText ? undefined : t("draftImproveHint")) : draftsDisabledHint
+            }
             data-testid="draft-improve"
           >
             {t("draftImprove")}
@@ -190,9 +198,12 @@ function ReplyChip({ preview, onClear }: { preview: string; onClear: () => void 
 export function Composer({
   conversationId,
   disabled,
+  draftsEnabled,
 }: {
   conversationId: string;
   disabled: boolean;
+  /** No org LLM credential → the draft buttons sit disabled with a hint. */
+  draftsEnabled: boolean;
 }) {
   const t = useTranslations("composer");
   const router = useRouter();
@@ -331,6 +342,8 @@ export function Composer({
           onEmoji={insertEmoji}
           onAttach={() => fileInput.current?.click()}
           onRequestDraft={requestDraft}
+          draftsEnabled={draftsEnabled}
+          draftsDisabledHint={t("draftNoCredential")}
           attachTitle={t("attach")}
           recorder={
             <VoiceRecorder

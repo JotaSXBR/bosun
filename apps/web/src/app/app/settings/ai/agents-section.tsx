@@ -22,7 +22,16 @@ import {
 
 type Run = (action: Promise<AiActionResult>, success?: string, onSuccess?: () => void) => void;
 
-export function AgentsSection({ agents, canManage }: { agents: AgentRow[]; canManage: boolean }) {
+export function AgentsSection({
+  agents,
+  canManage,
+  isOwner,
+}: {
+  agents: AgentRow[];
+  canManage: boolean;
+  /** System agents (observer) are owner-only — mirrored by agents/service.ts. */
+  isOwner: boolean;
+}) {
   const t = useTranslations("settings.ai.agents");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -88,7 +97,7 @@ export function AgentsSection({ agents, canManage }: { agents: AgentRow[]; canMa
                   <Badge tone="neutral">{statusLabel(agent.status)}</Badge>
                   {agent.specialty && <span className="text-ink-muted">{agent.specialty}</span>}
                 </div>
-                {canManage && (
+                {canManage && (agent.kind !== "observer" || isOwner) && (
                   <div className="flex shrink-0 items-center gap-2">
                     <Button
                       size="sm"

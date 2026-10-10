@@ -189,9 +189,18 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   recentes, BYOK fallback + `ai_usage_events` `callKind='draft'`, drafter
   lazy), actions com precheck de credencial, `DraftCard` no thread +
   botões "Sugerir/Melhorar resposta" no composer + toast draft-aware no
-  `inbox-live`. **Specced (aguardando build)**: observer modes — `ai_observer_mode`
-  off/on_close/interval/realtime, nudge cards, observer configurável
-  owner-only, migração do observer pra brain tools. Ver
+  `inbox-live`. ✅ Observer modes (sem realtime) entregue — `ai_observer_mode`
+  off/on_close/(realtime disabled na UI) + seção em settings/ai com
+  interval/idle/`auto_draft`; modo `interval` roda o sweep `observer-scan`
+  (cron */5, determinístico — sem LLM): ticket aberto+atribuído com última
+  msg inbound e humano idle → `NudgeCard` no thread (Gerar→enqueue drafter
+  /Dispensar) ou `generate-draft` direto com `auto_draft`; cleanup faz
+  supersede de nudges que saíram do predicado; cooldown = idle_minutes.
+  Draft e nudge dividem o slot único de card pendente por conversa
+  (índice parcial IN(draft,nudge)); agent `observer` lazy com
+  prompt/modelRef honrados e edição owner-only; manual "analisar agora" =
+  force (bypassa o gate de modo). **Roadmap do spec**: modo realtime
+  (inbound→observer decide) e migração do observer pra brain tools. Ver
   `docs/product/ai-agents.md`.
 - **P1 — Second brain (memória do copiloto)**: ✅ entregue — `memory_entries`
   (RLS, FTS pt-BR, escopo org/team/contact, confidence, `stale_after`,

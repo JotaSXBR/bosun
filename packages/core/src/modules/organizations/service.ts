@@ -13,8 +13,8 @@ import {
   listOrgMembers as repoListOrgMembers,
   upsertSettings,
 } from "./repository";
-import type { UpdateOrgSettingsInput } from "./schemas";
-import { updateOrgSettingsInput } from "./schemas";
+import type { UpdateObserverSettingsInput, UpdateOrgSettingsInput } from "./schemas";
+import { updateObserverSettingsInput, updateOrgSettingsInput } from "./schemas";
 
 export type Membership = { role: OrgRole };
 
@@ -79,5 +79,19 @@ export async function updateOrganizationSettings(
 ): Promise<OrganizationSettingsRow> {
   assertPermission(ctx, { organization: ["update"] });
   const parsed = updateOrgSettingsInput.parse(input);
+  return withTenant(db, ctx.organizationId, (tx) => upsertSettings(tx, ctx.organizationId, parsed));
+}
+
+/**
+ * Requires ai:manage — observer mode is an AI-surface setting, not a
+ * general org setting, so it follows the credentials/agents permission.
+ */
+export async function updateObserverSettings(
+  db: Database,
+  ctx: TenantContext,
+  input: UpdateObserverSettingsInput,
+): Promise<OrganizationSettingsRow> {
+  assertPermission(ctx, { ai: ["manage"] });
+  const parsed = updateObserverSettingsInput.parse(input);
   return withTenant(db, ctx.organizationId, (tx) => upsertSettings(tx, ctx.organizationId, parsed));
 }

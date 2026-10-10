@@ -19,3 +19,16 @@ export const reviewDraftInput = z.object({
   suggestionId: z.uuid(),
 });
 export type ReviewDraftInput = z.input<typeof reviewDraftInput>;
+
+/** Nudge payload inside `agent_suggestions.payload` — no text, just context. */
+export const nudgePayloadSchema = z.object({
+  idleMinutes: z.number().int().min(0).optional(),
+});
+export type NudgePayload = z.infer<typeof nudgePayloadSchema>;
+
+/** Nudge review — "Gerar sugestão" approves (and the action enqueues a draft). */
+export const reviewNudgeInput = z.object({
+  suggestionId: z.uuid(),
+  action: z.enum(["approved", "rejected"]),
+});
+export type ReviewNudgeInput = z.input<typeof reviewNudgeInput>;

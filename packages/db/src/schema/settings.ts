@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   integer,
   jsonb,
   pgPolicy,
@@ -35,6 +36,18 @@ export const organizationSettings = pgTable(
     // A resolved ticket stays reopenable for this many hours — after that
     // the close-resolved-tickets sweep materializes `closed`.
     ticketReopenWindowHours: integer().notNull().default(48),
+    // Observer mode (docs/product/ai-agents.md): off | on_close | interval
+    // | realtime (roadmap — needs the observer tool loop). `off` orgs still
+    // learn nothing automatically; manual triggers stay available.
+    aiObserverMode: text().notNull().default("on_close"),
+    // `interval` mode scan cadence + how long the assigned human must be
+    // idle (last message inbound) before a nudge card lands in the thread.
+    observerIntervalMinutes: integer().notNull().default(15),
+    observerIdleMinutes: integer().notNull().default(15),
+    // Interval mode upgrade: scan enqueues a draft instead of a nudge.
+    observerAutoDraft: boolean().notNull().default(false),
+    // Last time the observer-scan sweep ran for this org (per-org cadence).
+    observerLastScanAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

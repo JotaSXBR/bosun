@@ -17,9 +17,11 @@ import { listAgentSuggestions } from "../suggestions";
 import {
   approveDraft,
   createDraftSuggestion,
+  createNudgeSuggestion,
   findOrCreateDrafter,
-  listDrafts,
+  listThreadCards,
   rejectDraft,
+  reviewNudge,
 } from "./service";
 
 const { channelConnections, conversations, organizationMembers, organizations, users } = schema;
@@ -147,7 +149,7 @@ describe("drafts", () => {
       payload: { body: "Atualizado: 5 dias úteis." },
       rationale: "regenerado",
     });
-    const pending = await listDrafts(db, agentA(), ticket.id);
+    const pending = await listThreadCards(db, agentA(), ticket.id);
     expect(pending.map((d) => d.id)).toEqual([second.id]);
   });
 
@@ -175,7 +177,7 @@ describe("drafts", () => {
     expect(provider.sentMessages).toHaveLength(1);
 
     // The card leaves the pending list once reviewed.
-    expect(await listDrafts(db, agentA(), ticket.id)).toHaveLength(0);
+    expect(await listThreadCards(db, agentA(), ticket.id)).toHaveLength(0);
   });
 
   it("rejects, blocks re-approve, and is idempotent", async () => {
@@ -203,7 +205,9 @@ describe("drafts", () => {
       rationale: "r",
     });
 
-    await expect(listDrafts(db, viewerA(), ticket.id)).rejects.toThrowError(AuthorizationError);
+    await expect(listThreadCards(db, viewerA(), ticket.id)).rejects.toThrowError(
+      AuthorizationError,
+    );
     await expect(approveDraft(db, viewerA(), draft.id)).rejects.toThrowError(AuthorizationError);
     await expect(rejectDraft(db, viewerA(), draft.id)).rejects.toThrowError(AuthorizationError);
 
@@ -230,5 +234,62 @@ describe("drafts", () => {
 
     const again = await findOrCreateDrafter(db, orgA);
     expect(again.id).toBe(first.id);
+  });
+
+  it("nudge shares the pending card slot — a fresh draft supersedes it", async () => {
+    const ticket = await newTicket("draft-6@c.us", "false_d6@c.us_1", new Date("2024-05-01"));
+
+    const nudge = await createNudgeSuggestion(db, orgA, {
+      conversationId: ticket.id,
+      rationale: "Cliente aguardando há 20 min",
+      idleMinutes: 20,
+    });
+    expect(nudge.targetType).toBe("nudge");
+    expect(nudge.status).toBe("pending");
+    expect(await listThreadCards(db, agentA(), ticket.id)).toHaveLength(1);
+
+    await createDraftSuggestion(db, orgA, {
+      conversationId: ticket.id,
+      payload: { body: "texto" },
+      rationale: "r",
+    });
+    const cards = await listThreadCards(db, agentA(), ticket.id);
+    expect(cards.map((c) => c.targetType)).toEqual(["draft"]);
+  });
+
+  it("reviewNudge approves/rejects, guards target type and messaging:write", async () => {
+    const ticket = await newTicket("draft-7@c.us", "false_d7@c.us_1", new Date("2024-05-01"));
+    const nudge = await createNudgeSuggestion(db, orgA, {
+      conversationId: ticket.id,
+      rationale: "aguardando",
+    });
+
+    const approved = await reviewNudge(db, agentA(), {
+      suggestionId: nudge.id,
+      action: "approved",
+    });
+    expect(approved.status).toBe("approved");
+    expect(approved.reviewedBy).toBe(userId);
+
+    const second = await createNudgeSuggestion(db, orgA, {
+      conversationId: ticket.id,
+      rationale: "aguardando",
+    });
+    await expect(
+      reviewNudge(db, viewerA(), { suggestionId: second.id, action: "rejected" }),
+    ).rejects.toThrowError(AuthorizationError);
+    expect(
+      (await reviewNudge(db, agentA(), { suggestionId: second.id, action: "rejected" })).status,
+    ).toBe("rejected");
+
+    // Draft-shaped rows don't go through reviewNudge (type guard).
+    const draft = await createDraftSuggestion(db, orgA, {
+      conversationId: ticket.id,
+      payload: { body: "texto" },
+      rationale: "r",
+    });
+    await expect(
+      reviewNudge(db, agentA(), { suggestionId: draft.id, action: "approved" }),
+    ).rejects.toThrowError(NotFoundError);
   });
 });
