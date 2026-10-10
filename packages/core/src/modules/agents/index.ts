@@ -1,7 +1,9 @@
-export type { AgentRow } from "./repository";
+export type { AgentRow, InsertAgentValues } from "./repository";
 export {
   findAgentById,
+  findAgentByKind,
   insertAgent,
+  insertAgentOnce,
   listAgents as listAgentRows,
   updateAgent as updateAgentRow,
 } from "./repository";

@@ -3,6 +3,7 @@
 import { getServerEnv } from "@crm/config";
 import type { TenantContext } from "@crm/core";
 import { createLlmCredential } from "@crm/core/ai";
+import { createDraftSuggestion } from "@crm/core/drafts";
 import type { ConnectionRef } from "@crm/core/messaging";
 import { ingestChannelEvent, resolveConversation } from "@crm/core/messaging";
 import { listAgentSuggestions } from "@crm/core/suggestions";
@@ -235,5 +236,19 @@ describe("observerAnalyzeHandler", () => {
     );
     expect(payload.contactId).toBe(conv!.contactId);
     expect(memory!.sourceConversationId).toBe(convId);
+  });
+
+  it("a pending draft does not block the analysis pass", async () => {
+    const convId = await resolvedConversation(orgB, connB, "draftpending@c.us");
+    await createDraftSuggestion(db, orgB, {
+      conversationId: convId,
+      payload: { body: "Olá! Posso ajudar?" },
+      rationale: "saudação",
+    });
+    const result = await observerAnalyzeHandler(
+      { organizationId: orgB, conversationId: convId },
+      { analyze: fakeAnalyze },
+    );
+    expect(result.analyzed).toBe(true);
   });
 });

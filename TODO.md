@@ -180,10 +180,18 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `observe-org` manual), `/app/settings/ai` completo (credenciais, agents,
   knowledge, inbox de sugestões, analisar agora) + toast SSE em
   `agent_suggestion.created`. Pendências: second brain (item próprio
-  abaixo), triage/TTS = roadmap do spec. **Specced (aguardando build)**:
-  AI drafts + observer modes — drafter dedicado, card no thread
-  (aprovar/edita/rejeita), botões no composer, `ai_observer_mode`
-  off/on_close/interval/realtime, observer configurável owner-only. Ver
+  abaixo), triage/TTS = roadmap do spec. ✅ AI drafts entregue — módulo
+  `@crm/core/drafts` (draft = `agent_suggestions` `target_type='draft'`,
+  `messaging:write`, approve = `sendOutboundMessage` fora do tx, supersede
+  on regenerate, stale = inbound mais novo aprovável), `agents.kind`
+  (`org`/`drafter`/`observer`, unique parcial por org), `draftReply` puro
+  em `@crm/ai`, job `generate-draft` pg-boss (transcript = 40 msgs
+  recentes, BYOK fallback + `ai_usage_events` `callKind='draft'`, drafter
+  lazy), actions com precheck de credencial, `DraftCard` no thread +
+  botões "Sugerir/Melhorar resposta" no composer + toast draft-aware no
+  `inbox-live`. **Specced (aguardando build)**: observer modes — `ai_observer_mode`
+  off/on_close/interval/realtime, nudge cards, observer configurável
+  owner-only, migração do observer pra brain tools. Ver
   `docs/product/ai-agents.md`.
 - **P1 — Second brain (memória do copiloto)**: ✅ entregue — `memory_entries`
   (RLS, FTS pt-BR, escopo org/team/contact, confidence, `stale_after`,

@@ -30,26 +30,57 @@ export async function findAgentById(
   return row ?? null;
 }
 
+/** Dedicated system-role agent ('drafter', 'observer'…) — one per org. */
+export async function findAgentByKind(
+  executor: DbExecutor,
+  organizationId: string,
+  kind: string,
+): Promise<AgentRow | null> {
+  const [row] = await executor
+    .select()
+    .from(agents)
+    .where(and(eq(agents.organizationId, organizationId), eq(agents.kind, kind)))
+    .limit(1);
+  return row ?? null;
+}
+
+export type InsertAgentValues = {
+  organizationId: string;
+  name: string;
+  specialty?: string | null;
+  status: string;
+  kind?: string;
+  modelRef?: unknown;
+  systemPrompt: string;
+  businessRules?: string | null;
+  toolsAllowlist: unknown;
+  availabilityWindow?: unknown;
+  memoryTokenCap?: number | null;
+  toolExecutionLimit?: number | null;
+  signatureLine?: string | null;
+};
+
 export async function insertAgent(
   executor: DbExecutor,
-  values: {
-    organizationId: string;
-    name: string;
-    specialty?: string | null;
-    status: string;
-    modelRef?: unknown;
-    systemPrompt: string;
-    businessRules?: string | null;
-    toolsAllowlist: unknown;
-    availabilityWindow?: unknown;
-    memoryTokenCap?: number | null;
-    toolExecutionLimit?: number | null;
-    signatureLine?: string | null;
-  },
+  values: InsertAgentValues,
 ): Promise<AgentRow> {
   const [row] = await executor.insert(agents).values(values).returning();
   if (!row) throw new Error("agents insert returned no row");
   return row;
+}
+
+/**
+ * Conflict-safe insert for lazy-created rows (e.g. system-kind agents on
+ * the `agents_org_kind_unique` partial index): returns the inserted row,
+ * or null when ANY unique constraint fired — the caller re-reads to find
+ * the winner or re-runs `insertAgent` to surface the real error.
+ */
+export async function insertAgentOnce(
+  executor: DbExecutor,
+  values: InsertAgentValues,
+): Promise<AgentRow | null> {
+  const [row] = await executor.insert(agents).values(values).onConflictDoNothing().returning();
+  return row ?? null;
 }
 
 export async function updateAgent(

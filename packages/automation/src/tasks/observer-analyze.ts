@@ -1,10 +1,11 @@
-import type { AiProviderKeys, ObserverInput, ObserverResult } from "@crm/ai";
+import type { ObserverInput, ObserverResult } from "@crm/ai";
 import { analyzeConversation, resolveLanguageModel } from "@crm/ai";
 import { listAgentRows } from "@crm/core/agents";
 import { llmProviderSchema, recordUsageEvents, resolveOrgLlmCredentials } from "@crm/core/ai";
 import { listCanonEntries, memoryProposalSchema } from "@crm/core/brain";
+import { DRAFT_TARGET_TYPE } from "@crm/core/drafts";
 import { listKnowledgeRows } from "@crm/core/knowledge";
-import { getConversationRow, listConversations, listMessages } from "@crm/core/messaging";
+import { getConversationRow, listConversations, listRecentMessages } from "@crm/core/messaging";
 import {
   createSystemSuggestions,
   listPendingByTargetType,
@@ -14,6 +15,8 @@ import type { Database } from "@crm/db";
 import { getDb, withTenant } from "@crm/db";
 import { createLogger } from "@crm/observability";
 import { z } from "zod";
+
+import { keysFor } from "../llm-keys";
 
 const logger = createLogger({ bindings: { component: "observer" } });
 
@@ -30,14 +33,6 @@ export type ObserverAnalyzePayload = z.infer<typeof observerAnalyzePayload>;
 /** Resolved-conversation transcripts are capped — long history is a cost knob. */
 const TRANSCRIPT_LIMIT = 100;
 const MANUAL_CANDIDATES = 3;
-
-function keysFor(cred: { provider: string; apiKey: string }): AiProviderKeys {
-  return {
-    openaiApiKey: cred.provider === "openai" ? cred.apiKey : undefined,
-    anthropicApiKey: cred.provider === "anthropic" ? cred.apiKey : undefined,
-    openrouterApiKey: cred.provider === "openrouter" ? cred.apiKey : undefined,
-  };
-}
 
 async function pickConversationId(
   db: Database,
@@ -89,7 +84,11 @@ export async function observerAnalyzeHandler(
   const prepared = await withTenant(db, organizationId, async (tx) => {
     const credentials = await resolveOrgLlmCredentials(tx, organizationId);
     if (credentials.length === 0) return null;
-    const pending = await listPendingForConversation(tx, organizationId, conversationId);
+    const pending = (await listPendingForConversation(tx, organizationId, conversationId)).filter(
+      // Drafts/nudges live on open threads — they must not block the
+      // post-resolve analysis pass.
+      (row) => row.targetType !== DRAFT_TARGET_TYPE,
+    );
     if (pending.length > 0) return null;
     const agents = await listAgentRows(tx, organizationId);
     const knowledge = await listKnowledgeRows(tx, organizationId);
@@ -126,7 +125,7 @@ export async function observerAnalyzeHandler(
     return { analyzed: false, suggestions: 0, skipped: true };
   }
 
-  const messages = await listMessages(db, organizationId, conversationId, TRANSCRIPT_LIMIT);
+  const messages = await listRecentMessages(db, organizationId, conversationId, TRANSCRIPT_LIMIT);
   const transcript = messages.map((m) => {
     const content = m.content as { text?: string; caption?: string; type?: string };
     return {

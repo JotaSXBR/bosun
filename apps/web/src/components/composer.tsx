@@ -10,8 +10,10 @@ import { useRef, useState, useTransition } from "react";
 
 import { VoiceRecorder } from "@/components/voice-recorder";
 import { useChatPresence } from "@/lib/chat-presence";
+import { useDraftFill } from "@/lib/draft-bridge";
 import { setReplyTarget, useReplyTarget } from "@/lib/reply-bridge";
 import { sendChannelMessageAction, sendMediaMessageAction } from "@/server/actions/chat";
+import { requestDraftAction } from "@/server/actions/drafts";
 import { addInternalNoteAction } from "@/server/actions/messaging";
 
 type Mode = "reply" | "note";
@@ -66,8 +68,10 @@ function ComposerToolbar({
   disabled,
   sendingMedia,
   channelTools,
+  hasText,
   onEmoji,
   onAttach,
+  onRequestDraft,
   recorder,
   hint,
   attachTitle,
@@ -77,11 +81,14 @@ function ComposerToolbar({
   sendingMedia: boolean;
   /** Attach/voice reach the customer — hidden on the internal-note tab. */
   channelTools: boolean;
+  hasText: boolean;
   onEmoji: (emoji: string) => void;
   onAttach: () => void;
+  onRequestDraft: (mode: "suggest" | "improve") => void;
   recorder: React.ReactNode;
   hint: string;
 }) {
+  const t = useTranslations("composer");
   return (
     <div className="flex items-center gap-1">
       <EmojiPicker onPick={onEmoji} />
@@ -99,6 +106,31 @@ function ComposerToolbar({
         </Button>
       )}
       {channelTools && recorder}
+      {channelTools && (
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={disabled}
+            onClick={() => onRequestDraft("suggest")}
+            data-testid="draft-suggest"
+          >
+            {t("draftSuggest")}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={disabled || !hasText}
+            onClick={() => onRequestDraft("improve")}
+            title={hasText ? undefined : t("draftImproveHint")}
+            data-testid="draft-improve"
+          >
+            {t("draftImprove")}
+          </Button>
+        </>
+      )}
       <span className="text-ink-muted text-xs">{hint}</span>
     </div>
   );
@@ -171,6 +203,12 @@ export function Composer({
   const fileInput = useRef<HTMLInputElement | null>(null);
   const textarea = useRef<HTMLTextAreaElement | null>(null);
   const replyTo = useReplyTarget();
+  // "Editar" on a draft card publishes the body here.
+  useDraftFill((body) => {
+    setText(body);
+    setMode("reply");
+    textarea.current?.focus();
+  });
   // Presence only flows on the reply tab — internal notes never reach the remote.
   const presence = useChatPresence(conversationId, !disabled && mode === "reply");
 
@@ -212,6 +250,18 @@ export function Composer({
       router.refresh();
     });
   };
+
+  /** Async drafter call — the card lands via SSE refresh; toast just confirms enqueue. */
+  const requestDraft = (draftMode: "suggest" | "improve") =>
+    startTransition(async () => {
+      const result = await requestDraftAction({
+        conversationId,
+        mode: draftMode,
+        ...(draftMode === "improve" ? { sourceText: text.trim() } : {}),
+      });
+      if (!result.ok) return void toast.error(result.error);
+      toast.info(t("draftRequested"));
+    });
 
   const sendFile = (file: File) => {
     const caption = text.trim();
@@ -274,11 +324,13 @@ export function Composer({
 
       <div className="flex items-center justify-between gap-2">
         <ComposerToolbar
-          disabled={disabled}
+          disabled={disabled || pending}
           sendingMedia={sendingMedia}
           channelTools={mode === "reply"}
+          hasText={text.trim().length > 0}
           onEmoji={insertEmoji}
           onAttach={() => fileInput.current?.click()}
+          onRequestDraft={requestDraft}
           attachTitle={t("attach")}
           recorder={
             <VoiceRecorder

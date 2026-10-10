@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "agent_suggestions_pending_draft_idx" ON "agent_suggestions" USING btree ("source_conversation_id") WHERE "agent_suggestions"."target_type" = 'draft' and "agent_suggestions"."status" = 'pending';

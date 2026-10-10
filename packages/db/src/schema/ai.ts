@@ -78,6 +78,9 @@ export const agents = pgTable(
     name: text().notNull(),
     specialty: text(),
     status: text().notNull().default("draft"),
+    // 'org' = regular org-tuned agent; 'drafter'/'observer' = dedicated
+    // system-role agents (draft generation / observation pipeline).
+    kind: text().notNull().default("org"),
     modelRef: jsonb(),
     systemPrompt: text().notNull().default(""),
     businessRules: text(),
@@ -94,6 +97,11 @@ export const agents = pgTable(
   (t) => [
     uniqueIndex("agents_org_name_idx").on(t.organizationId, t.name),
     index("agents_org_idx").on(t.organizationId),
+    // One system-role agent per kind per org ('drafter', 'observer'…);
+    // 'org' rows stay unlimited — partial index.
+    uniqueIndex("agents_org_kind_unique")
+      .on(t.organizationId, t.kind)
+      .where(sql`${t.kind} <> 'org'`),
     pgPolicy("agents_tenant_isolation", {
       for: "all",
       to: crmAppRole,
@@ -169,6 +177,11 @@ export const agentSuggestions = pgTable(
   },
   (t) => [
     index("agent_suggestions_org_status_idx").on(t.organizationId, t.status),
+    // At most one pending draft per conversation — the invariant the
+    // supersede+insert pair in createDraftSuggestion relies on.
+    uniqueIndex("agent_suggestions_pending_draft_idx")
+      .on(t.sourceConversationId)
+      .where(sql`${t.targetType} = 'draft' and ${t.status} = 'pending'`),
     pgPolicy("agent_suggestions_tenant_isolation", {
       for: "all",
       to: crmAppRole,

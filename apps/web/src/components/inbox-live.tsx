@@ -20,6 +20,7 @@ const INDICATOR_MS = 8_000;
 export function InboxLive() {
   const t = useTranslations("inbox");
   const tAi = useTranslations("settings.ai.suggestions");
+  const tDrafts = useTranslations("drafts");
   const router = useRouter();
   const [hasNew, setHasNew] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -29,13 +30,19 @@ export function InboxLive() {
     return subscribeToDomainEvents((event) => {
       if (event.type === "contact.presence") return;
       if (event.type === "agent_suggestion.created") {
-        toast.info(tAi("newSuggestion"), {
-          action: (
-            <Button variant="secondary" size="sm" onClick={() => router.push("/app/settings/ai")}>
-              {tAi("title")}
-            </Button>
-          ),
-        });
+        // Drafts surface as cards in the conversation thread — the toast
+        // just signals; config suggestions get the settings link.
+        if (event.targetType === "draft") {
+          toast.info(tDrafts("newDraftToast"));
+        } else {
+          toast.info(tAi("newSuggestion"), {
+            action: (
+              <Button variant="secondary" size="sm" onClick={() => router.push("/app/settings/ai")}>
+                {tAi("title")}
+              </Button>
+            ),
+          });
+        }
       }
       setHasNew(true);
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
@@ -43,7 +50,7 @@ export function InboxLive() {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = setTimeout(() => setHasNew(false), INDICATOR_MS);
     });
-  }, [router, tAi]);
+  }, [router, tAi, tDrafts]);
 
   if (!hasNew) return null;
   return (

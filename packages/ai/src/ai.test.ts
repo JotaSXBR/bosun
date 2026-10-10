@@ -196,6 +196,58 @@ describe("analyzeConversation", () => {
   });
 });
 
+describe("draftReply", () => {
+  const usage = {
+    inputTokens: { total: 12, noCache: 12, cacheRead: 0, cacheWrite: 0 },
+    outputTokens: { total: 6, text: 6, reasoning: 0 },
+  };
+  const draftModel = () =>
+    new MockLanguageModelV4({
+      doGenerate: {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              body: "Nosso prazo é de 5 dias úteis. Posso confirmar seu pedido?",
+              rationale: "Responde a pergunta com o prazo padrão.",
+            }),
+          },
+        ],
+        finishReason: { unified: "stop", raw: "stop" },
+        usage,
+        warnings: [],
+      },
+    });
+  const drafter = { name: "Drafter", systemPrompt: "", businessRules: null };
+  const transcript = [{ direction: "inbound" as const, text: "qual o prazo?" }];
+
+  it("returns a parsed draft body + rationale and token usage", async () => {
+    const { draftReply } = await import("./drafter");
+    const result = await draftReply({
+      model: draftModel(),
+      drafter,
+      transcript,
+      mode: "suggest",
+    });
+    expect(result.body).toContain("5 dias úteis");
+    expect(result.rationale).toContain("prazo");
+    expect(result.tokensIn).toBe(12);
+    expect(result.tokensOut).toBe(6);
+  });
+
+  it("improve mode rewrites the given source text", async () => {
+    const { draftReply } = await import("./drafter");
+    const result = await draftReply({
+      model: draftModel(),
+      drafter,
+      transcript,
+      mode: "improve",
+      sourceText: "prazo 5 dias",
+    });
+    expect(result.body).toContain("5 dias úteis");
+  });
+});
+
 describe("runAgent", () => {
   const mockModel = new MockLanguageModelV4({
     doGenerate: {

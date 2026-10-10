@@ -200,6 +200,54 @@ export async function listMessages(
   });
 }
 
+/**
+ * The `limit` NEWEST messages in chronological order — LLM transcript
+ * windows (observer/drafter). `listMessages` pages the thread
+ * oldest-first; jobs need the tail, where the customer's last message is.
+ */
+export async function listRecentMessages(
+  db: Database,
+  organizationId: string,
+  conversationId: string,
+  limit: number,
+): Promise<MessageRow[]> {
+  return withTenant(db, organizationId, async (tx) => {
+    const rows = await tx
+      .select()
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, conversationId),
+          eq(messages.organizationId, organizationId),
+        ),
+      )
+      .orderBy(sql`${messages.sentAt} desc nulls last`, desc(messages.createdAt))
+      .limit(limit);
+    return rows.reverse();
+  });
+}
+
+/** Latest inbound timestamp — draft staleness, independent of any list window. */
+export async function getLastInboundAt(
+  executor: DbExecutor,
+  organizationId: string,
+  conversationId: string,
+): Promise<Date | null> {
+  const [row] = await executor
+    .select({ createdAt: messages.createdAt })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        eq(messages.organizationId, organizationId),
+        eq(messages.direction, "inbound"),
+      ),
+    )
+    .orderBy(desc(messages.createdAt))
+    .limit(1);
+  return row?.createdAt ?? null;
+}
+
 /** Detail fetch for the conversation page: contact + preceding ticket numbers. */
 export async function getConversationDetail(
   executor: DbExecutor,

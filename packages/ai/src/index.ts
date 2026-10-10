@@ -1,4 +1,6 @@
 export type { AgentDefinition } from "./agent";
+export type { DraftInput, DraftResult } from "./drafter";
+export { draftReply, draftResultSchema } from "./drafter";
 export type { AiProviderKeys, ModelRef } from "./model";
 export { AiProviderNotConfiguredError, resolveLanguageModel } from "./model";
 export type {

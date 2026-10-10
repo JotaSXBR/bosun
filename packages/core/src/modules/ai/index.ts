@@ -4,6 +4,7 @@ export { llmProviderSchema } from "./schemas";
 export {
   createLlmCredential,
   deleteLlmCredential,
+  hasOrgLlmCredentials,
   listLlmCredentials,
   recordUsageEvents,
   resolveOrgLlmCredentials,

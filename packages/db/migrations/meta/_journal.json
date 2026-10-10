@@ -134,6 +134,27 @@
       "when": 1791479719026,
       "tag": "0018_past_talon",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791581272879,
+      "tag": "0019_safe_vengeance",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791632750440,
+      "tag": "0020_odd_stature",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791635658504,
+      "tag": "0021_slippery_magneto",
+      "breakpoints": true
     }
   ]
 }

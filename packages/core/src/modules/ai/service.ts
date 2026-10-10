@@ -133,6 +133,18 @@ export async function resolveOrgLlmCredentials(
 }
 
 /**
+ * Internal — cheap "is AI configured" check that never touches key
+ * material. The caller must already be inside a tenant-scoped context
+ * (`withTenant`).
+ */
+export async function hasOrgLlmCredentials(
+  executor: DbExecutor,
+  organizationId: string,
+): Promise<boolean> {
+  return (await listActiveCredentialsEncrypted(executor, organizationId)).length > 0;
+}
+
+/**
  * Internal — records one row per LLM call attempt (fallback chain). The
  * caller must already be inside a tenant-scoped context (`withTenant`).
  */

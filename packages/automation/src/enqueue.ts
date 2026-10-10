@@ -5,6 +5,7 @@ import { fromDrizzle } from "pg-boss";
 
 import { getBoss, QUEUES, startJobs } from "./boss";
 import type { ChannelReconcilePayload } from "./tasks/channel-messages-reconcile";
+import type { GenerateDraftPayload } from "./tasks/generate-draft";
 import type { ObserverAnalyzePayload } from "./tasks/observer-analyze";
 import type { OrganizationOnboardingPayload } from "./tasks/organization-onboarding";
 import type { ProcessChannelEventPayload } from "./tasks/process-channel-event";
@@ -74,4 +75,16 @@ export async function enqueueObserverAnalyze(
   tx?: DbExecutor,
 ): Promise<{ skipped: boolean }> {
   return send(QUEUES.observerAnalyze, payload, tx);
+}
+
+/**
+ * Enqueues a draft generation for the composer buttons (post-commit
+ * best-effort — a skipped send just means the card never appears; the
+ * button stays clickable).
+ */
+export async function enqueueGenerateDraft(
+  payload: GenerateDraftPayload,
+  tx?: DbExecutor,
+): Promise<{ skipped: boolean }> {
+  return send(QUEUES.generateDraft, payload, tx);
 }

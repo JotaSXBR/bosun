@@ -6,6 +6,7 @@ import { PgBoss } from "pg-boss";
 import { brainStaleSweepHandler } from "./tasks/brain-stale-sweep";
 import { channelReconcileHandler } from "./tasks/channel-messages-reconcile";
 import { closeResolvedTicketsHandler } from "./tasks/close-resolved-tickets";
+import { generateDraftHandler } from "./tasks/generate-draft";
 import { observerAnalyzeHandler } from "./tasks/observer-analyze";
 import { organizationOnboardingHandler } from "./tasks/organization-onboarding";
 import { processChannelEventHandler } from "./tasks/process-channel-event";
@@ -19,6 +20,7 @@ export const QUEUES = {
   channelReconcile: "channel-messages-reconcile",
   observerAnalyze: "observer-analyze",
   brainStaleSweep: "brain-stale-sweep",
+  generateDraft: "generate-draft",
 } as const;
 
 let boss: PgBoss | undefined;
@@ -98,6 +100,9 @@ async function start(env: ServerEnv): Promise<PgBoss> {
   });
   await instance.work(QUEUES.brainStaleSweep, async (jobs) => {
     for (const job of jobs) await brainStaleSweepHandler(job.data);
+  });
+  await instance.work(QUEUES.generateDraft, async (jobs) => {
+    for (const job of jobs) await generateDraftHandler(job.data);
   });
   // Flag expired canon memory entries for human review once a day.
   await instance.schedule(QUEUES.brainStaleSweep, "15 3 * * *");

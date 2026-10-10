@@ -11,6 +11,7 @@ import type { MemoryEntryRow } from "@crm/core/brain";
 import { listBrainEntries, listStaleBrainEntries } from "@crm/core/brain";
 import type { ContactListRow } from "@crm/core/contacts";
 import { listOrgContacts } from "@crm/core/contacts";
+import { listDrafts } from "@crm/core/drafts";
 import type { ChannelConnectionRow } from "@crm/core/integrations";
 import { listChannelConnectionsForTenant } from "@crm/core/integrations";
 import type { KnowledgeEntryRow } from "@crm/core/knowledge";
@@ -33,6 +34,7 @@ import type {
 } from "@crm/core/messaging";
 import {
   getConversationDetail,
+  getConversationLastInboundAt,
   listConversationMessages,
   listTenantConversations,
 } from "@crm/core/messaging";
@@ -214,4 +216,22 @@ export async function listOrgBrainEntries(ctx: TenantContext): Promise<MemoryEnt
 
 export async function listOrgStaleBrainEntries(ctx: TenantContext): Promise<MemoryEntryRow[]> {
   return listStaleBrainEntries(getDb(), ctx);
+}
+
+// --- AI drafts -------------------------------------------------------------
+
+/** Pending draft suggestions for the conversation thread (messaging:write). */
+export async function listConversationDrafts(
+  ctx: TenantContext,
+  conversationId: string,
+): Promise<AgentSuggestionRow[]> {
+  return listDrafts(getDb(), ctx, conversationId);
+}
+
+/** Last inbound timestamp — draft staleness, independent of the listed window. */
+export async function getLastInboundAt(
+  ctx: TenantContext,
+  conversationId: string,
+): Promise<Date | null> {
+  return getConversationLastInboundAt(getDb(), ctx, { conversationId });
 }

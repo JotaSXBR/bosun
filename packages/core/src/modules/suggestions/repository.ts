@@ -1,6 +1,6 @@
 import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 const { agentSuggestions, contacts, teams } = schema;
 
@@ -9,18 +9,17 @@ export type AgentSuggestionRow = typeof agentSuggestions.$inferSelect;
 export async function listSuggestions(
   executor: DbExecutor,
   organizationId: string,
-  filter: { status?: string; limit: number },
+  filter: { status?: string; limit: number; targetTypes?: string[] },
 ): Promise<AgentSuggestionRow[]> {
   return executor
     .select()
     .from(agentSuggestions)
     .where(
-      filter.status
-        ? and(
-            eq(agentSuggestions.organizationId, organizationId),
-            eq(agentSuggestions.status, filter.status),
-          )
-        : eq(agentSuggestions.organizationId, organizationId),
+      and(
+        eq(agentSuggestions.organizationId, organizationId),
+        filter.status ? eq(agentSuggestions.status, filter.status) : undefined,
+        filter.targetTypes ? inArray(agentSuggestions.targetType, filter.targetTypes) : undefined,
+      ),
     )
     .orderBy(desc(agentSuggestions.createdAt))
     .limit(filter.limit);

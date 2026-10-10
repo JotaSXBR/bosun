@@ -28,6 +28,7 @@ playwright/.cache/
 
 # External reference material (re-cloneable, see research/README.md)
 research/vibe-coding-toolkit/
+research/agent-skills/
 
 # Archived task briefs (tasks/briefs/) + Devin local overrides
 .task-brief*.md

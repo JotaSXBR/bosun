@@ -9,10 +9,11 @@ import { z } from "zod";
 import { AuthorizationError, DomainError, NotFoundError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
+import { getLastInboundAt } from "./reads";
 import type { MessageEditRow } from "./repository-messages";
 import { getMessage, listMessageEdits as repoListMessageEdits } from "./repository-messages";
-import type { MessageActionInput } from "./schemas";
-import { messageActionInput } from "./schemas";
+import type { ConversationIdInput, MessageActionInput } from "./schemas";
+import { conversationIdInput, messageActionInput } from "./schemas";
 import { canInspectMessageHistory } from "./service";
 
 const messageIdInput = z.object({ messageId: z.uuid() });
@@ -52,6 +53,19 @@ export async function getMessageContent(
   assertMessageInspector(ctx);
   const message = await loadConversationMessage(db, ctx, input);
   return { content: message.content, editedAt: message.editedAt, revokedAt: message.revokedAt };
+}
+
+/** Requires messaging:read. Last inbound timestamp — draft staleness check. */
+export async function getConversationLastInboundAt(
+  db: Database,
+  ctx: TenantContext,
+  input: ConversationIdInput,
+): Promise<Date | null> {
+  assertPermission(ctx, { messaging: ["read"] });
+  const parsed = conversationIdInput.parse(input);
+  return withTenant(db, ctx.organizationId, (tx) =>
+    getLastInboundAt(tx, ctx.organizationId, parsed.conversationId),
+  );
 }
 
 /** Privileged: previous versions of an edited message, newest first. */

@@ -18,6 +18,7 @@ export {
 } from "./message-actions";
 export type { MediaResolverDeps, ResolvedMediaBody } from "./message-views";
 export {
+  getConversationLastInboundAt,
   getMessageContent,
   getMessageEdits,
   getMessageMedia,
@@ -41,7 +42,7 @@ export type {
   MessageWithAuthorRow,
   QuotedMessageView,
 } from "./reads";
-export { listConversations, listMessages } from "./reads";
+export { getLastInboundAt, listConversations, listMessages, listRecentMessages } from "./reads";
 export type { ContactRow, ConversationRow, MessageRow } from "./repository";
 export { getConversation as getConversationRow } from "./repository";
 export type { MessageEditRow } from "./repository-messages";

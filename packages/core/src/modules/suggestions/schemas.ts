@@ -3,7 +3,7 @@ import { z } from "zod";
 export const suggestionTargetSchema = z.enum(["agent", "knowledge_entry", "memory"]);
 export type SuggestionTarget = z.infer<typeof suggestionTargetSchema>;
 
-export const suggestionStatusSchema = z.enum(["pending", "approved", "rejected"]);
+export const suggestionStatusSchema = z.enum(["pending", "approved", "rejected", "superseded"]);
 
 /** Field-level diff against the target entity — validated per target on approve. */
 export const suggestionPayloadSchema = z.record(z.string(), z.unknown());

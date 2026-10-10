@@ -19,20 +19,32 @@ Mesma sequência do pack upstream. Adaptações locais:
   escopo** (`## Escopo` globs) que o hook enforça — o plano é o contrato.
   Não existe passo de "brief" separado.
 
-| Stage  | Command                                                                    | What happens                                                                                                                                                       |
-| ------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Spec   | `/spec` → `spec-driven-development` (ou já existe)                         | Ver "Quando /spec é obrigatório" abaixo. Fonte: `docs/product/` + `TODO.md`. Ideia crua: `interview-me` / `idea-refine` antes.                                     |
-| Plan   | `/plan` → `planning-and-task-breakdown`                                    | Escreve `tasks/plan.md` (`docs/development/plan.template.md`): objetivo, `## Contexto` (decisões do gate), `## Escopo`, fora de escopo, tarefas → `tasks/todo.md`. |
-| Build  | `/build` → `incremental-implementation` + `test-driven-development`        | Slices finos, teste junto. Sem slice gigante.                                                                                                                      |
-| Test   | `/test` → `debugging-and-error-recovery` + `browser-testing-with-devtools` | Gates do repo (abaixo) + verificação real no browser via chrome-devtools MCP quando UI.                                                                            |
-| Review | `/review` → `code-review-and-quality`                                      | Diff review antes de qualquer commit.                                                                                                                              |
-| Ship   | `/ship` → `git-workflow-and-versioning` + `shipping-and-launch`            | Commit convencional (só quando o usuário pedir), TODO/docs atualizados, plan arquivado `tasks/plan-<item>.done.md`.                                                |
+Skills por fase (espelha `skills.addy.ie/lifecycle`): cada comando carrega
+o **conjunto da fase** — as "sempre" definem o método da fase; as
+condicionais se aplicam quando o trabalho toca o eixo delas.
 
-Skills de apoio sob demanda: `doubt-driven-development` (decisões
-arriscadas), `source-driven-development` (conferir docs oficiais),
-`security-and-hardening` (webhooks/auth/dados), `api-and-interface-design`
-(contratos novos), `constraint-driven-development` (barra de qualidade),
-`documentation-and-adrs` (ADRs).
+| Stage  | Command   | Skills — sempre                                                                                                                                               | Skills — quando o eixo se aplica                                                                                                                                                                                                                                           |
+| ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Spec   | `/spec`   | `spec-driven-development` (PRD em `docs/product/`; ver "Quando /spec é obrigatório")                                                                          | `interview-me`, `idea-refine` — ideia crua/ambígua                                                                                                                                                                                                                         |
+| Plan   | `/plan`   | `planning-and-task-breakdown` → `tasks/plan.md` (template: `docs/development/plan.template.md`; carrega `## Contexto` + `## Escopo`) + gate de esclarecimento | —                                                                                                                                                                                                                                                                          |
+| Build  | `/build`  | `incremental-implementation` (slices finos), `test-driven-development` (teste junto)                                                                          | `frontend-ui-engineering` (UI), `api-and-interface-design` (contratos novos), `source-driven-development` + `context7-docs` (API de lib/framework — checar docs oficiais), `doubt-driven-development` (decisão arriscada), `context-engineering` (setup de contexto/rules) |
+| Test   | `/test`   | `debugging-and-error-recovery` (triage de falha)                                                                                                              | `browser-testing-with-devtools` — evidência real no browser via chrome-devtools MCP quando há UI/fluxo                                                                                                                                                                     |
+| Review | `/review` | `code-review-and-quality` (diff review antes de commit)                                                                                                       | `code-simplification` (complexidade acumulada), `security-and-hardening` (auth/webhooks/dados/deps), `performance-optimization` (queries, N+1, bundle)                                                                                                                     |
+| Ship   | `/ship`   | `git-workflow-and-versioning` (commit convencional — só quando o usuário pedir), `shipping-and-launch` (checklist/rollback)                                   | `ci-cd-and-automation` (pipeline), `documentation-and-adrs` (docs/ADR), `observability-and-instrumentation` (logs/métricas), `deprecation-and-migration` (remoções/migrações)                                                                                              |
+
+Comandos standalone fora do loop principal: `/webperf` (audit de
+performance) e `/code-simplify` (rodada de simplificação).
+
+Skills fora de fase (upstream, standalone): `using-agent-skills`
+(meta — roteamento de skill) e `constraint-driven-development` (barra
+de qualidade como contrato escrito; invocar quando o projeto não tem
+padrões escritos ou agentes silenciam checks pra chegar no verde).
+
+Skill local (não-upstream): `context7-docs` (docs de libs via Context7
+MCP — companheira de `source-driven-development` no Build).
+
+Fonte de verdade do pack: `github.com/addyosmani/agent-skills` — clone
+de referência em `research/agent-skills` (gitignored, re-cloneable).
 
 ## Gate de esclarecimento (antes de /plan, sempre)
 

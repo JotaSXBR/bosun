@@ -27,7 +27,7 @@ import {
   scopeRefsExist,
 } from "./repository";
 import type { CreateSuggestionInput, ListSuggestionsInput } from "./schemas";
-import { createSuggestionInput, listSuggestionsInput } from "./schemas";
+import { createSuggestionInput, listSuggestionsInput, suggestionTargetSchema } from "./schemas";
 
 /** Audit is post-commit best-effort — a logging failure must not fail the mutation. */
 function audit(db: Database, ctx: TenantContext, action: string, suggestionId: string): void {
@@ -39,7 +39,11 @@ function audit(db: Database, ctx: TenantContext, action: string, suggestionId: s
   }).catch((error: unknown) => captureException(error, { module: "suggestions", action }));
 }
 
-/** Requires ai:read. */
+/**
+ * Requires ai:read. The settings inbox lists only configuration-class
+ * targets — conversation-scoped kinds (drafts, nudges) live in the
+ * thread UI and never surface here.
+ */
 export async function listAgentSuggestions(
   db: Database,
   ctx: TenantContext,
@@ -48,7 +52,10 @@ export async function listAgentSuggestions(
   assertPermission(ctx, { ai: ["read"] });
   const parsed = listSuggestionsInput.parse(input ?? {});
   return withTenant(db, ctx.organizationId, (tx) =>
-    repoListSuggestions(tx, ctx.organizationId, parsed),
+    repoListSuggestions(tx, ctx.organizationId, {
+      ...parsed,
+      targetTypes: suggestionTargetSchema.options,
+    }),
   );
 }
 
@@ -298,6 +305,16 @@ async function applyPayload(
   }
 }
 
+/**
+ * Conversation-scoped targets (drafts…) have their own review services —
+ * the generic review path only handles configuration-class suggestions.
+ */
+function assertConfigSuggestion(suggestion: AgentSuggestionRow): void {
+  if (!(suggestionTargetSchema.options as readonly string[]).includes(suggestion.targetType)) {
+    throw new DomainError("SUGGESTION_TARGET_UNSUPPORTED", suggestion.targetType);
+  }
+}
+
 /** Requires ai:manage. Idempotent: re-approving returns the row unchanged. */
 export async function approveSuggestion(
   db: Database,
@@ -308,6 +325,7 @@ export async function approveSuggestion(
   const reviewed = await withTenant(db, ctx.organizationId, async (tx) => {
     const suggestion = await findSuggestionById(tx, ctx.organizationId, suggestionId);
     if (!suggestion) throw new NotFoundError("AgentSuggestion", suggestionId);
+    assertConfigSuggestion(suggestion);
     if (suggestion.status === "approved") return suggestion;
     if (suggestion.status !== "pending") {
       throw new DomainError("SUGGESTION_ALREADY_REVIEWED", suggestion.status);
@@ -344,6 +362,7 @@ export async function rejectSuggestion(
   const reviewed = await withTenant(db, ctx.organizationId, async (tx) => {
     const suggestion = await findSuggestionById(tx, ctx.organizationId, suggestionId);
     if (!suggestion) throw new NotFoundError("AgentSuggestion", suggestionId);
+    assertConfigSuggestion(suggestion);
     if (suggestion.status === "rejected") return suggestion;
     if (suggestion.status !== "pending") {
       throw new DomainError("SUGGESTION_ALREADY_REVIEWED", suggestion.status);

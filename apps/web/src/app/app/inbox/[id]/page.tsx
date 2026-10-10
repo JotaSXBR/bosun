@@ -1,8 +1,11 @@
 import { NotFoundError } from "@crm/core";
+import { draftPayloadSchema } from "@crm/core/drafts";
 import type { ConversationDetailRow } from "@crm/core/messaging";
 import { canInspectMessageHistory } from "@crm/core/messaging";
+import type { AgentSuggestionRow } from "@crm/core/suggestions";
 import { Badge } from "@crm/design-system/components/badge";
 import { Card } from "@crm/design-system/components/card";
+import { captureException } from "@crm/observability";
 import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,6 +13,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 
 import { Composer } from "@/components/composer";
 import { ConversationLeadPanel } from "@/components/conversation-lead-panel";
+import { DraftCard } from "@/components/draft-card";
 import { MessageItem } from "@/components/message-item";
 import { PresenceIndicator } from "@/components/presence-indicator";
 import { TicketActions } from "@/components/ticket-actions";
@@ -18,6 +22,8 @@ import {
   getConversation,
   getConversationDeal,
   getConversationLabels,
+  getLastInboundAt,
+  listConversationDrafts,
   listFunnelsWithStages,
   listMembers,
   listMessages,
@@ -98,6 +104,18 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   const canManageLeads = hasPermission(ctx.role, { leads: ["manage"] });
   const canWork =
     !isViewer && conversation.status !== "resolved" && conversation.status !== "closed";
+  // Drafts only render on a workable thread — a pending card on a
+  // resolved ticket would sit disabled forever.
+  const showDrafts = canWork && hasPermission(ctx.role, { messaging: ["write"] });
+  const [drafts, lastInboundAt] = showDrafts
+    ? await Promise.all([
+        listConversationDrafts(ctx, id).catch((error: unknown) => {
+          captureException(error, { action: "listConversationDrafts" });
+          return [];
+        }),
+        getLastInboundAt(ctx, id),
+      ])
+    : [[] as AgentSuggestionRow[], null];
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-8">
@@ -150,6 +168,17 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
               isClosed={conversation.status === "closed"}
               isViewer={isViewer}
             />
+
+            {showDrafts &&
+              drafts.map((draft) => (
+                <DraftCard
+                  key={draft.id}
+                  suggestionId={draft.id}
+                  body={draftPayloadSchema.safeParse(draft.payload).data?.body ?? ""}
+                  rationale={draft.rationale}
+                  stale={lastInboundAt !== null && lastInboundAt > draft.createdAt}
+                />
+              ))}
 
             {!isViewer && <Composer conversationId={conversation.id} disabled={!canWork} />}
           </>

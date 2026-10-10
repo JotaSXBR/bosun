@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "agents_org_kind_unique" ON "agents" USING btree ("organization_id","kind") WHERE "agents"."kind" <> 'org';
