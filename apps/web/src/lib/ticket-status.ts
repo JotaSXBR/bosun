@@ -2,6 +2,7 @@
 // only carries the badge tone per status.
 export const TICKET_STATUS: Record<string, { tone: "warning" | "success" | "neutral" }> = {
   open: { tone: "warning" },
+  pending: { tone: "neutral" },
   in_progress: { tone: "success" },
   waiting_customer: { tone: "neutral" },
   resolved: { tone: "neutral" },

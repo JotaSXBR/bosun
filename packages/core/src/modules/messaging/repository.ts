@@ -310,6 +310,7 @@ export async function updateConversationState(
     resolvedAt?: Date | null;
     resolvedById?: string | null;
     firstResponseAt?: Date | null;
+    snoozedUntil?: Date | null;
   },
 ): Promise<ConversationRow | undefined> {
   const [row] = await executor

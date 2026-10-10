@@ -242,7 +242,7 @@ describe("closed ticket semantics", () => {
 
     const mine = await listConversations(db, orgA, { view: "mine", limit: 50, userId });
     expect(mine.some((row) => row.id === ticket.id)).toBe(false);
-    const resolved = await listConversations(db, orgA, { view: "resolved", limit: 50, userId });
+    const resolved = await listConversations(db, orgA, { view: "closed", limit: 50, userId });
     const row = resolved.find((r) => r.id === ticket.id);
     expect(row?.status).toBe("closed");
   });

@@ -23,8 +23,12 @@ import {
   teamExists,
   updateConversationState,
 } from "./repository";
-import type { ConversationIdInput, TransferConversationInput } from "./schemas";
-import { conversationIdInput, transferConversationInput } from "./schemas";
+import type {
+  ConversationIdInput,
+  SnoozeConversationInput,
+  TransferConversationInput,
+} from "./schemas";
+import { conversationIdInput, snoozeConversationInput, transferConversationInput } from "./schemas";
 
 /**
  * A ticket in attendance belongs to its assignee — everyone else takes the
@@ -273,6 +277,31 @@ export async function reopenTicket(
       }
       throw error;
     }
+  });
+}
+
+/**
+ * Requires messaging:write. Defers a ticket out of every work view until
+ * `until` passes (lazy un-snooze — the views compare against now()); `null`
+ * resumes it immediately. Status/assignee are untouched — snooze is
+ * orthogonal to the ticket lifecycle.
+ */
+export async function setConversationSnooze(
+  db: Database,
+  ctx: TenantContext,
+  input: SnoozeConversationInput,
+): Promise<ConversationRow> {
+  assertPermission(ctx, { messaging: ["write"] });
+  const parsed = snoozeConversationInput.parse(input);
+  if (parsed.until !== null && parsed.until.getTime() <= Date.now()) {
+    throw new DomainError("SNOOZE_IN_PAST", "Snooze target must be in the future");
+  }
+  return withTenant(db, ctx.organizationId, async (tx) => {
+    const conv = await loadActiveTicket(tx, parsed.conversationId);
+    assertTicketOwner(conv, ctx);
+    return patchTicket(tx, ctx.organizationId, parsed.conversationId, {
+      snoozedUntil: parsed.until,
+    });
   });
 }
 

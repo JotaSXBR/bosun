@@ -5,6 +5,7 @@ export {
   resolveConversation,
   resumeTicket,
   setConversationInProgress,
+  setConversationSnooze,
   setConversationWaiting,
   transferConversation,
 } from "./actions";
@@ -42,7 +43,13 @@ export type {
   MessageWithAuthorRow,
   QuotedMessageView,
 } from "./reads";
-export { getLastInboundAt, listConversations, listMessages, listRecentMessages } from "./reads";
+export {
+  getLastInboundAt,
+  listConversations,
+  listConversationViewCounts,
+  listMessages,
+  listRecentMessages,
+} from "./reads";
 export type { ContactRow, ConversationRow, MessageRow } from "./repository";
 export { getConversation as getConversationRow } from "./repository";
 export type { MessageEditRow } from "./repository-messages";
@@ -58,6 +65,7 @@ export type {
   ReactMessageInput,
   SendChannelInput,
   SendOutboundInput,
+  SnoozeConversationInput,
   StartOutboundConversationInput,
   TransferConversationInput,
 } from "./schemas";
@@ -73,6 +81,7 @@ export {
   reactMessageInput,
   sendChannelInput,
   sendOutboundInput,
+  snoozeConversationInput,
   startOutboundConversationInput,
   transferConversationInput,
 } from "./schemas";
@@ -82,6 +91,7 @@ export {
   getConversationDetail,
   ingestChannelEvent,
   ingestChannelWebhook,
+  listConversationCounts,
   listConversationMessages,
   listTenantConversations,
 } from "./service";
