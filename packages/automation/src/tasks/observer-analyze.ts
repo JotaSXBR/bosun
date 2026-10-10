@@ -3,7 +3,7 @@ import { analyzeConversation, resolveLanguageModel } from "@crm/ai";
 import { listAgentRows, modelRefSchema } from "@crm/core/agents";
 import { llmProviderSchema, recordUsageEvents, resolveOrgLlmCredentials } from "@crm/core/ai";
 import { listCanonEntries, memoryProposalSchema } from "@crm/core/brain";
-import { DRAFT_TARGET_TYPE, findOrCreateObserver } from "@crm/core/drafts";
+import { findOrCreateObserver, THREAD_CARD_TARGET_TYPES } from "@crm/core/drafts";
 import { listKnowledgeRows } from "@crm/core/knowledge";
 import { getConversationRow, listConversations, listRecentMessages } from "@crm/core/messaging";
 import { findSettings } from "@crm/core/organizations";
@@ -103,7 +103,7 @@ export async function observerAnalyzeHandler(
     const pending = (await listPendingForConversation(tx, organizationId, conversationId)).filter(
       // Drafts/nudges live on open threads — they must not block the
       // post-resolve analysis pass.
-      (row) => row.targetType !== DRAFT_TARGET_TYPE,
+      (row) => !(THREAD_CARD_TARGET_TYPES as readonly string[]).includes(row.targetType),
     );
     if (pending.length > 0) return null;
     const agents = await listAgentRows(tx, organizationId);
@@ -261,7 +261,8 @@ async function runCredentialAttempt(
       brain,
       observerPersona,
     });
-    await record("ok", result.tokensIn, result.tokensOut);
+    // Persist the paid-for suggestions first — a usage-record failure must
+    // not discard them (best-effort, same as the error path below).
     const created = await createSystemSuggestions(db, organizationId, [
       ...result.suggestions.map((s) => ({
         ...s,
@@ -270,6 +271,12 @@ async function runCredentialAttempt(
       })),
       ...memorySuggestionInputs(result, { conversationId, teamId, contactId }, organizationId),
     ]);
+    await record("ok", result.tokensIn, result.tokensOut).catch((usageError: unknown) =>
+      logger.warn("observer usage record failed", {
+        organizationId,
+        error: usageError instanceof Error ? usageError.message : String(usageError),
+      }),
+    );
     return { ok: true, suggestions: created.length };
   } catch (error) {
     logger.warn("observer credential attempt failed", {
