@@ -109,8 +109,10 @@ export type NudgeCandidate = { id: string; idleSince: Date | null };
  * Interval-scan predicate (docs/product/ai-agents.md): tickets open or
  * in-progress, assigned to a human, whose LAST message is inbound and
  * older than `idleMinutes`. Conversations with a pending thread card or
- * a nudge inside the cooldown window are skipped — the card already
- * prompts action and re-nudging is spam.
+ * a card inside the cooldown window are skipped — the card already
+ * prompts action and re-prompting is spam. The cooldown counts drafts
+ * too: without it, an auto_draft org would re-enqueue a paid generation
+ * right after the human rejected the previous one.
  */
 export async function listNudgeCandidates(
   executor: DbExecutor,
@@ -134,7 +136,7 @@ export async function listNudgeCandidates(
         sql`not exists (
           select 1 from ${agentSuggestions} s
           where s.source_conversation_id = ${conversations.id}
-            and s.target_type = 'nudge'
+            and s.target_type in ('draft', 'nudge')
             and s.created_at > now() - make_interval(mins => ${opts.cooldownMinutes})
         )`,
       ),

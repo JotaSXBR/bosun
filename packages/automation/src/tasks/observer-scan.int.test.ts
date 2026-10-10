@@ -5,7 +5,12 @@
 import { getServerEnv } from "@crm/config";
 import type { TenantContext } from "@crm/core";
 import { createLlmCredential } from "@crm/core/ai";
-import { createNudgeSuggestion, listThreadCards } from "@crm/core/drafts";
+import {
+  createDraftSuggestion,
+  createNudgeSuggestion,
+  listThreadCards,
+  rejectDraft,
+} from "@crm/core/drafts";
 import type { ConnectionRef } from "@crm/core/messaging";
 import { ingestChannelEvent } from "@crm/core/messaging";
 import { updateObserverSettings } from "@crm/core/organizations";
@@ -182,6 +187,36 @@ describe("observerScanHandler", () => {
     expect(enqueued).toEqual([
       { organizationId: orgA, conversationId: ticket.id, mode: "suggest" },
     ]);
+    expect(await listThreadCards(db, ctx(orgA), ticket.id)).toHaveLength(0);
+    await setObserver({ aiObserverMode: "interval", observerAutoDraft: false });
+  });
+
+  it("a rejected draft cools down auto-draft re-enqueues", async () => {
+    const ticket = await idleTicket("scan-5@c.us", "scan_n5_1");
+    await setObserver({ aiObserverMode: "interval", observerAutoDraft: true });
+    // The human discarded the last suggestion — the cooldown must hold, or
+    // every scan tick pays for another draft they already rejected.
+    const draft = await createDraftSuggestion(db, orgA, {
+      conversationId: ticket.id,
+      payload: { body: "rascunho rejeitado" },
+      rationale: "test",
+    });
+    await rejectDraft(db, ctx(orgA), draft.id);
+    const enqueued: Array<{ conversationId: string }> = [];
+
+    await observerScanHandler(
+      {},
+      {
+        enqueueDraft: (payload) => {
+          enqueued.push(payload);
+          return Promise.resolve({ skipped: false });
+        },
+      },
+    );
+
+    // Other idle tickets may still be enqueued — the assertion is that
+    // THIS ticket's rejected draft cools it down for the cooldown window.
+    expect(enqueued.map((e) => e.conversationId)).not.toContain(ticket.id);
     expect(await listThreadCards(db, ctx(orgA), ticket.id)).toHaveLength(0);
     await setObserver({ aiObserverMode: "interval", observerAutoDraft: false });
   });

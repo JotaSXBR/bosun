@@ -1,4 +1,4 @@
-export { DRAFT_TARGET_TYPE, NUDGE_TARGET_TYPE } from "./repository";
+export { DRAFT_TARGET_TYPE, NUDGE_TARGET_TYPE, THREAD_CARD_TARGET_TYPES } from "./repository";
 export { listNudgeCandidates, listStaleNudges, supersedeNudges } from "./repository";
 export type {
   DraftPayload,
