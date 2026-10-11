@@ -31,7 +31,8 @@ test("platform admin: setup gate, then Plataforma section visible", async ({ pag
 
   if (page.url().includes("/app/setup")) {
     // First-run wizard: console is an explicit choice — marks e-mail done.
-    await page.getByLabel("Provider").selectOption("console");
+    await page.getByLabel("Provider").click();
+    await page.getByRole("option", { name: /console/ }).click();
     await page.getByRole("button", { name: "Salvar e continuar" }).click();
     // On success the form does router.push("/app"); a failed save stays on
     // /app/setup — waiting proves the action completed before we navigate.

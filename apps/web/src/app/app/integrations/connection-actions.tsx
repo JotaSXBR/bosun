@@ -1,6 +1,14 @@
 "use client";
 
 import { Button } from "@crm/design-system/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@crm/design-system/components/dropdown-menu";
+import { IconButton } from "@crm/design-system/components/icon-button";
 import { toast } from "@crm/design-system/components/toast";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -67,70 +75,51 @@ export function ConnectionActions({
     });
   }
 
+  const wahaActive = kind === "waha" && status === "connected";
+  const wahaDown = kind === "waha" && (status === "error" || status === "disconnected");
+  const hasLifecycle = wahaActive || wahaDown;
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex items-center gap-2">
         {kind !== "site_chat" && (
-          <Button variant="primary" type="button" size="sm" disabled={pending} onClick={connect}>
+          <Button variant="secondary" type="button" size="sm" disabled={pending} onClick={connect}>
             {status === "connected" ? t("actions.reconnect") : t("actions.connect")}
           </Button>
         )}
-        {kind === "waha" && status === "connected" && (
-          <>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={pending}
-              onClick={() => lifecycle("restart", t("actions.sessionRestarted"))}
-            >
-              {t("actions.restart")}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={pending}
-              onClick={() => lifecycle("stop", t("actions.sessionStopped"))}
-            >
-              {t("actions.stop")}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={pending}
-              onClick={() => lifecycle("logout", t("actions.deviceUnpaired"))}
-            >
-              {t("actions.unpair")}
-            </Button>
-          </>
-        )}
-        {kind === "waha" && (status === "error" || status === "disconnected") && (
-          <>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={pending}
-              onClick={() => lifecycle("restart", t("actions.sessionRestartedQr"))}
-            >
-              {t("actions.restart")}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={pending}
-              onClick={() => lifecycle("logout", t("actions.deviceUnpaired"))}
-            >
-              {t("actions.unpair")}
-            </Button>
-          </>
-        )}
-        <Button type="button" variant="danger" size="sm" disabled={pending} onClick={remove}>
-          {t("actions.delete")}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <IconButton icon="ellipsis-vertical" label={t("actions.more")} disabled={pending} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {hasLifecycle && (
+              <>
+                <DropdownMenuItem
+                  onSelect={() =>
+                    lifecycle(
+                      "restart",
+                      wahaActive ? t("actions.sessionRestarted") : t("actions.sessionRestartedQr"),
+                    )
+                  }
+                >
+                  {t("actions.restart")}
+                </DropdownMenuItem>
+                {wahaActive && (
+                  <DropdownMenuItem onSelect={() => lifecycle("stop", t("actions.sessionStopped"))}>
+                    {t("actions.stop")}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={() => lifecycle("logout", t("actions.deviceUnpaired"))}>
+                  {t("actions.unpair")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem variant="destructive" onSelect={remove}>
+              {t("actions.delete")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       {pairing && <PairingPanel id={id} initialQr={pairing.qr} onDone={() => setPairing(null)} />}
     </div>

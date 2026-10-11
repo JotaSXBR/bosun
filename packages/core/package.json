@@ -20,6 +20,7 @@
     "./leads/schemas": "./src/modules/leads/schemas.ts",
     "./leads/templates": "./src/modules/leads/templates.ts",
     "./messaging": "./src/modules/messaging/index.ts",
+    "./onboarding": "./src/modules/onboarding/index.ts",
     "./organizations": "./src/modules/organizations/index.ts",
     "./platform": "./src/modules/platform/index.ts",
     "./suggestions": "./src/modules/suggestions/index.ts",
