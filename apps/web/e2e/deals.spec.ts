@@ -47,8 +47,10 @@ test("funnel lifecycle: create from template, manage stages, delete", async ({ p
   await page.getByRole("button", { name: "Excluir etapa" }).click();
   await expect(page.getByTestId("kanban-board")).not.toContainText("Pré-venda");
 
-  // Delete the funnel → back to the empty state.
-  await page.getByRole("button", { name: "Excluir funil" }).click();
+  // Delete the funnel → back to the empty state. Destructive action lives
+  // under the "Mais ações" menu (7-leis: danger não compete com o primário).
+  await page.getByRole("button", { name: "Mais ações" }).click();
+  await page.getByRole("menuitem", { name: "Excluir funil" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Excluir funil" }).click();
   await expect(page.getByTestId("empty-funnel")).toBeVisible();
 });

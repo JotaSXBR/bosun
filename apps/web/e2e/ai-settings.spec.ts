@@ -17,9 +17,9 @@ test("AI settings: credentials, agents and knowledge CRUD over the observer surf
   await page.getByRole("button", { name: "Criar organização" }).click();
   await page.waitForURL("**/app");
 
-  // Navigate from the settings index card — lands on the suggestions tab.
+  // Navigate from the settings sections card — lands on the suggestions tab.
   await page.goto("/app/settings");
-  await page.getByRole("link", { name: "Gerenciar IA" }).click();
+  await page.getByRole("link", { name: /Agentes e IA/ }).click();
   await page.waitForURL("**/app/settings/ai/suggestions");
   await expect(page.getByRole("heading", { name: "Inteligência artificial" })).toBeVisible();
 

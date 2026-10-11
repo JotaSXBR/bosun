@@ -17,17 +17,11 @@ test("site chat: visitor pre-form → message → agent reply reaches the widget
   await page.getByRole("button", { name: "Criar organização" }).click();
   await page.waitForURL("**/app");
 
-  // Create a site_chat connection — no credentials needed. The controlled
-  // select reverts if the option fires before hydration — re-select until the
-  // value sticks.
+  // Create a site_chat connection — no credentials needed. The channel field
+  // is a DS Select (Radix combobox), not a native <select>.
   await page.goto("/app/integrations");
-  const canal = page.getByLabel("Canal");
-  await expect
-    .poll(async () => {
-      await canal.selectOption("site_chat");
-      return canal.inputValue();
-    })
-    .toBe("site_chat");
+  await page.getByLabel("Canal").click();
+  await page.getByRole("option", { name: /Chat do site/ }).click();
   await page.getByLabel("Nome").fill("Widget E2E");
   await page.getByRole("button", { name: "Criar conexão" }).click();
 
