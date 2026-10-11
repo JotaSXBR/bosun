@@ -7,7 +7,6 @@ import { eq } from "drizzle-orm";
 import { NotFoundError, WebhookVerificationError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
-import { completeStepInTx } from "../onboarding";
 import type { ConversationDetailRow, ConversationListRow, MessageWithAuthorRow } from "./reads";
 import {
   getConversationDetail as repoGetConversationDetail,
@@ -130,7 +129,6 @@ async function ingestMessageReceived(
     conversation.status,
   );
   if (created) {
-    await completeStepInTx(executor, conn.organizationId, "first_conversation");
     await emitDomainEvent(executor, {
       type: "conversation.created",
       organizationId: conn.organizationId,

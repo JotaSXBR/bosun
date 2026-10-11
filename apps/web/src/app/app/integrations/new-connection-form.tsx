@@ -11,7 +11,6 @@ import {
   FormMessage,
 } from "@crm/design-system/components/form";
 import { Input } from "@crm/design-system/components/input";
-import { Select } from "@crm/design-system/components/select";
 import { toast } from "@crm/design-system/components/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
@@ -122,16 +121,14 @@ export function NewConnectionForm() {
                 <FormItem>
                   <FormLabel>{t("form.channel")}</FormLabel>
                   <FormControl>
-                    <Select
-                      options={[
-                        { value: "waha", label: t("form.kindWaha") },
-                        { value: "meta_cloud", label: t("form.kindMeta") },
-                        { value: "site_chat", label: t("form.kindSiteChat") },
-                      ]}
-                      value={field.value}
-                      onChange={field.onChange}
-                      name={field.name}
-                    />
+                    <select
+                      className="border-line shadow-control h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                      {...field}
+                    >
+                      <option value="waha">{t("form.kindWaha")}</option>
+                      <option value="meta_cloud">{t("form.kindMeta")}</option>
+                      <option value="site_chat">{t("form.kindSiteChat")}</option>
+                    </select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

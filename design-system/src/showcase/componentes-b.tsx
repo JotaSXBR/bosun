@@ -19,7 +19,6 @@ import { IconButton } from "../components/icon-button";
 import { Metric } from "../components/metric";
 import { ProgressBar } from "../components/progress-bar";
 import { RingChart } from "../components/ring-chart";
-import { Steps } from "../components/steps";
 import { Toast, toast } from "../components/toast";
 import { Tooltip, TooltipBubble } from "../components/tooltip";
 import { Row, Section } from "./helpers";
@@ -198,37 +197,6 @@ export function ComponentesB() {
       </Section>
 
       <DialogSection />
-
-      <Section title="Steps">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <Steps
-            items={[
-              { label: "Conta criada", status: "done" },
-              { label: "Conectar um canal", status: "current", href: "#" },
-              { label: "Convidar o time", status: "pending" },
-              { label: "Criar o primeiro funil", status: "pending" },
-              { label: "Receber a primeira conversa", status: "pending" },
-            ]}
-          />
-          <Steps
-            items={[
-              { label: "Conta criada", status: "done" },
-              { label: "Canal conectado", status: "done" },
-              { label: "Time convidado", status: "done" },
-              { label: "Funil criado", status: "done" },
-              { label: "Receber a primeira conversa", status: "current", href: "#" },
-            ]}
-          />
-          <Steps
-            items={[
-              { label: "Conta criada", status: "done" },
-              { label: "Canal conectado", status: "done" },
-              { label: "Time convidado", status: "done" },
-            ]}
-            doneLabel="Espaço pronto."
-          />
-        </div>
-      </Section>
 
       <Section title="Toast">
         <div className="grid max-w-md grid-cols-1 gap-3">

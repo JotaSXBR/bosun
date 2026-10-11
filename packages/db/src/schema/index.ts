@@ -5,6 +5,5 @@ export * from "./billing";
 export * from "./brain";
 export * from "./leads";
 export * from "./messaging";
-export * from "./onboarding";
 export * from "./settings";
 export * from "./teams";

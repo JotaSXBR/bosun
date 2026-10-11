@@ -2,7 +2,6 @@
 
 import { enqueueOrganizationOnboarding } from "@crm/automation";
 import { recordAuditEvent } from "@crm/core/audit";
-import { completeStep } from "@crm/core/onboarding";
 import { getDb } from "@crm/db";
 import { captureException } from "@crm/observability";
 import { headers } from "next/headers";
@@ -86,26 +85,16 @@ export async function createOrganization(input: unknown): Promise<CreateOrganiza
     headers: requestHeaders,
   });
 
-  const tenantCtx = {
-    organizationId: org.id,
-    userId: session.user.id,
-    role: "owner" as const,
-    isPlatformAdmin: session.user.role === "platform_admin",
-  };
-
-  await recordAuditEvent(getDb(), tenantCtx, {
-    action: "organization.created",
-    targetType: "organization",
-    targetId: org.id,
-  });
-
-  // Checklist de ativação nasce endowed: org criada já conta (1/5). Nunca
-  // pode quebrar a criação da organização.
-  try {
-    await completeStep(getDb(), tenantCtx, "org_created");
-  } catch (error) {
-    captureException(error, { action: "organization.checklist" });
-  }
+  await recordAuditEvent(
+    getDb(),
+    {
+      organizationId: org.id,
+      userId: session.user.id,
+      role: "owner",
+      isPlatformAdmin: session.user.role === "platform_admin",
+    },
+    { action: "organization.created", targetType: "organization", targetId: org.id },
+  );
 
   // Background onboarding must never break organization creation.
   try {

@@ -12,7 +12,6 @@ import {
   requestConnectionPairingCode,
   updateWidgetConfig,
 } from "@crm/core/integrations";
-import { completeStep } from "@crm/core/onboarding";
 import { getDb } from "@crm/db";
 import { captureException } from "@crm/observability";
 import { revalidatePath } from "next/cache";
@@ -85,11 +84,6 @@ export async function createChannelConnectionAction(
     } catch (connectError) {
       captureException(connectError, { action: "integrations.create-connect" });
       warning = "Conexão criada, mas o provedor não respondeu — tente Conectar.";
-    }
-    try {
-      await completeStep(getDb(), ctx, "connect_channel");
-    } catch (checklistError) {
-      captureException(checklistError, { action: "integrations.checklist" });
     }
     revalidatePath("/app/integrations");
     return { ok: true, connectionId: conn.id, status, qrCode, warning };

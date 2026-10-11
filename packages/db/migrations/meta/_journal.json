@@ -169,13 +169,6 @@
       "when": 1791651245449,
       "tag": "0023_far_korath",
       "breakpoints": true
-    },
-    {
-      "idx": 24,
-      "version": "7",
-      "when": 1791728708949,
-      "tag": "0024_fair_reptil",
-      "breakpoints": true
     }
   ]
 }

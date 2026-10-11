@@ -3,7 +3,6 @@
 import { Button } from "@crm/design-system/components/button";
 import { Card } from "@crm/design-system/components/card";
 import { Input } from "@crm/design-system/components/input";
-import { Select } from "@crm/design-system/components/select";
 import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -57,17 +56,21 @@ export function SetupForm() {
   return (
     <Card title={t("title")}>
       <form onSubmit={onSubmit} className="space-y-4">
-        <Select
-          id="setup-provider"
-          label={t("provider")}
-          options={[
-            { value: "console", label: t("consoleOption") },
-            { value: "resend", label: "resend" },
-            { value: "smtp", label: "smtp" },
-          ]}
-          value={provider}
-          onChange={setProvider}
-        />
+        <div className="space-y-1">
+          <label className="text-sm font-medium" htmlFor="setup-provider">
+            {t("provider")}
+          </label>
+          <select
+            id="setup-provider"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            className="border-line shadow-control h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+          >
+            <option value="console">{t("consoleOption")}</option>
+            <option value="resend">resend</option>
+            <option value="smtp">smtp</option>
+          </select>
+        </div>
 
         <div className="space-y-1">
           <label className="text-sm font-medium" htmlFor="setup-from">

@@ -154,13 +154,6 @@ bubble alone (`stem` px, `placement`).
 `success`/`warning`/`danger`, `pattern` (hatched track), `thumb` (glow knob),
 `labels`, `label`, `valueLabel`. `role="progressbar"` + aria values.
 
-### `Steps` — `@crm/design-system/components/steps`
-
-Checklist de passos sobre a `ProgressBar`. `items: {label, status:
-"done"|"current"|"pending", href?}[]`, `linkComponent` ("a"), `counter`,
-`counterLabel(done,total)`, `remainingLabel(n)` (reta final: falta 1 ou
-≥70%), `doneLabel` (substitui a lista em 100%; `null` mantém).
-
 ### `RingChart` — `@crm/design-system/components/ring-chart`
 
 Segmented donut. `segments: {value, color?, label?, display?}[]`,

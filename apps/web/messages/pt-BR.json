@@ -140,8 +140,7 @@
     "snoozeTomorrow": "Até amanhã às 9h",
     "snoozeWeek": "1 semana",
     "snoozedUntil": "Adiado até {date}",
-    "resume": "Retomar",
-    "moreActions": "Mais ações"
+    "resume": "Retomar"
   },
   "contacts": {
     "title": "Contatos",
@@ -193,7 +192,6 @@
     "createFunnel": "Criar funil",
     "newStage": "Etapa",
     "deleteFunnel": "Excluir funil",
-    "moreActions": "Mais ações",
     "stageActions": "Ações da etapa {name}",
     "editStage": "Editar etapa",
     "deleteStage": "Excluir etapa",
@@ -295,19 +293,7 @@
     "role": "Papel:",
     "platformAdminSuffix": "(platform admin)",
     "recentActivity": "Atividade recente",
-    "noEvents": "Nenhum evento registrado.",
-    "checklist": {
-      "title": "Primeiros passos",
-      "subtitle": "Complete a configuração do seu espaço.",
-      "done": "Espaço pronto.",
-      "steps": {
-        "org_created": "Criar a organização",
-        "connect_channel": "Conectar um canal",
-        "create_team": "Criar uma equipe",
-        "create_funnel": "Criar um funil",
-        "first_conversation": "Receber a primeira conversa"
-      }
-    }
+    "noEvents": "Nenhum evento registrado."
   },
   "widgetDemo": {
     "title": "Widget demo",
@@ -349,8 +335,7 @@
       "restart": "Reiniciar sessão",
       "stop": "Parar",
       "unpair": "Desparear",
-      "delete": "Excluir",
-      "more": "Mais ações"
+      "delete": "Excluir"
     },
     "copy": {
       "copied": "URL copiada",
@@ -402,7 +387,6 @@
     "teams": "Equipes",
     "teamsDescription": "Setores de atendimento e seus membros.",
     "manageTeams": "Gerenciar equipes",
-    "sections": "Seções",
     "org": {
       "title": "Organização",
       "description": "Preferências de atendimento aplicadas a toda a organização.",
@@ -499,14 +483,6 @@
       "cardDescription": "Credenciais LLM (BYOK), agentes, conhecimento e sugestões do observador.",
       "manage": "Gerenciar IA",
       "restricted": "Configurações de IA disponíveis para owner, admin, manager e viewer.",
-      "tabs": {
-        "suggestions": "Sugestões",
-        "credentials": "Credenciais",
-        "observer": "Observador",
-        "agents": "Agentes",
-        "knowledge": "Conhecimento",
-        "brain": "Segundo cérebro"
-      },
       "analyzeNow": "Analisar agora",
       "analyzeStarted": "Análise iniciada — sugestões aparecem aqui quando prontas.",
       "observer": {
