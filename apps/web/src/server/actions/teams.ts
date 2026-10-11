@@ -1,6 +1,7 @@
 "use server";
 
 import { DomainError } from "@crm/core";
+import { completeStep } from "@crm/core/onboarding";
 import type { CreateTeamInput, TeamMemberInput, UpdateTeamInput } from "@crm/core/teams";
 import {
   addTeamMember,
@@ -37,11 +38,16 @@ export async function createTeamAction(input: CreateTeamInput): Promise<TeamsAct
   const ctx = await requireTenantContext();
   try {
     await createTeam(getDb(), ctx, input);
-    revalidateTeams();
-    return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível criar a equipe.") };
   }
+  try {
+    await completeStep(getDb(), ctx, "create_team");
+  } catch (checklistError) {
+    captureException(checklistError, { action: "teams.checklist" });
+  }
+  revalidateTeams();
+  return { ok: true };
 }
 
 export async function updateTeamAction(input: UpdateTeamInput): Promise<TeamsActionResult> {

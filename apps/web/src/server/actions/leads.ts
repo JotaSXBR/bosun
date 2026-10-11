@@ -36,6 +36,7 @@ import {
   updateLabel,
   updateStage,
 } from "@crm/core/leads";
+import { completeStep } from "@crm/core/onboarding";
 import { getDb } from "@crm/db";
 import { captureException } from "@crm/observability";
 import { revalidatePath } from "next/cache";
@@ -66,13 +67,19 @@ function revalidateLeads(conversationId?: string): void {
 
 export async function createFunnelAction(input: CreateFunnelInput) {
   const ctx = await requireTenantContext();
+  let funnel;
   try {
-    const funnel = await createFunnel(getDb(), ctx, input);
-    revalidateLeads();
-    return { ok: true as const, data: funnel };
+    funnel = await createFunnel(getDb(), ctx, input);
   } catch (error) {
     return { ok: false as const, error: errorMessage(error, "Não foi possível criar o funil") };
   }
+  try {
+    await completeStep(getDb(), ctx, "create_funnel");
+  } catch (checklistError) {
+    captureException(checklistError, { action: "leads.checklist" });
+  }
+  revalidateLeads();
+  return { ok: true as const, data: funnel };
 }
 
 export async function updateFunnelAction(input: UpdateFunnelInput) {

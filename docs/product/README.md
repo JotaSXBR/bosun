@@ -10,4 +10,5 @@ architecture decisions live in `docs/adr/`.
 - [domain-model.md](domain-model.md) — entities and lifecycle (implemented vs planned)
 - [rules.md](rules.md) — business rules (assignment, statuses, off-hours, billing, LGPD)
 - [ai-agents.md](ai-agents.md) — AI strategy: observer-first, agents catalog, BYOK, tools
+- [ux-7-leis.md](ux-7-leis.md) — audit + plan: every screen follows the 7 UX laws
 - [roadmap.md](roadmap.md) — skeleton milestone and phases
