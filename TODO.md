@@ -293,6 +293,8 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   site_chat fora), "novo contato" inline no ContactSelect do deal form.
   Permissões: `messaging:read` lista, `messaging:write` cria/abre.
   Importação (CSV/Google Contacts) = futuro.
+- ~~**P1 — UX: 7 leis em todas as telas**~~ ✅ entregue 2026-10-11 — movido
+  para `## Concluído`.
 - **Decisão — round-robin descartado** (2026-10-08): atribuição segue manual
   da fila; quando agentes IA entrarem, roteamento é via intake
   `open`|`pending` (pending = IA atende) — não por rodízio de agentes.
@@ -360,6 +362,25 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 
 ## Concluído
 
+- **P1 — UX: 7 leis em todas as telas** ✅ 2026-10-11 —
+  `control-md` 42→44px (WCAG 2.5.5); componente `Steps` no DS (Passo X de Y
+  - check + copy "Quase lá — falta N" na reta final); `<select>` nativos →
+    DS `Select` (setup + nova conexão); `onboarding_checklist` tenant-owned
+    (RLS + FORCE, jsonb por org, migração 0024) + `@crm/core/onboarding`
+    (`getChecklist` com endowed `org_created`, `completeStep` idempotente);
+    marks em org/integração/equipe/funil + `first_conversation` no ingest
+    inbound; card "Primeiros passos" na home (sempre visível enquanto
+    incompleto, CTA = próximo passo, some aos 100%); `/app/settings/ai` em 6
+    subpaths com tabs Radix (deep links preservados, "Analisar agora"
+    contextual em Sugestões); `ticket-actions` com primário por status +
+    "Mais ações" (Adiar ▸/Transferir ▸ submenus); `connection-actions` com
+    CTA contextual + danger no menu; toolbar do kanban e `/settings` com
+    hierarquia. Gate do ciclo: typecheck 14/14, lint 0 erros, unit 167/167,
+    integração 5/5 (RLS + idempotência + merge de marks concorrentes via
+    `steps ||` jsonb), smoke browser real (sign-up → org →
+    checklist 1/5 → 2/5 ao criar funil, 0 erros de console). Checklist das 6
+    perguntas virou gate de `/review` em
+    `docs/development/ux-7-leis-checklist.md`. Plan: `tasks/plan-ux-7-leis.done.md`.
 - **Padrão de qualidade por pesquisa externa** ✅ 2026-10-10 —
   `docs/development/code-quality-standard.md` (§1 fontes, §2 adoção/contagens).
   `tooling/eslint/base.js` reescrito: `eslint-config-prettier`, sonarjs

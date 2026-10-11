@@ -327,7 +327,7 @@ spacing:
   card-pad: 24px
   control-xs: 28px
   control-sm: 34px
-  control-md: 42px
+  control-md: 44px
   control-lg: 50px
   icon-btn: 44px
   icon-sm: 16px
@@ -342,7 +342,7 @@ components:
     textColor: "{colors.text-on-accent}"
     typography: "{typography.label-md}"
     rounded: "{rounded.full}"
-    height: 42px
+    height: 44px
     padding: 18px
   button-primary-hover:
     backgroundColor: "{colors.surface-accent-hover}"
@@ -352,7 +352,7 @@ components:
     textColor: "{colors.text-strong}"
     typography: "{typography.label-md}"
     rounded: "{rounded.full}"
-    height: 42px
+    height: 44px
     padding: 18px
   button-secondary-hover:
     backgroundColor: "{colors.surface-control-hover}"
@@ -408,7 +408,7 @@ components:
     textColor: "{colors.text-strong}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.full}"
-    height: 42px
+    height: 44px
     padding: 16px
   input-form:
     backgroundColor: "{colors.bg-sunken}"
@@ -419,7 +419,7 @@ components:
     textColor: "{colors.text-strong}"
     typography: "{typography.label-sm}"
     rounded: "{rounded.full}"
-    height: 42px
+    height: 44px
   menu:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.text-body}"
@@ -448,7 +448,7 @@ components:
     backgroundColor: "{colors.surface-control}"
     textColor: "{colors.text-body}"
     rounded: "{rounded.full}"
-    height: 42px
+    height: 44px
   module-nav-item-active:
     backgroundColor: "{colors.surface-accent-soft}"
     textColor: "{colors.text-accent}"
@@ -519,7 +519,7 @@ Bosun customer-operations platform (inbox, deals, integrations, AI agents).
   Azul abissal page, tonal cards stepping up toward the viewer, one Verde
   sinal accent. A complete light theme exists for islands (marketing panels,
   showcase) and future use.
-- **Density:** working UI is compact (14px interface text, 42px controls);
+- **Density:** working UI is compact (14px interface text, 44px controls);
   marketing moments are generous (120–160px between site sections).
 
 ## Colors
@@ -578,7 +578,7 @@ here (`tokens/extensions.css`) so no component hardcodes a size.
 - **4px base grid.** `spacing` keys `N` = N × 4px (Tailwind's default spacing
   scale is identical). 16px between cards (`card-gap`), 24px inside
   (`card-pad`), 8px between grouped controls.
-- **Controls:** 28 / 34 / 42 / 50px heights (`control-xs|sm|md|lg`); icon
+- **Controls:** 28 / 34 / 44 / 50px heights (`control-xs|sm|md|lg`); icon
   buttons are 34 / 44 / 52px circles.
 - **App shell:** 76px top bar — wordmark left · centered pill `ModuleNav` ·
   round actions right. Page header: 40px Manrope 600 title with underline
@@ -667,7 +667,7 @@ onAccent`; always labelled; optional Verde sinal notification dot. Press:
   radius 14, `shadow-pop`; selected option in accent with a check.
 - **Checkbox / Radio / Switch** — Verde sinal when on; Switch knob turns
   Azul abissal.
-- **ModuleNav** — icon+label pills (42px); active = accent-soft fill + accent
+- **ModuleNav** — icon+label pills (44px); active = accent-soft fill + accent
   border + accent text; compact mode = 48px discs, active disc filled signal.
 - **Tabs** — `underline` (page sections, 2px strong underline) or `pill`
   (segmented on control fill).

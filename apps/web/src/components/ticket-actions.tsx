@@ -4,7 +4,17 @@ import type { ConversationDetailRow } from "@crm/core/messaging";
 import type { OrgMember } from "@crm/core/organizations";
 import type { TeamWithMembers } from "@crm/core/teams";
 import { Button } from "@crm/design-system/components/button";
-import { Select } from "@crm/design-system/components/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@crm/design-system/components/dropdown-menu";
 import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
@@ -22,6 +32,7 @@ import {
 } from "@/server/actions/messaging";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
+type T = ReturnType<typeof useTranslations>;
 
 export function TicketActions({
   conversation,
@@ -45,7 +56,6 @@ export function TicketActions({
   const t = useTranslations("tickets");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [target, setTarget] = useState<string>();
 
   if (isViewer) return null;
 
@@ -66,22 +76,11 @@ export function TicketActions({
 
   const conversationId = conversation.id;
 
-  const doTransfer = () => {
-    if (!target) return;
-    const [kind, id] = target.split(":");
-    void run(
-      transferConversationAction(
-        kind === "user" ? { conversationId, assigneeId: id! } : { conversationId, sectorId: id! },
-      ),
-    );
-    setTarget("");
-  };
-
   return (
     <div className="flex flex-wrap items-center gap-2 border-t pt-4" data-testid="ticket-actions">
       {isResolved && (
         <Button
-          variant="secondary"
+          variant="primary"
           disabled={pending}
           onClick={() => run(reopenTicketAction({ conversationId }))}
         >
@@ -91,7 +90,7 @@ export function TicketActions({
 
       {isClosed && (
         <Button
-          variant="secondary"
+          variant="primary"
           disabled={pending}
           onClick={() => run(resumeTicketAction({ conversationId }))}
         >
@@ -105,39 +104,26 @@ export function TicketActions({
         </span>
       )}
 
-      {canWork && ownsTicket && (
-        <>
-          <WorkButtons conversation={conversation} pending={pending} run={run} t={t} />
-          <SnoozeControl conversation={conversation} pending={pending} run={run} t={t} />
-        </>
+      {canWork && ownsTicket && !isResolved && !isClosed && (
+        <WorkActions conversation={conversation} pending={pending} run={run} t={t} />
       )}
 
       {canWork && (
-        <div className="flex items-center gap-2">
-          <Select
-            options={[
-              { value: "__hdr_agents", label: t("agents"), disabled: true },
-              ...agents.map((m) => ({ value: `user:${m.userId}`, label: m.name })),
-              { value: "__hdr_sectors", label: t("sectors"), disabled: true },
-              ...sectors.map((s) => ({ value: `sector:${s.id}`, label: s.name })),
-            ]}
-            value={target}
-            onChange={setTarget}
-            placeholder={t("transferPlaceholder")}
-            aria-label={t("transferTo")}
-            disabled={pending}
-            className="w-52"
-          />
-          <Button variant="secondary" disabled={pending || !target} onClick={doTransfer}>
-            {t("transfer")}
-          </Button>
-        </div>
+        <MoreActions
+          conversation={conversation}
+          agents={agents}
+          sectors={sectors}
+          pending={pending}
+          run={run}
+          t={t}
+        />
       )}
     </div>
   );
 }
 
-function WorkButtons({
+/** Primary contextual action + uniform secondary status toggle. */
+function WorkActions({
   conversation,
   pending,
   run,
@@ -146,18 +132,27 @@ function WorkButtons({
   conversation: ConversationDetailRow;
   pending: boolean;
   run: (action: Promise<ActionResult>) => void;
-  t: ReturnType<typeof useTranslations>;
+  t: T;
 }) {
   const conversationId = conversation.id;
+  const unassigned = conversation.assigneeId === null;
   return (
     <>
-      {conversation.status === "open" && conversation.assigneeId === null && (
+      {conversation.status === "open" && unassigned ? (
         <Button
           variant="primary"
           disabled={pending}
           onClick={() => run(pickupConversationAction({ conversationId }))}
         >
           {t("pickup")}
+        </Button>
+      ) : (
+        <Button
+          variant="primary"
+          disabled={pending}
+          onClick={() => run(resolveConversationAction({ conversationId }))}
+        >
+          {t("resolve")}
         </Button>
       )}
       {conversation.status === "in_progress" && (
@@ -178,13 +173,6 @@ function WorkButtons({
           {t("inProgress")}
         </Button>
       )}
-      <Button
-        variant="secondary"
-        disabled={pending}
-        onClick={() => run(resolveConversationAction({ conversationId }))}
-      >
-        {t("resolve")}
-      </Button>
     </>
   );
 }
@@ -207,65 +195,99 @@ function snoozeTarget(preset: keyof typeof SNOOZE_PRESET_KEY): Date {
   return new Date(now.getTime() + 7 * 86_400_000);
 }
 
-/** Defer out of every work view; "Retomar" clears an active snooze early. */
-function SnoozeControl({
+/** Less-frequent actions live under one ghost trigger — never competes with
+ * the primary. */
+function MoreActions({
   conversation,
+  agents,
+  sectors,
   pending,
   run,
   t,
 }: {
   conversation: ConversationDetailRow;
+  agents: OrgMember[];
+  sectors: TeamWithMembers[];
   pending: boolean;
   run: (action: Promise<ActionResult>) => void;
-  t: ReturnType<typeof useTranslations>;
+  t: T;
 }) {
   const format = useFormatter();
-  const [preset, setPreset] = useState<keyof typeof SNOOZE_PRESET_KEY>();
   const [mountedAt] = useState(() => Date.now());
   const conversationId = conversation.id;
   const snoozedUntil = conversation.snoozedUntil ? new Date(conversation.snoozedUntil) : null;
+  const snoozed = snoozedUntil !== null && snoozedUntil.getTime() > mountedAt;
 
-  if (snoozedUntil && snoozedUntil.getTime() > mountedAt) {
-    return (
-      <div className="flex items-center gap-2">
+  const transfer = (target: string) => {
+    const [kind, id] = target.split(":");
+    run(
+      transferConversationAction(
+        kind === "user" ? { conversationId, assigneeId: id! } : { conversationId, sectorId: id! },
+      ),
+    );
+  };
+
+  return (
+    <>
+      {snoozed && (
         <span className="text-ink-muted text-sm">
           {t("snoozedUntil", {
             date: format.dateTime(snoozedUntil, { dateStyle: "short", timeStyle: "short" }),
           })}
         </span>
-        <Button
-          variant="secondary"
-          disabled={pending}
-          onClick={() => run(snoozeConversationAction({ conversationId, until: null }))}
-        >
-          {t("resume")}
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <Select
-        options={(Object.keys(SNOOZE_PRESET_KEY) as (keyof typeof SNOOZE_PRESET_KEY)[]).map(
-          (p) => ({ value: p, label: t(SNOOZE_PRESET_KEY[p]) }),
-        )}
-        value={preset}
-        onChange={(v) => setPreset(v as keyof typeof SNOOZE_PRESET_KEY)}
-        placeholder={t("snoozePlaceholder")}
-        aria-label={t("snooze")}
-        disabled={pending}
-        className="w-44"
-      />
-      <Button
-        variant="secondary"
-        disabled={pending || !preset}
-        onClick={() =>
-          preset && run(snoozeConversationAction({ conversationId, until: snoozeTarget(preset) }))
-        }
-      >
-        {t("snooze")}
-      </Button>
-    </div>
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" iconRight="chevron-down" disabled={pending}>
+            {t("moreActions")}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {snoozed && (
+            <>
+              <DropdownMenuItem
+                onSelect={() => run(snoozeConversationAction({ conversationId, until: null }))}
+              >
+                {t("resume")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>{t("snooze")}</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {(Object.keys(SNOOZE_PRESET_KEY) as (keyof typeof SNOOZE_PRESET_KEY)[]).map((p) => (
+                <DropdownMenuItem
+                  key={p}
+                  onSelect={() =>
+                    run(snoozeConversationAction({ conversationId, until: snoozeTarget(p) }))
+                  }
+                >
+                  {t(SNOOZE_PRESET_KEY[p])}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>{t("transferTo")}</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuLabel>{t("agents")}</DropdownMenuLabel>
+              {agents.map((m) => (
+                <DropdownMenuItem key={m.userId} onSelect={() => transfer(`user:${m.userId}`)}>
+                  {m.name}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuLabel>{t("sectors")}</DropdownMenuLabel>
+              {sectors.map((s) => (
+                <DropdownMenuItem key={s.id} onSelect={() => transfer(`sector:${s.id}`)}>
+                  {s.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }

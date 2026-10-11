@@ -40,6 +40,8 @@ import {
   listConversationMessages,
   listTenantConversations,
 } from "@crm/core/messaging";
+import type { OnboardingChecklistRow } from "@crm/core/onboarding";
+import { getChecklist } from "@crm/core/onboarding";
 import type { OrganizationSettingsRow, OrgMember, UserOrganization } from "@crm/core/organizations";
 import {
   getOrganizationSettings,
@@ -72,6 +74,10 @@ export async function listMyOrganizations(userId: string): Promise<UserOrganizat
 
 export async function listChannelConnections(ctx: TenantContext): Promise<ChannelConnectionRow[]> {
   return listChannelConnectionsForTenant(getDb(), ctx);
+}
+
+export async function getOnboardingChecklist(ctx: TenantContext): Promise<OnboardingChecklistRow> {
+  return getChecklist(getDb(), ctx);
 }
 
 export async function listConversations(
