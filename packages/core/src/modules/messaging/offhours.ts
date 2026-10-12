@@ -301,7 +301,10 @@ async function deliverReply(
       .update(messages)
       .set({ externalId: sent.externalId, status: sent.status, updatedAt: new Date() })
       .where(sql`${messages.id} = ${marker.id}`);
-    await updateConversationLastMessage(tx, plan.conv.id, plan.now);
+    await updateConversationLastMessage(tx, plan.conv.id, plan.now, {
+      direction: "outbound",
+      preview: plan.text,
+    });
     await emitDomainEvent(tx, {
       type: "message.sent",
       organizationId: plan.organizationId,

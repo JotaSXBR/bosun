@@ -23,6 +23,7 @@ import {
   findOrCreateTicket,
   insertMessage,
   markMessageRevoked,
+  messagePreviewText,
   updateConversationLastMessage,
   updateMessageStatus,
   upsertContact,
@@ -111,7 +112,10 @@ async function ingestMessageReceived(
     status: "received",
     sentAt: event.timestamp,
   });
-  await updateConversationLastMessage(executor, conversation.id, event.timestamp);
+  await updateConversationLastMessage(executor, conversation.id, event.timestamp, {
+    direction: "inbound",
+    preview: messagePreviewText(event.content),
+  });
   // Fan out only for a real insert — webhook replays return no row and must
   // not re-notify nor re-run the status transition. pg_notify fires on
   // commit with the write tx; the job row lands in the same tx.

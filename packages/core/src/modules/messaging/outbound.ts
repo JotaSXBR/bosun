@@ -10,7 +10,7 @@ import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import { assertTicketOwner, loadActiveTicket, patchTicket } from "./actions";
 import type { MessageRow } from "./repository";
-import { insertMessage, updateConversationLastMessage } from "./repository";
+import { insertMessage, messagePreviewText, updateConversationLastMessage } from "./repository";
 import type { InternalNoteInput, SendChannelInput, SendOutboundInput } from "./schemas";
 import { internalNoteInput, sendChannelInput, sendOutboundInput } from "./schemas";
 
@@ -127,7 +127,10 @@ export async function sendChannelMessage(
       authorId: ctx.userId,
     });
     if (!message) throw new Error("outbound message insert raced");
-    await updateConversationLastMessage(tx, conversation.id, now);
+    await updateConversationLastMessage(tx, conversation.id, now, {
+      direction: "outbound",
+      preview: messagePreviewText(content),
+    });
     await patchTicket(tx, ctx.organizationId, conversation.id, {
       status: "waiting_customer",
       assigneeId: current.assigneeId ?? ctx.userId,

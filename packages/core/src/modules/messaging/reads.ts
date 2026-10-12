@@ -58,26 +58,11 @@ const TERMINAL_STATUSES = sql`${conversations.status} in ('resolved', 'closed')`
 const NOT_SNOOZED = sql`(${conversations.snoozedUntil} is null or ${conversations.snoozedUntil} <= now())`;
 const SNOOZED = sql`(${conversations.snoozedUntil} > now())`;
 /**
- * Latest message per conversation, packed as ONE correlated scalar —
- * select-list subplans only run for output rows (post-LIMIT), so a
- * single jsonb probe halves the two scalar evaluations the row used to
- * pay (a LATERAL join was measured WORSE here: joins evaluate per
- * candidate row, before the LIMIT).
+ * Latest-message preview/direction are denormalized columns on
+ * conversations — written wherever lastMessageAt is bumped and refreshed
+ * on message edit/revoke. The inbox list reads them directly: zero
+ * correlated probes per row, private notes excluded by construction.
  */
-const LAST_MESSAGE_SQL = sql<{ direction: string | null; preview: string | null } | null>`(
-  select jsonb_build_object(
-    'direction', m.direction,
-    'preview', coalesce(m.content ->> 'text', m.content ->> 'caption', '[' || (m.content ->> 'type') || ']')
-  )
-  from ${messages} m
-  where m.conversation_id = ${conversations.id}
-  order by m.sent_at desc nulls last, m.created_at desc
-  limit 1
-)`;
-/** Direction-only probe for the optional `awaitingReply` filter. */
-const LAST_MSG_DIRECTION_SQL = sql<
-  string | null
->`(select m.direction from ${messages} m where m.conversation_id = ${conversations.id} order by m.sent_at desc nulls last, m.created_at desc limit 1)`;
 
 /** Search across contact name, channel user id (phone), external id and ticket #. */
 function searchFilter(search: string | undefined) {
@@ -122,7 +107,7 @@ export async function listConversations(
       ? eq(conversations.channelConnectionId, opts.channelConnectionId)
       : undefined,
     opts.sectorId ? eq(conversations.sectorId, opts.sectorId) : undefined,
-    opts.awaitingReply ? sql`${LAST_MSG_DIRECTION_SQL} = 'inbound'` : undefined,
+    opts.awaitingReply ? eq(conversations.lastMessageDirection, "inbound") : undefined,
   );
   const order =
     opts.view === "closed"
@@ -139,7 +124,6 @@ export async function listConversations(
         contactChannelUserId: contacts.channelUserId,
         assigneeName: users.name,
         sectorName: teams.name,
-        lastMessage: LAST_MESSAGE_SQL,
       })
       .from(conversations)
       .innerJoin(contacts, eq(contacts.id, conversations.contactId))
@@ -149,11 +133,10 @@ export async function listConversations(
       .orderBy(order)
       .limit(opts.limit),
   );
-  return rows.map(({ conversation, lastMessage, ...rest }) => ({
+  return rows.map(({ conversation, ...rest }) => ({
     ...conversation,
     ...rest,
-    lastMessagePreview: lastMessage?.preview ?? null,
-    awaitingReply: lastMessage?.direction === "inbound",
+    awaitingReply: conversation.lastMessageDirection === "inbound",
   }));
 }
 

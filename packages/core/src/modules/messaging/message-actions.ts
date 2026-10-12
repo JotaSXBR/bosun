@@ -16,6 +16,7 @@ import {
   applyMessageEdit,
   getMessage,
   markMessageRevoked,
+  refreshConversationLastMessage,
   upsertMessageReaction,
 } from "./repository";
 import type {
@@ -146,6 +147,7 @@ export async function editMessageContent(
       newContent,
       editedByUserId: ctx.userId,
     });
+    await refreshConversationLastMessage(tx, message.conversationId);
     await emitDomainEvent(tx, {
       type: "message.updated",
       organizationId: ctx.organizationId,
@@ -193,6 +195,7 @@ export async function deleteMessageContent(
   await provider.deleteMessage(chatId, message.externalId!);
   await withTenant(db, ctx.organizationId, async (tx) => {
     await markMessageRevoked(tx, message.channelConnectionId, message.externalId!);
+    await refreshConversationLastMessage(tx, message.conversationId);
     await emitDomainEvent(tx, {
       type: "message.updated",
       organizationId: ctx.organizationId,
