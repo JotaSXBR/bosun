@@ -9,7 +9,7 @@ import type { AuditLogRow, ListAuditEventsInput } from "@crm/core/audit";
 import { listAuditEvents } from "@crm/core/audit";
 import type { MemoryEntryRow } from "@crm/core/brain";
 import { listBrainEntries, listStaleBrainEntries } from "@crm/core/brain";
-import type { ContactListRow } from "@crm/core/contacts";
+import type { ContactListRow, ListContactsInput } from "@crm/core/contacts";
 import { listOrgContacts } from "@crm/core/contacts";
 import { listThreadCards } from "@crm/core/drafts";
 import type { ChannelConnectionRow } from "@crm/core/integrations";
@@ -55,6 +55,7 @@ import { listAgentSuggestions } from "@crm/core/suggestions";
 import type { TeamWithMembers } from "@crm/core/teams";
 import { listTeams } from "@crm/core/teams";
 import { getDb, withTenant } from "@crm/db";
+import { cache } from "react";
 
 /**
  * Server-side composition helpers: the only place UI code may reach @crm/core
@@ -72,8 +73,18 @@ export async function listMyOrganizations(userId: string): Promise<UserOrganizat
   return listUserOrganizations(getDb(), userId);
 }
 
+/**
+ * Request-cached single fetch of the org's channel connections — the
+ * page derives several filtered views (waha/connected/all) that would
+ * otherwise re-run the same query per render.
+ */
+const listChannelConnectionsCached = cache(
+  async (ctx: TenantContext): Promise<ChannelConnectionRow[]> =>
+    listChannelConnectionsForTenant(getDb(), ctx),
+);
+
 export async function listChannelConnections(ctx: TenantContext): Promise<ChannelConnectionRow[]> {
-  return listChannelConnectionsForTenant(getDb(), ctx);
+  return listChannelConnectionsCached(ctx);
 }
 
 export async function getOnboardingChecklist(ctx: TenantContext): Promise<OnboardingChecklistRow> {
@@ -93,12 +104,11 @@ export async function listConversationCounts(
   return svcListConversationCounts(getDb(), ctx);
 }
 
-export async function getConversation(
-  ctx: TenantContext,
-  id: string,
-): Promise<ConversationDetailRow> {
-  return getConversationDetail(getDb(), ctx, { conversationId: id });
-}
+/** Request-cached — ConversationPane and ConversationAside read the same ticket. */
+export const getConversation = cache(
+  async (ctx: TenantContext, id: string): Promise<ConversationDetailRow> =>
+    getConversationDetail(getDb(), ctx, { conversationId: id }),
+);
 
 export async function listMessages(
   ctx: TenantContext,
@@ -111,9 +121,10 @@ export async function listMembers(ctx: TenantContext): Promise<OrgMember[]> {
   return listOrgMembers(getDb(), ctx);
 }
 
-export async function listSectors(ctx: TenantContext): Promise<TeamWithMembers[]> {
-  return listTeams(getDb(), ctx);
-}
+/** Request-cached — inbox page and ConversationPane list the same sectors. */
+export const listSectors = cache(async (ctx: TenantContext): Promise<TeamWithMembers[]> =>
+  listTeams(getDb(), ctx),
+);
 
 export async function getOrgSettings(ctx: TenantContext): Promise<OrganizationSettingsRow> {
   return getOrganizationSettings(getDb(), ctx);
@@ -189,16 +200,16 @@ export type { ContactListRow };
 
 export async function listContactsPage(
   ctx: TenantContext,
-  query?: string,
+  input: ListContactsInput = {},
 ): Promise<ContactListRow[]> {
-  return listOrgContacts(getDb(), ctx, { query });
+  return listOrgContacts(getDb(), ctx, input);
 }
 
 export type WahaConnectionPick = Pick<ChannelConnectionRow, "id" | "name">;
 
 /** WAHA connections able to start outbound conversations (connected only). */
 export async function listWahaConnections(ctx: TenantContext): Promise<WahaConnectionPick[]> {
-  const connections = await listChannelConnectionsForTenant(getDb(), ctx);
+  const connections = await listChannelConnectionsCached(ctx);
   return connections
     .filter((c) => c.kind === "waha" && c.status === "connected")
     .map(({ id, name }) => ({ id, name }));
@@ -208,7 +219,7 @@ export type ConnectedChannelPick = Pick<ChannelConnectionRow, "id" | "name" | "k
 
 /** Every connected channel — the inbox channel filter's option set. */
 export async function listConnectedChannels(ctx: TenantContext): Promise<ConnectedChannelPick[]> {
-  const connections = await listChannelConnectionsForTenant(getDb(), ctx);
+  const connections = await listChannelConnectionsCached(ctx);
   return connections
     .filter((c) => c.status === "connected")
     .map(({ id, name, kind }) => ({ id, name, kind }));

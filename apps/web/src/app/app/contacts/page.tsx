@@ -4,6 +4,7 @@ import { Input } from "@crm/design-system/components/input";
 import { EmptyState } from "@crm/design-system/templates/empty-state";
 import { PageHeader } from "@crm/design-system/templates/page-header";
 import { hasPermission } from "@crm/permissions";
+import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 
 import type { ContactListRow } from "@/server/services";
@@ -20,21 +21,71 @@ function contactEmail(metadata: ContactListRow["metadata"]): string | undefined 
   return typeof email === "string" ? email : undefined;
 }
 
+const PAGE_SIZE = 50;
+
+function pageHref(query: string | undefined, target: number): string {
+  const sp = new URLSearchParams();
+  if (query) sp.set("q", query);
+  if (target > 1) sp.set("page", String(target));
+  const qs = sp.toString();
+  return `/app/contacts${qs ? `?${qs}` : ""}`;
+}
+
+function PaginationNav({
+  page,
+  hasNextPage,
+  query,
+  t,
+}: {
+  page: number;
+  hasNextPage: boolean;
+  query: string | undefined;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+}) {
+  if (page <= 1 && !hasNextPage) return null;
+  const link = "text-ink-muted hover:text-ink text-sm transition-colors";
+  return (
+    <nav
+      className="flex items-center justify-between border-t px-4 py-3"
+      aria-label={t("pagination")}
+    >
+      {page > 1 ? (
+        <Link href={pageHref(query, page - 1)} className={link}>
+          ← {t("previousPage")}
+        </Link>
+      ) : (
+        <span />
+      )}
+      {hasNextPage ? (
+        <Link href={pageHref(query, page + 1)} className={link}>
+          {t("nextPage")} →
+        </Link>
+      ) : (
+        <span />
+      )}
+    </nav>
+  );
+}
+
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const t = await getTranslations("contacts");
   const format = await getFormatter();
   const ctx = await requireTenantContext();
-  const { q } = await searchParams;
+  const { q, page: pageParam } = await searchParams;
   const query = q?.trim();
+  const page = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
   const canWrite = hasPermission(ctx.role, { messaging: ["write"] });
-  const [contacts, connections] = await Promise.all([
-    listContactsPage(ctx, query),
+  const [rows, connections] = await Promise.all([
+    // One extra row answers hasNextPage without a separate COUNT.
+    listContactsPage(ctx, { query, limit: PAGE_SIZE + 1, offset: (page - 1) * PAGE_SIZE }),
     listWahaConnections(ctx),
   ]);
+  const hasNextPage = rows.length > PAGE_SIZE;
+  const contacts = rows.slice(0, PAGE_SIZE);
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
@@ -93,6 +144,7 @@ export default async function ContactsPage({
               </li>
             ))}
           </ul>
+          <PaginationNav page={page} hasNextPage={hasNextPage} query={query} t={t} />
         </Card>
       )}
     </main>
