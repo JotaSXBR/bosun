@@ -311,9 +311,20 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   (arrow-left via `linkComponent`); template `AppShell` (grade `100dvh`,
   topBar/header fixos, rolagem independente) — tudo em `design-system/`,
   showcase + docs atualizados. Medido no Chrome: 1920×930 e 1536×740 sem
-  rolagem horizontal. **Próximos**: Slice 2 (shell — ModuleNav por papel,
-  engrenagem, UserMenu, ⌘K), 3 (hub de Configurações + redirects), 4
-  (Atendimento), 5 (Inteligência), 6 (Início+sino), 7 (telas PARCIAL/NOVO).
+  rolagem horizontal. **Slice 2 entregue** (2026-10-12): shell por papel —
+  `app/layout.tsx` passa `role`/`isPlatformAdmin`/`organizations` via
+  `getTenantContext` + `listMyOrganizations`; ModuleNav perde
+  Integrações/Configurações e ganha Inteligência (gate `ai:read`); engrenagem
+  → `/app/settings` só com permissão de gestão; `UserMenu` com Minha conta,
+  "Trocar para {org}" (`authClient.organization.setActive`) e Plataforma
+  (platform_admin); ⌘K com Módulos/Configurações/Minha conta/Ações; página
+  presa em `100dvh` com rolagem na região de conteúdo (scroller do
+  `AppShell` virou `div` — landmark `<main>` único por página). Rotas stub:
+  `/app/ai` (ai:read → 404), `/app/account` (todos), `/app/platform`
+  (platform_admin → 404). Verificado no Chrome com owner e agent (menu,
+  engrenagem, ⌘K, stubs e 404s). **Próximos**: Slice 3 (hub de
+  Configurações + redirects), 4 (Atendimento), 5 (Inteligência), 6
+  (Início+sino), 7 (telas PARCIAL/NOVO).
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
   business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB

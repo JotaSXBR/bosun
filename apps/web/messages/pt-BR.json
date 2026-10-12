@@ -187,6 +187,16 @@
     "alerts": "Alertas",
     "alertsEmpty": "Nenhum alerta por enquanto.",
     "alertsEmptyBody": "Avisos de conexões e automações aparecem aqui.",
+    "ai": "Inteligência",
+    "myAccount": "Minha conta",
+    "platform": "Plataforma",
+    "switchOrg": "Trocar para {org}",
+    "settingsOrg": "Organização",
+    "settingsService": "Atendimento",
+    "settingsChannels": "Canais",
+    "settingsSales": "Negócios",
+    "settingsAi": "Inteligência",
+    "actions": "Ações",
     "commandPlaceholder": "Buscar conteúdo e ações",
     "commandEmpty": "Nenhum resultado para “{query}”."
   },
@@ -712,5 +722,22 @@
     "dismiss": "Dispensar",
     "generatingToast": "Gerando sugestão…",
     "newNudgeToast": "Cliente aguardando resposta"
+  },
+  "ai": {
+    "title": "Inteligência",
+    "emptyTitle": "Inteligência em construção",
+    "emptyBody": "Revisões, conhecimento e memória dos agentes chegam aqui em breve.",
+    "restricted": "O módulo Inteligência não está disponível para o seu papel."
+  },
+  "account": {
+    "title": "Minha conta",
+    "emptyTitle": "Minha conta em construção",
+    "emptyBody": "Perfil, segurança, preferências e notificações pessoais chegam aqui em breve."
+  },
+  "platform": {
+    "title": "Plataforma",
+    "emptyTitle": "Plataforma em construção",
+    "emptyBody": "E-mail, cobrança e padrões da instância chegam aqui em breve.",
+    "restricted": "Área restrita a administradores da plataforma."
   }
 }

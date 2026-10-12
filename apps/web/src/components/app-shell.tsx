@@ -5,10 +5,14 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@crm/design-system/components/dropdown-menu";
+import { Icon } from "@crm/design-system/components/icon";
 import { IconButton } from "@crm/design-system/components/icon-button";
+import type { ModuleNavItem } from "@crm/design-system/components/module-nav";
+import { AppShell as DsAppShell } from "@crm/design-system/templates/app-shell";
 import { AppTopBar } from "@crm/design-system/templates/app-top-bar";
 import { CommandPalette, useCommandShortcut } from "@crm/design-system/templates/command-palette";
-import { UserMenu } from "@crm/design-system/templates/user-menu";
+import { UserMenu, type UserMenuItem } from "@crm/design-system/templates/user-menu";
+import { hasPermission, type OrgRole } from "@crm/permissions";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -16,109 +20,221 @@ import * as React from "react";
 
 import { authClient } from "@/lib/auth-client";
 
-const MODULES = [
-  { id: "home", href: "/app", icon: "house", key: "home" },
-  { id: "inbox", href: "/app/inbox", icon: "inbox", key: "inbox" },
-  { id: "contacts", href: "/app/contacts", icon: "users", key: "contacts" },
-  { id: "deals", href: "/app/deals", icon: "folder-kanban", key: "deals" },
-  { id: "integrations", href: "/app/integrations", icon: "plug", key: "integrations" },
-  { id: "settings", href: "/app/settings", icon: "settings", key: "settings" },
-] as const;
+import {
+  activeModule,
+  AI_MODULE,
+  MANAGEMENT,
+  menuItems,
+  type ModuleDef,
+  MODULES,
+  type OrgRef,
+  paletteGroups,
+} from "./app-shell-menu";
 
-function activeModule(pathname: string): string {
-  if (pathname === "/app") return "home";
-  return MODULES.find((m) => m.id !== "home" && pathname.startsWith(m.href))?.id ?? "home";
+interface ShellUser {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+}
+
+export interface AppShellProps {
+  user: ShellUser;
+  /** Active-org role — `null`/absent outside an org context (e.g. /app/setup). */
+  role?: OrgRole | null;
+  isPlatformAdmin?: boolean;
+  currentOrganizationId?: string | null;
+  organizations?: OrgRef[];
+  children: React.ReactNode;
+}
+
+/** Modules + visibility flags derived from the org role. */
+function useShellNav(role?: OrgRole | null) {
+  const t = useTranslations("nav");
+  const canAi = role ? hasPermission(role, { ai: ["read"] }) : false;
+  const canManage = role ? MANAGEMENT.some((p) => hasPermission(role, p)) : false;
+  const moduleDefs: readonly ModuleDef[] = canAi ? [...MODULES, AI_MODULE] : MODULES;
+  const navModules: ModuleNavItem[] = moduleDefs.map((m) => ({
+    id: m.id,
+    label: t(m.key),
+    icon: m.icon,
+    href: m.href,
+  }));
+  return { canAi, canManage, moduleDefs, navModules };
+}
+
+function useShellActions() {
+  const router = useRouter();
+  const signOut = React.useCallback(() => {
+    void authClient.signOut().then(() => {
+      router.push("/sign-in");
+      router.refresh();
+    });
+  }, [router]);
+  const switchOrg = React.useCallback(
+    (organizationId: string) => {
+      void authClient.organization.setActive({ organizationId }).then(() => {
+        router.push("/app");
+        router.refresh();
+      });
+    },
+    [router],
+  );
+  return { signOut, switchOrg };
+}
+
+function AlertsMenu() {
+  const t = useTranslations("nav");
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <IconButton icon="bell" label={t("alerts")} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72 p-3">
+        <p className="text-ink-strong text-sm font-medium">{t("alertsEmpty")}</p>
+        <p className="text-ink-muted mt-1 text-xs">{t("alertsEmptyBody")}</p>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function TopActions({
+  user,
+  canManage,
+  items,
+  onSearch,
+}: {
+  user: ShellUser;
+  canManage: boolean;
+  items: UserMenuItem[];
+  onSearch: () => void;
+}) {
+  const t = useTranslations("nav");
+  return (
+    <>
+      <IconButton
+        icon="search"
+        label={t("search")}
+        aria-keyshortcuts="Control+K Meta+K"
+        onClick={onSearch}
+      />
+      <AlertsMenu />
+      {canManage && (
+        <IconButton asChild label={t("settings")}>
+          <Link href="/app/settings">
+            <Icon name="settings" size={18} />
+          </Link>
+        </IconButton>
+      )}
+      <UserMenu
+        name={user.name ?? user.email ?? t("account")}
+        email={user.email ?? undefined}
+        src={user.image ?? undefined}
+        linkComponent={Link}
+        label={t("account")}
+        items={items}
+      />
+    </>
+  );
+}
+
+function ShellTopBar({
+  navModules,
+  pathname,
+  user,
+  canManage,
+  items,
+  onSearch,
+}: {
+  navModules: ModuleNavItem[];
+  pathname: string;
+  user: ShellUser;
+  canManage: boolean;
+  items: UserMenuItem[];
+  onSearch: () => void;
+}) {
+  return (
+    <AppTopBar
+      modules={navModules}
+      active={activeModule(pathname)}
+      linkComponent={Link}
+      actions={<TopActions user={user} canManage={canManage} items={items} onSearch={onSearch} />}
+    />
+  );
+}
+
+function Palette({
+  open,
+  onOpenChange,
+  moduleDefs,
+  canManage,
+  canAi,
+  signOut,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  moduleDefs: readonly ModuleDef[];
+  canManage: boolean;
+  canAi: boolean;
+  signOut: () => void;
+}) {
+  const t = useTranslations("nav");
+  const router = useRouter();
+  const go = React.useCallback((href: string) => () => router.push(href), [router]);
+  return (
+    <CommandPalette
+      open={open}
+      onOpenChange={onOpenChange}
+      placeholder={t("commandPlaceholder")}
+      emptyLabel={(q) => t("commandEmpty", { query: q })}
+      groups={paletteGroups({ t, go, moduleDefs, canManage, canAi, signOut })}
+    />
+  );
 }
 
 export function AppShell({
   user,
+  role,
+  isPlatformAdmin = false,
+  currentOrganizationId,
+  organizations = [],
   children,
-}: {
-  user: { name?: string | null; email?: string | null; image?: string | null };
-  children: React.ReactNode;
-}) {
+}: AppShellProps) {
   const t = useTranslations("nav");
   const pathname = usePathname();
-  const router = useRouter();
   const [paletteOpen, setPaletteOpen] = React.useState(false);
-
-  const openPalette = React.useCallback(() => setPaletteOpen(true), []);
-  useCommandShortcut(openPalette);
-
-  const signOut = React.useCallback(async () => {
-    await authClient.signOut();
-    router.push("/sign-in");
-    router.refresh();
-  }, [router]);
-
-  const modules = MODULES.map((m) => ({ id: m.id, label: t(m.key), icon: m.icon, href: m.href }));
+  const { signOut, switchOrg } = useShellActions();
+  const { canAi, canManage, moduleDefs, navModules } = useShellNav(role);
+  useCommandShortcut(React.useCallback(() => setPaletteOpen(true), []));
 
   return (
-    <>
-      <AppTopBar
-        modules={modules}
-        active={activeModule(pathname)}
-        linkComponent={Link}
-        actions={
-          <>
-            <IconButton
-              icon="search"
-              label={t("search")}
-              aria-keyshortcuts="Control+K Meta+K"
-              onClick={openPalette}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <IconButton icon="bell" label={t("alerts")} />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72 p-3">
-                <p className="text-ink-strong text-sm font-medium">{t("alertsEmpty")}</p>
-                <p className="text-ink-muted mt-1 text-xs">{t("alertsEmptyBody")}</p>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <UserMenu
-              name={user.name ?? user.email ?? t("account")}
-              email={user.email ?? undefined}
-              src={user.image ?? undefined}
-              linkComponent={Link}
-              label={t("account")}
-              items={[
-                { icon: "settings", label: t("settings"), href: "/app/settings" },
-                { icon: "log-out", label: t("signOut"), onSelect: () => void signOut() },
-              ]}
-            />
-          </>
-        }
-      />
-      <CommandPalette
+    <DsAppShell
+      topBar={
+        <ShellTopBar
+          navModules={navModules}
+          pathname={pathname}
+          user={user}
+          canManage={canManage}
+          items={menuItems({
+            t,
+            organizations,
+            currentOrganizationId,
+            isPlatformAdmin,
+            switchOrg,
+            signOut,
+          })}
+          onSearch={() => setPaletteOpen(true)}
+        />
+      }
+    >
+      <Palette
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
-        placeholder={t("commandPlaceholder")}
-        emptyLabel={(q) => t("commandEmpty", { query: q })}
-        groups={[
-          {
-            label: t("modules"),
-            items: MODULES.map((m) => ({
-              id: m.id,
-              icon: m.icon,
-              label: t(m.key),
-              onSelect: () => router.push(m.href),
-            })),
-          },
-          {
-            label: t("account"),
-            items: [
-              {
-                id: "sign-out",
-                icon: "log-out",
-                label: t("signOut"),
-                onSelect: () => void signOut(),
-              },
-            ],
-          },
-        ]}
+        moduleDefs={moduleDefs}
+        canManage={canManage}
+        canAi={canAi}
+        signOut={signOut}
       />
       {children}
-    </>
+    </DsAppShell>
   );
 }
