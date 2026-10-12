@@ -57,7 +57,24 @@ const TERMINAL_STATUSES = sql`${conversations.status} in ('resolved', 'closed')`
 /** Deferred rows leave the work views until the instant passes — lazy un-snooze. */
 const NOT_SNOOZED = sql`(${conversations.snoozedUntil} is null or ${conversations.snoozedUntil} <= now())`;
 const SNOOZED = sql`(${conversations.snoozedUntil} > now())`;
-/** Correlated scalar — the latest message's direction ('inbound' = awaiting reply). */
+/**
+ * Latest message per conversation, packed as ONE correlated scalar —
+ * select-list subplans only run for output rows (post-LIMIT), so a
+ * single jsonb probe halves the two scalar evaluations the row used to
+ * pay (a LATERAL join was measured WORSE here: joins evaluate per
+ * candidate row, before the LIMIT).
+ */
+const LAST_MESSAGE_SQL = sql<{ direction: string | null; preview: string | null } | null>`(
+  select jsonb_build_object(
+    'direction', m.direction,
+    'preview', coalesce(m.content ->> 'text', m.content ->> 'caption', '[' || (m.content ->> 'type') || ']')
+  )
+  from ${messages} m
+  where m.conversation_id = ${conversations.id}
+  order by m.sent_at desc nulls last, m.created_at desc
+  limit 1
+)`;
+/** Direction-only probe for the optional `awaitingReply` filter. */
 const LAST_MSG_DIRECTION_SQL = sql<
   string | null
 >`(select m.direction from ${messages} m where m.conversation_id = ${conversations.id} order by m.sent_at desc nulls last, m.created_at desc limit 1)`;
@@ -122,12 +139,7 @@ export async function listConversations(
         contactChannelUserId: contacts.channelUserId,
         assigneeName: users.name,
         sectorName: teams.name,
-        // Correlated scalar subquery — cheap under
-        // messages_conversation_sent_idx for inbox-sized pages.
-        lastMessagePreview: sql<
-          string | null
-        >`(select coalesce(m.content ->> 'text', m.content ->> 'caption', '[' || (m.content ->> 'type') || ']') from ${messages} m where m.conversation_id = ${conversations.id} order by m.sent_at desc nulls last, m.created_at desc limit 1)`,
-        awaitingReply: sql<boolean>`${LAST_MSG_DIRECTION_SQL} = 'inbound'`,
+        lastMessage: LAST_MESSAGE_SQL,
       })
       .from(conversations)
       .innerJoin(contacts, eq(contacts.id, conversations.contactId))
@@ -137,7 +149,12 @@ export async function listConversations(
       .orderBy(order)
       .limit(opts.limit),
   );
-  return rows.map(({ conversation, ...rest }) => ({ ...conversation, ...rest }));
+  return rows.map(({ conversation, lastMessage, ...rest }) => ({
+    ...conversation,
+    ...rest,
+    lastMessagePreview: lastMessage?.preview ?? null,
+    awaitingReply: lastMessage?.direction === "inbound",
+  }));
 }
 
 /** Per-tab counters — one grouped scan, no N queries. */
@@ -179,6 +196,9 @@ export async function listMessages(
   limit: number,
 ): Promise<MessageWithAuthorRow[]> {
   return withTenant(db, organizationId, async (tx) => {
+    // The `limit` NEWEST messages in chronological order — same tail
+    // window as listRecentMessages: a long thread must keep its latest
+    // messages visible, not its first page.
     const rows = await tx
       .select({ message: messages, authorName: users.name })
       .from(messages)
@@ -189,9 +209,9 @@ export async function listMessages(
           eq(messages.organizationId, organizationId),
         ),
       )
-      .orderBy(messages.sentAt)
+      .orderBy(sql`${messages.sentAt} desc nulls last`, desc(messages.createdAt))
       .limit(limit);
-    const list = rows.map(({ message, ...rest }) => ({ ...message, ...rest }));
+    const list = rows.map(({ message, ...rest }) => ({ ...message, ...rest })).reverse();
     const ids = list.map((m) => m.id);
     const quotedIds = [
       ...new Set(list.map((m) => quotedExternalIdOf(m.content)).filter((v) => v !== null)),

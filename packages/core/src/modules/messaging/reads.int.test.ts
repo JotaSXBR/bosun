@@ -128,6 +128,41 @@ describe("messaging reads with tenant context", () => {
     expect(msgsB).toHaveLength(0);
   });
 
+  it("returns the newest messages when the thread exceeds the limit", async () => {
+    const conversationId = await withTenant(db, orgA, async (tx) => {
+      await ingestChannelEvent(tx, connA, {
+        ...inbound,
+        externalMessageId: "false_tail@c.us_T1",
+        from: { channelUserId: "tail@c.us", displayName: "Tail" },
+      });
+      const [conv] = await tx
+        .select({ id: conversations.id })
+        .from(conversations)
+        .where(eq(conversations.externalId, "tail@c.us"));
+      for (const i of [1, 2, 3, 4, 5, 6, 7, 8]) {
+        await insertMessage(tx, {
+          organizationId: orgA,
+          conversationId: conv!.id,
+          channelConnectionId: connA.id,
+          contactId: null,
+          direction: "outbound",
+          content: { type: "text", text: `m${i}` },
+          externalId: `tail-${i}`,
+          status: "sent",
+          sentAt: new Date(`2024-06-01T00:00:0${i}Z`),
+        });
+      }
+      return conv!.id;
+    });
+    const rows = await listConversationMessages(db, ctx(orgA, "agent"), {
+      conversationId,
+      limit: 3,
+    });
+    // The seeded inbound is older than m1 — the window must be the tail,
+    // in chronological order, not the first page of the thread.
+    expect(rows.map((m) => (m.content as { text: string }).text)).toEqual(["m6", "m7", "m8"]);
+  });
+
   it("getConversationDetail joins contact + names and hides cross-org ids", async () => {
     const convs = await listTenantConversations(db, ctx(orgA, "agent"), { limit: 10 });
     const detail = await getConversationDetail(db, ctx(orgA, "agent"), {
