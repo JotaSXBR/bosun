@@ -336,6 +336,18 @@ spacing:
   nav-height: 76px
   container-max: 1440px
   container-text: 680px
+  # Família Layout — docs/product/layout-desktop-app.md §5.
+  # Variantes -sm valem abaixo de 1700px de largura útil (limiar HIP).
+  viewport-ref: 1920px
+  viewport-floor: 1536px
+  page-pad: 32px
+  page-header-compact: 56px
+  inbox-list: 360px
+  inbox-list-sm: 320px
+  inbox-aside: 360px
+  inbox-aside-sm: 320px
+  thread-measure: 760px
+  kanban-column: 296px
 components:
   button-primary:
     backgroundColor: "{colors.surface-accent}"
@@ -651,7 +663,7 @@ loading, error, empty and selected states. Live specimens: `/design-system`
 | Surfaces   | `Card`, `Accordion`, `Dialog`                                                                        |
 | Feedback   | `Toast` (+ `Toaster`/`toast()`), `Tooltip`, `TooltipBubble`                                          |
 | Data       | `Metric`, `ProgressBar`, `RingChart`, `BarChart`                                                     |
-| Templates  | `AppTopBar`, `UserMenu`, `PageHeader`, `CommandPalette`, `EmptyState`, `AuthLayout`                  |
+| Templates  | `AppShell`, `AppTopBar`, `UserMenu`, `PageHeader`, `CommandPalette`, `EmptyState`, `AuthLayout`      |
 
 - **Button** — pill; `primary` (Verde sinal, **one per region**), `secondary`
   (tonal, default), `outline` (accent stroke), `ghost`, `inverse` (mist
@@ -779,7 +791,9 @@ overridable by props.
 Type: `font-display|sans|mono`, `text-display-xl|display|page-title|h1…h4|lg|md|sm|ui|ui-lg|xs|2xs|metric-xl|metric|metric-sm`,
 `tracking-display|heading|title|ui|eyebrow`. Shape: `rounded-xs…2xl|pill|card|card-inner|notch`.
 Layout: Tailwind spacing (4px), `h-control-*`, `size-icon-btn`, `h-nav`,
-`p-card-pad`, `gap-card-gap`, `max-w-page`, `max-w-text`. Effects:
+`p-card-pad`, `gap-card-gap`, `max-w-page`, `max-w-text`, `max-w-thread`,
+`px-page-pad`, `h-page-header-compact`, `w-inbox-list(-sm)`,
+`w-inbox-aside(-sm)`, `w-kanban-column`. Effects:
 `shadow-control|card|raised|pop|glow|focus`, `ease-standard|enter|exit`,
 `duration-instant|fast|base|slow|chart`, `backdrop-blur-overlay|glass`.
 

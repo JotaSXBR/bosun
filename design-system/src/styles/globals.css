@@ -207,6 +207,14 @@
   --spacing-card-pad: var(--card-pad);
   --container-page: var(--container-max);
   --container-text: var(--container-text);
+  --container-thread: var(--thread-measure);
+  --spacing-page-pad: var(--page-pad);
+  --spacing-page-header-compact: var(--page-header-compact);
+  --spacing-inbox-list: var(--inbox-list);
+  --spacing-inbox-list-sm: var(--inbox-list-sm);
+  --spacing-inbox-aside: var(--inbox-aside);
+  --spacing-inbox-aside-sm: var(--inbox-aside-sm);
+  --spacing-kanban-column: var(--kanban-column);
 
   /* Effects */
   --shadow-control: var(--shadow-control);

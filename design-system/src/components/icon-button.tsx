@@ -2,6 +2,7 @@
 
 import { cn } from "@crm/design-system/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Slot } from "radix-ui";
 import type * as React from "react";
 
 import { Icon, type IconName } from "./icon";
@@ -41,18 +42,26 @@ const DOT_POSITION = {
  * Circular icon-only button — card corner actions, toolbar, top bar.
  * Always pass a label.
  */
-export interface IconButtonProps
-  extends React.ComponentProps<"button">, VariantProps<typeof iconButtonVariants> {
-  /** Lucide icon name. */
-  icon: IconName;
-  /** Accessible label (also used as tooltip title). */
-  label: string;
-  /** Shows a Verde sinal notification dot. */
-  dot?: boolean;
-}
+export type IconButtonProps = React.ComponentProps<"button"> &
+  VariantProps<typeof iconButtonVariants> & {
+    /** Accessible label (also used as tooltip title). */
+    label: string;
+    /** Shows a Verde sinal notification dot. */
+    dot?: boolean;
+  } & (
+    | {
+        /** Lucide icon name. */
+        icon: IconName;
+        asChild?: false;
+      }
+    | {
+        /** Renders the single child (e.g. a router link) with IconButton styling — caller supplies the inner Icon. */
+        asChild: true;
+        icon?: undefined;
+      }
+  );
 
 export function IconButton({
-  icon,
   label,
   variant = "control",
   size = "md",
@@ -63,26 +72,34 @@ export function IconButton({
   ref,
   ...props
 }: IconButtonProps) {
+  const { icon, asChild, children, ...rest } = props;
+  const Comp = asChild ? Slot.Root : "button";
   return (
-    <button
+    <Comp
       ref={ref}
-      type={type}
+      type={asChild ? undefined : type}
       aria-label={label}
       title={label}
       disabled={disabled}
       className={cn(iconButtonVariants({ variant, size }), className)}
-      {...props}
+      {...rest}
     >
-      <Icon name={icon} size={ICON_SIZES[size ?? "md"]} />
-      {dot && (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "bg-signal-400 ring-control absolute size-1.5 rounded-full ring-2",
-            DOT_POSITION[size ?? "md"],
+      {asChild ? (
+        children
+      ) : (
+        <>
+          <Icon name={icon} size={ICON_SIZES[size ?? "md"]} />
+          {dot && (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "bg-signal-400 ring-control absolute size-1.5 rounded-full ring-2",
+                DOT_POSITION[size ?? "md"],
+              )}
+            />
           )}
-        />
+        </>
       )}
-    </button>
+    </Comp>
   );
 }

@@ -42,8 +42,9 @@ variants, defaults), Radix underneath where behavior matters. `textarea`,
 `label`, `form` and `dropdown-menu` predate the export (shadcn) and were
 restyled; they have no export equivalent.
 
-Templates (`src/templates/`): `app-top-bar`, `user-menu`, `page-header`,
-`command-palette` (+ `useCommandShortcut`), `empty-state`, `auth-layout` —
+Templates (`src/templates/`): `app-shell`, `app-top-bar`, `user-menu`,
+`page-header`, `command-palette` (+ `useCommandShortcut`), `empty-state`,
+`auth-layout` —
 ported from `reference/ui_kits/webapp` (shell + login) and used by the app
 shell (`apps/web/src/components/app-shell.tsx`) and the sign-in/sign-up/
 onboarding screens.

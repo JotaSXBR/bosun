@@ -45,4 +45,17 @@
   --gutter:24px;
   --card-gap:16px;
   --card-pad:24px;
+
+  /* Família Layout — docs/product/layout-desktop-app.md §5.
+     Variantes -sm valem abaixo de 1700px de largura útil. */
+  --viewport-ref:1920px;
+  --viewport-floor:1536px;
+  --page-pad:32px;
+  --page-header-compact:56px;
+  --inbox-list:360px;
+  --inbox-list-sm:320px;
+  --inbox-aside:360px;
+  --inbox-aside-sm:320px;
+  --thread-measure:760px;
+  --kanban-column:296px;
 }

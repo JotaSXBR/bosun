@@ -298,6 +298,22 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
 - **Decisão — round-robin descartado** (2026-10-08): atribuição segue manual
   da fila; quando agentes IA entrarem, roteamento é via intake
   `open`|`pending` (pending = IA atende) — não por rodízio de agentes.
+- **P1 — IA + navegação (reforma da interface)**: specs aprovadas
+  2026-10-12 — `docs/product/ia-navegacao.md` (árvore, rotas, matriz de
+  configurações, permissões novas, fluxos) + `layout-desktop-app.md`
+  (piso 1536×740 obrigatório, família Layout de tokens, formato app
+  `100dvh`). Execução em 7 slices (ordem sugerida no doc). **Slice 1
+  entregue** (2026-10-12): tokens Layout (`page-pad`,
+  `page-header-compact`, `inbox-list(-sm)`, `inbox-aside(-sm)`,
+  `thread-measure`, `kanban-column`, `viewport-*`) no DESIGN.md +
+  `spacing.css` + `@theme`; `IconButton` ganha `asChild` (Radix Slot);
+  `PageHeader` com `compact` (56px, título h3, abas na linha) e `back`
+  (arrow-left via `linkComponent`); template `AppShell` (grade `100dvh`,
+  topBar/header fixos, rolagem independente) — tudo em `design-system/`,
+  showcase + docs atualizados. Medido no Chrome: 1920×930 e 1536×740 sem
+  rolagem horizontal. **Próximos**: Slice 2 (shell — ModuleNav por papel,
+  engrenagem, UserMenu, ⌘K), 3 (hub de Configurações + redirects), 4
+  (Atendimento), 5 (Inteligência), 6 (Início+sino), 7 (telas PARCIAL/NOVO).
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
   business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB

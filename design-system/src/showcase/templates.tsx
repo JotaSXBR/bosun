@@ -5,6 +5,7 @@ import * as React from "react";
 import { Button } from "../components/button";
 import { IconButton } from "../components/icon-button";
 import { Input } from "../components/input";
+import { AppShell } from "../templates/app-shell";
 import { AppTopBar } from "../templates/app-top-bar";
 import { AuthLayout } from "../templates/auth-layout";
 import { CommandPalette, useCommandShortcut } from "../templates/command-palette";
@@ -90,6 +91,39 @@ export function Templates() {
           onRemoveFilter={(f) => setFilters((cur) => cur.filter((x) => x !== f))}
           right={<IconButton icon="list-filter" label="Filtros" />}
         />
+        <PageHeader
+          compact
+          title="Atendimento"
+          tabs={["Fila", "Minhas", "Adiados", "Fechadas"]}
+          right={<IconButton icon="list-filter" label="Filtros" />}
+        />
+        <PageHeader
+          compact
+          back={{ href: "#", label: "Voltar para Configurações" }}
+          title="Detalhe da conexão"
+        />
+      </Group>
+      <Group title="AppShell">
+        <div className="border-line overflow-hidden rounded-lg border">
+          <AppShell
+            className="h-160"
+            topBar={<AppTopBar modules={MODULES} active={module} onModuleChange={setModule} />}
+            header={<PageHeader compact title="Atendimento" tabs={["Fila", "Minhas", "Adiados"]} />}
+          >
+            <div className="flex h-full">
+              <div className="w-inbox-list border-line space-y-3 overflow-y-auto border-r p-4">
+                {Array.from({ length: 12 }, (_, i) => (
+                  <div key={i} className="bg-surface rounded-card h-16" />
+                ))}
+              </div>
+              <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                {Array.from({ length: 10 }, (_, i) => (
+                  <div key={i} className="bg-surface max-w-thread rounded-card h-20" />
+                ))}
+              </div>
+            </div>
+          </AppShell>
+        </div>
       </Group>
       <Group title="CommandPalette">
         <PaletteDemo />

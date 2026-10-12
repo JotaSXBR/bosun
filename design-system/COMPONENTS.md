@@ -194,10 +194,19 @@ shape="rounded"` styling.
 `name`, `email`, `src`, `items: {icon, label, href?, onSelect?}[]`,
 `linkComponent`, `label` ("Conta"). Avatar trigger; rings while open.
 
+### `AppShell`
+
+`topBar` (fixed `AppTopBar`), `header` (optional fixed `PageHeader`),
+`children` (work region). Fixed `100dvh` grid: chrome pinned, content
+scrolls — each panel inside may scroll independently.
+
 ### `PageHeader`
 
-`title` (ReactNode — display-size `h1`), `tabs`/`tab`/`onTab`, `filters` +
-`onRemoveFilter` (Tags), `right` (actions), `className`.
+`title` (ReactNode — display-size `h1`), `compact` (56px work-module header,
+title `h3`, tabs on the same line), `back` (`{href?, onClick?, label?}` —
+arrow-left `IconButton` before the title; `href` renders via `linkComponent`),
+`tabs`/`tab`/`onTab`, `filters` + `onRemoveFilter` (Tags), `right` (actions),
+`className`.
 
 ### `CommandPalette`, `useCommandShortcut`
 
