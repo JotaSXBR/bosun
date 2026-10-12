@@ -17,9 +17,9 @@ describe("shouldRefreshForEvent", () => {
     expect(shouldRefreshForEvent("/app/contacts", "agent_suggestion.created")).toBe(false);
   });
 
-  it("refreshes integrations/settings only on their data events", () => {
-    expect(shouldRefreshForEvent("/app/integrations", "connection.status")).toBe(true);
-    expect(shouldRefreshForEvent("/app/integrations", "message.created")).toBe(false);
+  it("refreshes channels/settings only on their data events", () => {
+    expect(shouldRefreshForEvent("/app/settings/channels", "connection.status")).toBe(true);
+    expect(shouldRefreshForEvent("/app/settings/channels", "message.created")).toBe(false);
     expect(shouldRefreshForEvent("/app/settings/ai", "agent_suggestion.created")).toBe(true);
     expect(shouldRefreshForEvent("/app/settings", "connection.status")).toBe(true);
     expect(shouldRefreshForEvent("/app/settings", "message.received")).toBe(false);

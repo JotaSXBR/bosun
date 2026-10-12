@@ -39,7 +39,7 @@ export async function updatePlatformSettingAction(input: {
   try {
     const parsed = inputSchema.parse(input);
     await setPlatformSetting(getDb(), ctx, parsed.group, parsed.values);
-    revalidatePath("/app/settings");
+    revalidatePath("/app/platform");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível salvar a configuração.") };

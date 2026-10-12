@@ -209,6 +209,8 @@
     "moreActions": "Mais ações",
     "stageActions": "Ações da etapa {name}",
     "editStage": "Editar etapa",
+    "editFunnel": "Editar funil",
+    "stages": "Etapas",
     "deleteStage": "Excluir etapa",
     "addDeal": "Deal",
     "dealActions": "Ações do deal {title}",
@@ -415,6 +417,50 @@
     "teamsDescription": "Setores de atendimento e seus membros.",
     "manageTeams": "Gerenciar equipes",
     "sections": "Seções",
+    "hub": {
+      "organization": "Organização",
+      "service": "Atendimento",
+      "channels": "Canais",
+      "sales": "Negócios",
+      "ai": "Inteligência",
+      "emptyTitle": "Sem configurações disponíveis",
+      "emptyBody": "O seu papel não permite gerenciar configurações nesta organização.",
+      "items": {
+        "general": "Geral",
+        "generalDesc": "Fuso horário e preferências da organização",
+        "members": "Membros e convites",
+        "membersDesc": "Pessoas, papéis e convites pendentes",
+        "billing": "Plano e uso",
+        "billingDesc": "Assinatura, cobrança e armazenamento",
+        "audit": "Auditoria",
+        "auditDesc": "Registro de ações da organização",
+        "teams": "Equipes",
+        "teamsDesc": "Equipes e membros de cada equipe",
+        "hours": "Horário e mensagens",
+        "hoursDesc": "Mensagem enviada fora do horário de atendimento",
+        "rules": "Regras de ticket",
+        "rulesDesc": "Janela para reabrir uma conversa resolvida",
+        "channels": "Conexões",
+        "channelsDesc": "Canais, webhooks e widget do site",
+        "funnels": "Funis e etapas",
+        "funnelsDesc": "Funis, etapas e modelos de negócio",
+        "ai": "Agentes e credenciais",
+        "aiDesc": "Agentes de IA, chaves e uso"
+      }
+    },
+    "stub": {
+      "title": "Em construção",
+      "body": "Esta seção chega em breve."
+    },
+    "general": {
+      "saved": "Preferências atualizadas."
+    },
+    "hours": {
+      "saved": "Mensagem fora do horário atualizada."
+    },
+    "rules": {
+      "saved": "Regras atualizadas."
+    },
     "org": {
       "title": "Organização",
       "description": "Preferências de atendimento aplicadas a toda a organização.",
@@ -441,6 +487,7 @@
       "fromDb": "(banco)",
       "secretSet": "•••••••• (configurado)",
       "saveGroup": "Salvar {group}",
+      "guidedSetup": "Abrir a configuração guiada",
       "groups": {
         "email": {
           "title": "E-mail",

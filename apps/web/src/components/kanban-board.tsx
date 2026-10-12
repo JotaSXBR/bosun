@@ -117,14 +117,7 @@ export function KanbanBoard({
 
   return (
     <div className="space-y-4">
-      <KanbanToolbar
-        board={board}
-        funnels={funnels}
-        canManage={canManage}
-        onNewFunnel={() => patchDialogs({ funnel: true })}
-        onNewStage={() => patchDialogs({ stage: { open: true } })}
-        onDeleteFunnel={() => patchDialogs({ deleteFunnel: true })}
-      />
+      <KanbanToolbar board={board} funnels={funnels} canManage={canManage} />
 
       <DndContext
         sensors={sensors}
@@ -147,8 +140,6 @@ export function KanbanBoard({
                 onDelete: (deal) => patchDialogs({ deletingDeal: deal }),
                 onMove: (deal, stageId) => moveDeal(deal.id, stageId),
               }}
-              onEditStage={() => patchDialogs({ stage: { open: true, stage: column.stage } })}
-              onDeleteStage={() => patchDialogs({ deletingStage: column.stage })}
               onAddDeal={() => patchDialogs({ newDealStage: column.stage.id })}
             />
           ))}
@@ -173,7 +164,6 @@ export function KanbanBoard({
         state={dialogs}
         setState={patchDialogs}
         funnelId={board.funnel.id}
-        funnelName={board.funnel.name}
         stages={columns.map((c) => c.stage)}
         labels={labels}
         canManage={canManage}

@@ -91,7 +91,7 @@ export async function createChannelConnectionAction(
     } catch (checklistError) {
       captureException(checklistError, { action: "integrations.checklist" });
     }
-    revalidatePath("/app/integrations");
+    revalidatePath("/app/settings/channels");
     return { ok: true, connectionId: conn.id, status, qrCode, warning };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível criar a conexão.") };
@@ -114,7 +114,7 @@ export async function connectChannelConnectionAction(id: string): Promise<Connec
         channelConnectionId: id,
       });
     }
-    revalidatePath("/app/integrations");
+    revalidatePath("/app/settings/channels");
     return { ok: true, status: result.status, qrCode: result.qrCode };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível conectar.") };
@@ -143,7 +143,7 @@ export async function connectionLifecycleAction(
   const ctx = await requireTenantContext();
   try {
     const result = await connectionLifecycle(getDb(), ctx, id, action);
-    revalidatePath("/app/integrations");
+    revalidatePath("/app/settings/channels");
     return { ok: true, status: result.status };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível executar a ação.") };
@@ -164,7 +164,7 @@ export async function deleteChannelConnectionAction(id: string): Promise<Integra
   const ctx = await requireTenantContext();
   try {
     await removeChannelConnection(getDb(), ctx, id);
-    revalidatePath("/app/integrations");
+    revalidatePath("/app/settings/channels");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível excluir a conexão.") };
@@ -179,7 +179,7 @@ export async function updateWidgetConfigAction(
   const ctx = await requireTenantContext();
   try {
     await updateWidgetConfig(getDb(), ctx, id, config);
-    revalidatePath("/app/integrations");
+    revalidatePath("/app/settings/channels");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível salvar o widget.") };

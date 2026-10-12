@@ -53,9 +53,11 @@ function ColorField({
 export function NewFunnelDialog({
   open,
   onOpenChange,
+  redirectBase = "/app/deals",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  redirectBase?: string;
 }) {
   const t = useTranslations("leads");
   const router = useRouter();
@@ -72,7 +74,7 @@ export function NewFunnelDialog({
       if (result.ok) {
         toast.success(t("funnelForm.created"));
         onOpenChange(false);
-        router.push(`/app/deals?funnel=${result.data.id}`);
+        router.push(`${redirectBase}?funnel=${result.data.id}`);
       } else {
         toast.error(result.error);
       }
@@ -190,11 +192,13 @@ export function DeleteFunnelDialog({
   funnelName,
   open,
   onOpenChange,
+  redirectBase = "/app/deals",
 }: {
   funnelId: string;
   funnelName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  redirectBase?: string;
 }) {
   const t = useTranslations("leads");
   const router = useRouter();
@@ -216,7 +220,7 @@ export function DeleteFunnelDialog({
               if (result.ok) {
                 toast.success(t("funnelForm.funnelDeleted"));
                 onOpenChange(false);
-                router.push("/app/deals");
+                router.push(redirectBase);
               } else {
                 toast.error(result.error);
               }

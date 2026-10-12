@@ -31,7 +31,7 @@ function errorMessage(error: unknown, fallback: string): string {
 }
 
 function revalidateTeams(): void {
-  revalidatePath("/app/settings/teams");
+  revalidatePath("/app/settings/service/teams");
 }
 
 export async function createTeamAction(input: CreateTeamInput): Promise<TeamsActionResult> {

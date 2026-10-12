@@ -13,7 +13,7 @@ export function shouldRefreshForEvent(pathname: string, type: string): boolean {
     return INBOX_EVENTS.some((prefix) => type.startsWith(prefix));
   }
   if (pathname.startsWith("/app/contacts")) return type.startsWith("conversation.");
-  if (pathname.startsWith("/app/integrations")) return type.startsWith("connection.");
+  // /app/settings/channels is covered by the /app/settings branch (connection.*).
   if (pathname.startsWith("/app/settings")) {
     return SETTINGS_EVENTS.some((prefix) => type.startsWith(prefix));
   }

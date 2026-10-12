@@ -7,12 +7,6 @@ import { useTranslations } from "next-intl";
 
 import { DealFormDialog } from "@/components/deal-dialogs";
 import { DeleteDealDialog } from "@/components/delete-deal-dialog";
-import {
-  DeleteFunnelDialog,
-  DeleteStageDialog,
-  NewFunnelDialog,
-  StageDialog,
-} from "@/components/funnel-dialogs";
 import { LabelPicker } from "@/components/label-picker";
 import { setDealLabelsAction } from "@/server/actions/leads";
 
@@ -54,28 +48,19 @@ function DealLabelsDialog({
 }
 
 export interface KanbanDialogState {
-  funnel: boolean;
-  deleteFunnel: boolean;
-  stage: { open: boolean; stage?: StageRow };
-  deletingStage?: StageRow;
   editingDeal?: DealCardRow;
   deletingDeal?: DealCardRow;
   labelsDeal?: DealCardRow;
   newDealStage?: string;
 }
 
-export const DIALOGS_CLOSED: KanbanDialogState = {
-  funnel: false,
-  deleteFunnel: false,
-  stage: { open: false },
-};
+export const DIALOGS_CLOSED: KanbanDialogState = {};
 
 /** All kanban dialogs, driven by one state object in the board. */
 export function KanbanDialogs({
   state,
   setState,
   funnelId,
-  funnelName,
   stages,
   labels,
   canManage,
@@ -83,7 +68,6 @@ export function KanbanDialogs({
   state: KanbanDialogState;
   setState: (patch: Partial<KanbanDialogState>) => void;
   funnelId: string;
-  funnelName: string;
   stages: StageRow[];
   labels: LabelRow[];
   canManage: boolean;
@@ -91,26 +75,6 @@ export function KanbanDialogs({
   const dealDialogOpen = Boolean(state.newDealStage ?? state.editingDeal);
   return (
     <>
-      <NewFunnelDialog open={state.funnel} onOpenChange={(open) => setState({ funnel: open })} />
-      <StageDialog
-        funnelId={funnelId}
-        stage={state.stage.stage}
-        open={state.stage.open}
-        onOpenChange={(open) => setState({ stage: { open } })}
-      />
-      <DeleteFunnelDialog
-        funnelId={funnelId}
-        funnelName={funnelName}
-        open={state.deleteFunnel}
-        onOpenChange={(open) => setState({ deleteFunnel: open })}
-      />
-      {state.deletingStage && (
-        <DeleteStageDialog
-          stage={state.deletingStage}
-          open
-          onOpenChange={(open) => !open && setState({ deletingStage: undefined })}
-        />
-      )}
       <DealFormDialog
         funnelId={funnelId}
         stages={stages}

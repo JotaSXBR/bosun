@@ -200,7 +200,8 @@ function FieldInput({
   );
 }
 
-function GroupCard({ summary }: { summary: PlatformSettingSummary }) {
+/** One platform settings group — rendered at /app/platform/<group> (platform_admin only). */
+export function PlatformGroupCard({ summary }: { summary: PlatformSettingSummary }) {
   const t = useTranslations("settings");
   const router = useRouter();
   const def = groupDefs(t)[summary.group];
@@ -261,18 +262,5 @@ function GroupCard({ summary }: { summary: PlatformSettingSummary }) {
         </div>
       </form>
     </Card>
-  );
-}
-
-/** Product settings groups — visible only to platform_admin (server-gated). */
-export function PlatformSettings({ summaries }: { summaries: PlatformSettingSummary[] }) {
-  const t = useTranslations("settings");
-  return (
-    <section className="space-y-4">
-      <h2 className="text-lg font-semibold">{t("platform.title")}</h2>
-      {summaries.map((summary) => (
-        <GroupCard key={summary.group} summary={summary} />
-      ))}
-    </section>
   );
 }

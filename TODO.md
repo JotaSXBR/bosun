@@ -322,8 +322,24 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `AppShell` virou `div` — landmark `<main>` único por página). Rotas stub:
   `/app/ai` (ai:read → 404), `/app/account` (todos), `/app/platform`
   (platform_admin → 404). Verificado no Chrome com owner e agent (menu,
-  engrenagem, ⌘K, stubs e 404s). **Próximos**: Slice 3 (hub de
-  Configurações + redirects), 4 (Atendimento), 5 (Inteligência), 6
+  engrenagem, ⌘K, stubs e 404s). **Slice 3 entregue** (2026-10-12): hub de
+  Configurações — `/app/settings` vira índice com 5 grupos filtrados pela
+  matriz §7.7 (`organization:update`, `member:create`, `billing:read`,
+  `audit:read`, `teams:manage`, `integrations:manage`, `leads:manage`,
+  `ai:manage`); agent/viewer veem EmptyState. Rotas reais:
+  `organization/general` (fuso/idioma), `service/hours` (msg fora do
+  horário), `service/rules` (reabertura) — form antigo dividido;
+  `service/teams` e `settings/channels` (moves com redirect 307 dos
+  endereços antigos); `settings/sales/funnels` real — edição de
+  funil/etapas saiu do quadro, que ganhou atalho "Editar funil"
+  (`?funnel=`); stubs members/billing/audit com endereço canônico.
+  Plataforma separada: `/app/platform` índice + `/app/platform/{email,
+billing,meta,ai}` (platform_admin; link para `/app/setup`). Refs
+  atualizadas: checklist do Início, ⌘K (destinos + permissões por item),
+  `live-refresh`, `revalidatePath` das actions. `canManage` de Canais
+  corrigido p/ `integrations:manage` (era `role !== "agent"` — incluía
+  viewer). Verificado no Chrome com agent/manager/owner/superadmin +
+  1536×740. **Próximos**: Slice 4 (Atendimento), 5 (Inteligência), 6
   (Início+sino), 7 (telas PARCIAL/NOVO).
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),

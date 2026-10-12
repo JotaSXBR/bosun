@@ -166,15 +166,13 @@ function Palette({
   open,
   onOpenChange,
   moduleDefs,
-  canManage,
-  canAi,
+  role,
   signOut,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   moduleDefs: readonly ModuleDef[];
-  canManage: boolean;
-  canAi: boolean;
+  role?: OrgRole | null;
   signOut: () => void;
 }) {
   const t = useTranslations("nav");
@@ -186,7 +184,7 @@ function Palette({
       onOpenChange={onOpenChange}
       placeholder={t("commandPlaceholder")}
       emptyLabel={(q) => t("commandEmpty", { query: q })}
-      groups={paletteGroups({ t, go, moduleDefs, canManage, canAi, signOut })}
+      groups={paletteGroups({ t, go, moduleDefs, role, signOut })}
     />
   );
 }
@@ -203,7 +201,7 @@ export function AppShell({
   const pathname = usePathname();
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const { signOut, switchOrg } = useShellActions();
-  const { canAi, canManage, moduleDefs, navModules } = useShellNav(role);
+  const { canManage, moduleDefs, navModules } = useShellNav(role);
   useCommandShortcut(React.useCallback(() => setPaletteOpen(true), []));
 
   return (
@@ -230,8 +228,7 @@ export function AppShell({
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
         moduleDefs={moduleDefs}
-        canManage={canManage}
-        canAi={canAi}
+        role={role}
         signOut={signOut}
       />
       {children}

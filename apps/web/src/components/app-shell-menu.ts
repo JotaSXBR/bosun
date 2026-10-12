@@ -1,6 +1,6 @@
 import type { CommandGroup, CommandItem } from "@crm/design-system/templates/command-palette";
 import type { UserMenuItem } from "@crm/design-system/templates/user-menu";
-import type { PermissionCheck } from "@crm/permissions";
+import { hasPermission, type OrgRole, type PermissionCheck } from "@crm/permissions";
 import type { useTranslations } from "next-intl";
 
 export type NavT = ReturnType<typeof useTranslations>;
@@ -30,13 +30,43 @@ export const MANAGEMENT: PermissionCheck[] = [
   { ai: ["manage"] },
 ];
 
-// Settings-hub entries point at current routes; dedicated routes arrive in Slice 3.
+// ⌘K settings entries — same destinations + permissions as the hub (hub.ts).
 const SETTINGS_DESTINATIONS = [
-  { id: "settings-org", icon: "settings", key: "settingsOrg", href: "/app/settings" },
-  { id: "settings-service", icon: "inbox", key: "settingsService", href: "/app/settings/teams" },
-  { id: "settings-channels", icon: "plug", key: "settingsChannels", href: "/app/integrations" },
-  { id: "settings-sales", icon: "folder-kanban", key: "settingsSales", href: "/app/settings" },
-  { id: "settings-ai", icon: "sparkles", key: "settingsAi", href: "/app/settings/ai" },
+  {
+    id: "settings-org",
+    icon: "settings",
+    key: "settingsOrg",
+    href: "/app/settings/organization/general",
+    permission: { organization: ["update"] },
+  },
+  {
+    id: "settings-service",
+    icon: "inbox",
+    key: "settingsService",
+    href: "/app/settings/service/teams",
+    permission: { teams: ["manage"] },
+  },
+  {
+    id: "settings-channels",
+    icon: "plug",
+    key: "settingsChannels",
+    href: "/app/settings/channels",
+    permission: { integrations: ["manage"] },
+  },
+  {
+    id: "settings-sales",
+    icon: "folder-kanban",
+    key: "settingsSales",
+    href: "/app/settings/sales/funnels",
+    permission: { leads: ["manage"] },
+  },
+  {
+    id: "settings-ai",
+    icon: "sparkles",
+    key: "settingsAi",
+    href: "/app/settings/ai",
+    permission: { ai: ["manage"] },
+  },
 ] as const;
 
 export function activeModule(pathname: string): string | undefined {
@@ -44,8 +74,8 @@ export function activeModule(pathname: string): string | undefined {
   return [...MODULES, AI_MODULE].find((m) => m.id !== "home" && pathname.startsWith(m.href))?.id;
 }
 
-export function settingsItems(t: NavT, go: Go, canAi: boolean): CommandItem[] {
-  return SETTINGS_DESTINATIONS.filter((d) => d.id !== "settings-ai" || canAi).map((d) => ({
+export function settingsItems(t: NavT, go: Go, role: OrgRole): CommandItem[] {
+  return SETTINGS_DESTINATIONS.filter((d) => hasPermission(role, d.permission)).map((d) => ({
     id: d.id,
     icon: d.icon,
     label: t(d.key),
@@ -57,15 +87,13 @@ export function paletteGroups({
   t,
   go,
   moduleDefs,
-  canManage,
-  canAi,
+  role,
   signOut,
 }: {
   t: NavT;
   go: Go;
   moduleDefs: readonly ModuleDef[];
-  canManage: boolean;
-  canAi: boolean;
+  role?: OrgRole | null;
   signOut: () => void;
 }): CommandGroup[] {
   const groups: CommandGroup[] = [
@@ -89,8 +117,8 @@ export function paletteGroups({
       items: [{ id: "sign-out", icon: "log-out", label: t("signOut"), onSelect: signOut }],
     },
   ];
-  if (canManage) {
-    groups.splice(1, 0, { label: t("settings"), items: settingsItems(t, go, canAi) });
+  if (role && MANAGEMENT.some((p) => hasPermission(role, p))) {
+    groups.splice(1, 0, { label: t("settings"), items: settingsItems(t, go, role) });
   }
   return groups;
 }

@@ -18,9 +18,9 @@ import { requireTenantContext } from "@/server/tenant";
 export const dynamic = "force-dynamic";
 
 const STEP_HREFS: Record<string, string | undefined> = {
-  connect_channel: "/app/integrations",
-  create_team: "/app/settings/teams",
-  create_funnel: "/app/deals",
+  connect_channel: "/app/settings/channels",
+  create_team: "/app/settings/service/teams",
+  create_funnel: "/app/settings/sales/funnels",
   first_conversation: "/app/inbox",
 };
 

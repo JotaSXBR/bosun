@@ -17,6 +17,8 @@ test("settings pages render and an owner can manage teams", async ({ page }) => 
 
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Configurações" })).toBeVisible();
+  // The reopen window moved to Atendimento › Regras de ticket (Slice 3 hub).
+  await page.goto("/app/settings/service/rules");
   await expect(page.getByLabel("Janela de reabertura (horas)")).toHaveValue("48");
   // Product settings are platform_admin-only — a plain org owner never sees them.
   await expect(page.getByRole("heading", { name: "Plataforma" })).not.toBeVisible();

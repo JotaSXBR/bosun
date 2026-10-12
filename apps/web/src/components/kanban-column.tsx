@@ -2,13 +2,6 @@
 
 import type { DealCardRow, StageRow } from "@crm/core/leads";
 import { Button } from "@crm/design-system/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@crm/design-system/components/dropdown-menu";
-import { IconButton } from "@crm/design-system/components/icon-button";
 import { cn } from "@crm/design-system/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -24,20 +17,7 @@ export interface CardCallbacks {
   onMove: (deal: DealCardRow, stageId: string) => void;
 }
 
-function StageHeader({
-  stage,
-  count,
-  canManage,
-  onEditStage,
-  onDeleteStage,
-}: {
-  stage: StageRow;
-  count: number;
-  canManage: boolean;
-  onEditStage: () => void;
-  onDeleteStage: () => void;
-}) {
-  const t = useTranslations("leads");
+function StageHeader({ stage, count }: { stage: StageRow; count: number }) {
   return (
     <div className="flex items-center justify-between px-1 py-0.5">
       <div className="flex min-w-0 items-center gap-1.5">
@@ -45,25 +25,6 @@ function StageHeader({
         <span className="truncate text-sm font-medium">{stage.name}</span>
         <span className="text-ink-muted text-xs">{count}</span>
       </div>
-      {canManage && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <IconButton
-              variant="ghost"
-              size="sm"
-              icon="ellipsis"
-              className="size-6 p-0"
-              label={t("stageActions", { name: stage.name })}
-            />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={onEditStage}>{t("editStage")}</DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onSelect={onDeleteStage}>
-              {t("deleteStage")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
     </div>
   );
 }
@@ -76,8 +37,6 @@ export function KanbanStageColumn({
   canWrite,
   canManage,
   cardCallbacks,
-  onEditStage,
-  onDeleteStage,
   onAddDeal,
 }: {
   stage: StageRow;
@@ -86,8 +45,6 @@ export function KanbanStageColumn({
   canWrite: boolean;
   canManage: boolean;
   cardCallbacks: CardCallbacks;
-  onEditStage: () => void;
-  onDeleteStage: () => void;
   onAddDeal: () => void;
 }) {
   const t = useTranslations("leads");
@@ -101,13 +58,7 @@ export function KanbanStageColumn({
         isOver && "ring-line-accent ring-2",
       )}
     >
-      <StageHeader
-        stage={stage}
-        count={deals.length}
-        canManage={canManage}
-        onEditStage={onEditStage}
-        onDeleteStage={onDeleteStage}
-      />
+      <StageHeader stage={stage} count={deals.length} />
       <SortableContext items={deals.map((d) => d.id)} strategy={verticalListSortingStrategy}>
         <div className="flex min-h-16 flex-col gap-2">
           {deals.map((deal) => (
