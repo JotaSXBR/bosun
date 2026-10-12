@@ -56,7 +56,8 @@
       "allChannels": "Todos os canais",
       "sector": "Setor",
       "allSectors": "Todos os setores",
-      "awaiting": "Aguardando resposta"
+      "awaiting": "Aguardando resposta",
+      "ver": "Ver"
     },
     "ticketSeq": "{seq}º atendimento deste contato · aberto em {date}",
     "previousTicket": "↑ Ticket anterior{number} — ver histórico",
@@ -119,7 +120,7 @@
     "draftImprove": "Melhorar resposta",
     "draftImproveHint": "Escreva algo primeiro para melhorar",
     "draftNoCredential": "Configure uma credencial de IA em Configurações > IA",
-    "draftRequested": "Gerando sugestão — o rascunho aparece aqui em instantes."
+    "draftRequested": "Gerando rascunho — aparece aqui em instantes."
   },
   "tickets": {
     "reopen": "Reabrir ticket",
@@ -754,20 +755,20 @@
     "hidePassword": "Ocultar senha"
   },
   "drafts": {
-    "title": "Sugestão da IA",
+    "title": "Rascunho da IA",
     "staleBadge": "Cliente respondeu depois",
     "approve": "Aprovar e enviar",
     "edit": "Editar",
     "reject": "Descartar",
     "approvedToast": "Resposta enviada.",
-    "newDraftToast": "Nova sugestão de resposta"
+    "newDraftToast": "Novo rascunho de resposta"
   },
   "nudges": {
     "title": "Cliente aguardando",
     "badge": "Sem resposta",
-    "generate": "Gerar sugestão",
+    "generate": "Gerar rascunho",
     "dismiss": "Dispensar",
-    "generatingToast": "Gerando sugestão…",
+    "generatingToast": "Gerando rascunho…",
     "newNudgeToast": "Cliente aguardando resposta"
   },
   "ai": {

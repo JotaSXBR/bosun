@@ -339,8 +339,16 @@ billing,meta,ai}` (platform_admin; link para `/app/setup`). Refs
   `live-refresh`, `revalidatePath` das actions. `canManage` de Canais
   corrigido p/ `integrations:manage` (era `role !== "agent"` — incluía
   viewer). Verificado no Chrome com agent/manager/owner/superadmin +
-  1536×740. **Próximos**: Slice 4 (Atendimento), 5 (Inteligência), 6
-  (Início+sino), 7 (telas PARCIAL/NOVO).
+  1536×740. **Slice 4 entregue** (2026-10-12): Atendimento — 4 abas com
+  contador (Fila/Minhas/Adiados/Fechadas) + filtro "Ver" em pílula ao lado
+  da busca (Automático=`?view=pending`, Todas=`?view=all`); larguras por
+  token `inbox-list(-sm)`/`inbox-aside(-sm)` com novo breakpoint
+  `wide:` (106.25rem — o limiar HIP, declarado em rem para ordenar com os
+  breakpoints padrão do Tailwind); vocabulário Rascunho/Aviso na conversa;
+  e2e `inbox.spec.ts` atualizado. Verificado no Chrome: 360px@1920,
+  320px@1536, sem scroll horizontal, deep links `/app/inbox/<id>`→`?c=`
+  e `?view=pending|all` sem aba ativa. **Próximos**: Slice 5
+  (Inteligência), 6 (Início+sino), 7 (telas PARCIAL/NOVO).
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
   business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB

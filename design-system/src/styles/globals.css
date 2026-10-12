@@ -256,6 +256,10 @@
 
 /* DS motion — keyframes + matching animate-* utilities. */
 @theme {
+  /* Limiar HIP (DESIGN.md — família Layout): variantes -sm valem abaixo.
+     Em rem para ordenar com os breakpoints padrão do Tailwind. */
+  --breakpoint-wide: 106.25rem; /* = 1700px */
+
   --animate-loader: bx-spin 900ms linear infinite;
   --animate-pulse-dot: bx-pulse 1.6s var(--ease-standard) infinite;
   --animate-fade: bx-fade var(--dur-base) var(--ease-enter);

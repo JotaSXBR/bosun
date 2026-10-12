@@ -23,7 +23,10 @@ import { requireTenantContext } from "@/server/tenant";
 // Reads the session + database → must never be prerendered at build time.
 export const dynamic = "force-dynamic";
 
-const VIEWS: ConversationView[] = ["pending", "queue", "mine", "all", "snoozed", "closed"];
+// IA spec §3: four tab views; pending/all are query modes of the "Ver" filter.
+const TAB_VIEWS: ConversationView[] = ["queue", "mine", "snoozed", "closed"];
+const FILTER_VIEWS: ConversationView[] = ["pending", "all"];
+const VIEWS: ConversationView[] = [...TAB_VIEWS, ...FILTER_VIEWS];
 const UNIFORM_STATUS_VIEWS = new Set<string>(["pending", "queue"]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -156,7 +159,7 @@ export default async function InboxPage({
     <main className="h-workbench flex" data-testid="inbox-workbench">
       <section
         className={cn(
-          "border-line w-full flex-col border-r lg:flex lg:w-80 xl:w-96",
+          "border-line lg:w-inbox-list-sm wide:w-inbox-list w-full flex-col border-r lg:flex",
           selectedId ? "hidden lg:flex" : "flex",
         )}
         aria-label={t("viewsAria")}
@@ -169,7 +172,7 @@ export default async function InboxPage({
         </div>
 
         <nav className="flex gap-1 overflow-x-auto border-b px-2" aria-label={t("viewsAria")}>
-          {VIEWS.map((v) => (
+          {TAB_VIEWS.map((v) => (
             <Link
               key={v}
               href={`/app/inbox?${queryString({ ...params, view: v, c: undefined })}`}
@@ -230,7 +233,7 @@ export default async function InboxPage({
       </section>
 
       {selectedId && (
-        <aside className="border-line hidden w-80 shrink-0 overflow-y-auto border-l p-4 xl:block">
+        <aside className="border-line w-inbox-aside-sm wide:w-inbox-aside hidden shrink-0 overflow-y-auto border-l p-4 xl:block">
           <ConversationAside conversationId={selectedId} />
         </aside>
       )}

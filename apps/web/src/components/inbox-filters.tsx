@@ -16,6 +16,9 @@ export interface FilterParams {
   awaiting?: string;
 }
 
+// "Ver" filter views (IA spec §3): query modes rendered outside the tab list.
+const VER_VIEWS = ["pending", "all"] as const;
+
 export function buildInboxQuery(params: FilterParams): string {
   const sp = new URLSearchParams();
   for (const key of ["view", "c", "q", "conn", "sector", "awaiting"] as const) {
@@ -23,6 +26,63 @@ export function buildInboxQuery(params: FilterParams): string {
     if (value) sp.set(key, value);
   }
   return sp.toString();
+}
+
+function VerSelect({ view, onChange }: { view: string; onChange: (v: string) => void }) {
+  const t = useTranslations("inbox.filters");
+  const tv = useTranslations("inbox.views");
+  return (
+    <Select
+      options={VER_VIEWS.map((v) => ({ value: v, label: tv(v) }))}
+      value={VER_VIEWS.find((v) => v === view)}
+      onChange={onChange}
+      placeholder={t("ver")}
+      aria-label={t("ver")}
+      className="w-auto shrink-0"
+    />
+  );
+}
+
+function ScopeSelects({
+  params,
+  channels,
+  sectors,
+  onReplace,
+}: {
+  params: FilterParams;
+  channels: { id: string; name: string }[];
+  sectors: { id: string; name: string }[];
+  onReplace: (patch: Partial<FilterParams>) => void;
+}) {
+  const t = useTranslations("inbox.filters");
+  return (
+    <div className="flex items-center gap-2">
+      {channels.length > 1 && (
+        <Select
+          options={[
+            { value: "all", label: t("allChannels") },
+            ...channels.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+          value={params.conn ?? "all"}
+          onChange={(v) => onReplace({ conn: v === "all" ? undefined : v })}
+          aria-label={t("channel")}
+          className="min-w-0 flex-1"
+        />
+      )}
+      {sectors.length > 0 && (
+        <Select
+          options={[
+            { value: "all", label: t("allSectors") },
+            ...sectors.map((s) => ({ value: s.id, label: s.name })),
+          ]}
+          value={params.sector ?? "all"}
+          onChange={(v) => onReplace({ sector: v === "all" ? undefined : v })}
+          aria-label={t("sector")}
+          className="min-w-0 flex-1"
+        />
+      )}
+    </div>
+  );
 }
 
 /**
@@ -61,38 +121,17 @@ export function InboxFilters({
 
   return (
     <div className="space-y-2 px-3 pt-3" data-testid="inbox-filters">
-      <Input
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
-        placeholder={t("search")}
-        aria-label={t("search")}
-      />
       <div className="flex items-center gap-2">
-        {channels.length > 1 && (
-          <Select
-            options={[
-              { value: "all", label: t("allChannels") },
-              ...channels.map((c) => ({ value: c.id, label: c.name })),
-            ]}
-            value={params.conn ?? "all"}
-            onChange={(v) => replace({ conn: v === "all" ? undefined : v })}
-            aria-label={t("channel")}
-            className="min-w-0 flex-1"
-          />
-        )}
-        {sectors.length > 0 && (
-          <Select
-            options={[
-              { value: "all", label: t("allSectors") },
-              ...sectors.map((s) => ({ value: s.id, label: s.name })),
-            ]}
-            value={params.sector ?? "all"}
-            onChange={(v) => replace({ sector: v === "all" ? undefined : v })}
-            aria-label={t("sector")}
-            className="min-w-0 flex-1"
-          />
-        )}
+        <Input
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder={t("search")}
+          aria-label={t("search")}
+          className="min-w-0 flex-1"
+        />
+        <VerSelect view={params.view} onChange={(v) => replace({ view: v })} />
       </div>
+      <ScopeSelects params={params} channels={channels} sectors={sectors} onReplace={replace} />
       <div className="pb-1">
         <Switch
           checked={params.awaiting === "1"}

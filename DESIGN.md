@@ -337,7 +337,9 @@ spacing:
   container-max: 1440px
   container-text: 680px
   # Família Layout — docs/product/layout-desktop-app.md §5.
-  # Variantes -sm valem abaixo de 1700px de largura útil (limiar HIP).
+  # Variantes -sm valem abaixo de 1700px de largura útil (limiar HIP) —
+  # o limiar é o breakpoint `wide:` (--breakpoint-wide: 106.25rem, em rem para
+  # ordenar com os breakpoints padrão), não um valor mágico.
   viewport-ref: 1920px
   viewport-floor: 1536px
   page-pad: 32px

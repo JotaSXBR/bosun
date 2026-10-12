@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("inbox renders the six ticket views for an authenticated org member", async ({ page }) => {
+test("inbox renders the four tab views plus the Ver filter", async ({ page }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const email = `e2e-inbox-${suffix}@crm.local`;
 
@@ -16,8 +16,14 @@ test("inbox renders the six ticket views for an authenticated org member", async
   await page.waitForURL("**/app");
 
   await page.goto("/app/inbox");
-  for (const label of ["Automático", "Fila", "Minhas", "Todas", "Adiados", "Fechadas"]) {
+  for (const label of ["Fila", "Minhas", "Adiados", "Fechadas"]) {
     await expect(page.getByRole("link", { name: label })).toBeVisible();
   }
+  const ver = page.getByRole("combobox", { name: "Ver" });
+  await expect(ver).toBeVisible();
+  await ver.click();
+  await expect(page.getByRole("option", { name: "Automático" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Todas" })).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(page.getByText("Nenhum ticket aguardando atendimento.")).toBeVisible();
 });
