@@ -73,7 +73,12 @@ export function SetupForm() {
           <label className="text-sm font-medium" htmlFor="setup-from">
             {t("from")}
           </label>
-          <Input shape="rounded" id="setup-from" name="from" placeholder={t("fromPlaceholder")} />
+          <Input
+            shape="rounded"
+            id="setup-from"
+            name="from"
+            placeholder="Bosun <noreply@exemplo.com>"
+          />
         </div>
 
         {provider === "resend" && (

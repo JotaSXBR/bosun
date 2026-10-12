@@ -283,7 +283,6 @@
     "provider": "Provider",
     "consoleOption": "console (só loga — desenvolvimento)",
     "from": "Remetente (From)",
-    "fromPlaceholder": "Bosun <noreply@exemplo.com>",
     "resendKey": "Resend API key",
     "host": "Host",
     "port": "Porta",
