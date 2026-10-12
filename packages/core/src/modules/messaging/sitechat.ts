@@ -102,10 +102,18 @@ export async function createWidgetSession(
 }
 
 type ResolvedWidgetSession = {
-  session: { id: string };
+  session: { id: string; lastSeenAt: Date };
   contact: { id: string; channelUserId: string; displayName: string | null };
   connection: ConnectionRef & { webhookToken: string; metadata: unknown };
 };
+
+/**
+ * Activity signal granularity — widget polls hit resolveWidgetSession on
+ * every request; without a throttle each poll is a pointless UPDATE. A
+ * 5-minute window keeps "is the visitor around" accurate while turning
+ * the steady-state read path write-free.
+ */
+const SESSION_TOUCH_THROTTLE_MS = 5 * 60_000;
 
 async function resolveWidgetSession(
   db: Database,
@@ -114,7 +122,9 @@ async function resolveWidgetSession(
   return withServiceAccess(db, async (tx) => {
     const found = await findSiteChatSessionByToken(tx, sessionToken);
     if (!found) return undefined;
-    await touchSiteChatSession(tx, found.session.id);
+    if (Date.now() - found.session.lastSeenAt.getTime() > SESSION_TOUCH_THROTTLE_MS) {
+      await touchSiteChatSession(tx, found.session.id);
+    }
     return found;
   });
 }
