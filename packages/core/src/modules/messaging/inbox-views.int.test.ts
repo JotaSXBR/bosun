@@ -10,7 +10,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DomainError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { pickupConversation, resolveConversation, setConversationSnooze } from "./actions";
-import { insertMessage } from "./repository";
+import { addInternalNote } from "./outbound";
+import { insertMessage, updateConversationLastMessage } from "./repository";
 import type { ConnectionRef } from "./service";
 import { ingestChannelEvent, listConversationCounts, listTenantConversations } from "./service";
 
@@ -141,7 +142,7 @@ describe("inbox views", () => {
     }
   });
 
-  it("awaitingReply filter drops tickets whose last message is outbound", async () => {
+  it("awaitingReply filter drops tickets whose last channel message is outbound", async () => {
     const t1 = await newTicket("v-await", "Await", new Date("2024-01-04T10:00:00Z"));
     const agent = ctx(orgA, "agent");
     const before = await listTenantConversations(db, agent, {
@@ -150,9 +151,11 @@ describe("inbox views", () => {
     });
     expect(before.map((r) => r.id)).toContain(t1.id);
 
-    // An outbound (agent/system) message flips the last direction.
-    await withTenant(db, orgA, (tx) =>
-      insertMessage(tx, {
+    // A real outbound send flips the last direction — the write path
+    // (insertMessage + updateConversationLastMessage) is mirrored here.
+    const sentAt = new Date("2024-01-04T11:00:00Z");
+    await withTenant(db, orgA, async (tx) => {
+      await insertMessage(tx, {
         organizationId: orgA,
         conversationId: t1.id,
         channelConnectionId: connA.id,
@@ -161,12 +164,15 @@ describe("inbox views", () => {
         content: { type: "text", text: "resposta" },
         externalId: null,
         status: "sent",
-        sentAt: new Date("2024-01-04T11:00:00Z"),
-        private: true,
+        sentAt,
         authorId: userId,
         metadata: {},
-      }),
-    );
+      });
+      await updateConversationLastMessage(tx, t1.id, sentAt, {
+        direction: "outbound",
+        preview: "resposta",
+      });
+    });
     const after = await listTenantConversations(db, agent, {
       view: "all",
       awaitingReply: true,
@@ -175,6 +181,23 @@ describe("inbox views", () => {
     // The unfiltered list keeps it but clears the flag.
     const all = await listTenantConversations(db, agent, { view: "all" });
     expect(all.find((r) => r.id === t1.id)?.awaitingReply).toBe(false);
+  });
+
+  it("internal note does not clear awaitingReply nor leak into the preview", async () => {
+    const t1 = await newTicket("v-note", "Note", new Date("2024-01-04T12:00:00Z"));
+    const agent = ctx(orgA, "agent");
+    await pickupConversation(db, agent, { conversationId: t1.id });
+    await addInternalNote(db, agent, {
+      conversationId: t1.id,
+      text: "nota interna — não deve virar preview",
+    });
+
+    const all = await listTenantConversations(db, agent, { view: "all" });
+    const row = all.find((r) => r.id === t1.id);
+    // Private notes never touch the denormalized last-message fields —
+    // aligned with lastMessageAt, which they don't bump either.
+    expect(row?.awaitingReply).toBe(true);
+    expect(row?.lastMessagePreview).toBe("oi de Note");
   });
 });
 

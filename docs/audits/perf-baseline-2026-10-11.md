@@ -321,3 +321,21 @@ pré-existentes) · `pnpm test` 167/167 · `pnpm test:integration` 260/260
 Sem claim de ganho percentual em latência de usuário: números são de
 plano/execução em cache quente num dataset sintético local — evidência de
 forma de plano e buffers, não de produção.
+
+### Etapa 2 — F3-b (2026-10-12, PR #30)
+
+`conversations.last_message_preview` + `last_message_direction`
+denormalizados — migration `0026` com backfill `DISTINCT ON` (só
+não-privadas). Escritas nos 3 call sites de
+`updateConversationLastMessage` (ingest, outbound, off-hours) +
+`refreshConversationLastMessage` correlacionado apenas em edit/revoke
+(path raro com provider call). `listConversations` lê as colunas direto:
+**EXPLAIN com 0 subplanos — o read do inbox não toca `messages`**.
+
+Correção comportamental intencional: notas privadas deixam de poluir o
+preview e de apagar `awaitingReply` (o subplano antigo as contava, embora
+`lastMessageAt` nunca fosse atualizado por elas). Teste novo cobre isso;
+o caso "outbound vira o flag" foi reescrito usando o write path real.
+
+Gate: typecheck 14/14 · lint 0 erros · unit 167/167 · int **261/261**
+(+1 teste) · format:check ✅.

@@ -1,116 +1,107 @@
-# Plan — Perf: correções da auditoria 2026-10-11
+# Plan — Perf: etapa 2 (F3-b denormalização do último mensagem)
 
-- **Origem**: `docs/audits/perf-baseline-2026-10-11.md` (F1–F4, F10, F11) ·
-  `TODO.md` → "P2 — Perf: crescimento dos reads quentes"
+- **Origem**: `docs/audits/perf-baseline-2026-10-11.md` (F3-b) ·
+  `TODO.md` → "P2 — Perf: crescimento dos reads quentes" · PR #29 (etapa 1)
 - **Lifecycle**: /spec (auditoria) ✅ → /plan → /build → /test → /review → /ship
-- **Data**: 2026-10-11
+- **Branch**: `perf/audit-etapa-2` (a partir de `main` pós-#29)
+- **Data**: 2026-10-12
 
 ## Objetivo
 
-Eliminar os gargalos confirmados por plano de execução nos reads quentes
-(inbox, contatos, widget/ingestão) e corrigir dois suspeitos funcionais,
-sem alterar contratos de API nem o isolamento por tenant.
+Eliminar por completo o subplano correlacionado de última mensagem no
+read quente do inbox (`listConversations`), materializando
+`last_message_preview` + `last_message_direction` em `conversations` —
+escritos no mesmo ponto que já atualiza `last_message_at`.
 
 ## Contexto
 
-Decisões do gate de esclarecimento (2026-10-11):
+Decisões já tomadas na etapa 1 e fatos verificados no código:
 
-1. **F10/F11 entram**: `listMessages` passa a retornar as **últimas N**
-   mensagens em ordem cronológica (hoje: as primeiras N — threads >100
-   msgs não mostram as recentes); página de contatos ganha paginação
-   (`?page=`) porque só os primeiros 50 eram alcançáveis.
-2. **F2**: índice `conversations(channel_connection_id, external_id,
-created_at desc)` — migration nova via `pnpm db:generate`, revisada
-   antes de `pnpm db:migrate` local; validação com EXPLAIN antes/depois.
-3. **F3**: etapa (a) da auditoria — um único lookup da última mensagem
-   por linha (LATERAL join compartilhando direction+preview+filtro),
-   eliminando 2 dos 3 subplanos; a desnormalização (b) fica para outro
-   plano.
-4. **F4**: dedup por request via React `cache` — `requireTenantContext`,
-   `getConversation`, busca de conexões (derivada para waha/connected) e
-   `listTeams`. Envelope transacional por query simples NÃO muda (decisão
-   de design — revisitar separado se houver sinal).
-5. F5/F6/F7/F8/F9/F13/F14/F15 ficam fora — design maior, não confirmados
-   ou baixo impacto (registrados na auditoria e no TODO).
+1. `updateConversationLastMessage` tem **3 call sites**, todos com o
+   conteúdo da mensagem em mãos: ingest inbound (`service.ts:114`),
+   outbound (`outbound.ts:130`), off-hours auto-reply (`offhours.ts:304`).
+2. Mensagens `private` (notas internas, system notes) **não** chamam
+   `updateConversationLastMessage` — já não movem `last_message_at`.
+   O subplano atual, porém, as conta como "última mensagem": hoje uma
+   nota interna polui o preview e limpa `awaitingReply`. A
+   desnormalização alinha preview/direction a `last_message_at` —
+   **correção comportamental intencional** (nota interna não apaga o
+   indicador de "aguardando resposta" nem vaza no preview da fila).
+3. Edição/revogação (`applyMessageEdit`, `markMessageRevoked`) são paths
+   raros com provider call no meio — recebem um refresh correlacionado
+   para manter paridade (hoje o subplano mostra texto editado; revogação
+   mantém conteúdo original — não filtrar `revokedAt` no refresh).
+4. Replay de webhook dedupado chama `updateConversationLastMessage`
+   mesmo sem insert (linha 114 antes do `if (!message)`) — reescrever os
+   mesmos valores é idempotente, sem ação extra.
+5. `messages.direction` é CHECK `('inbound','outbound')` — domínio de 2
+   valores; `awaitingReply` vira `direction = 'inbound'` na coluna.
+6. Backfill usa `DISTINCT ON (conversation_id)` sobre mensagens
+   **não-privadas**, mesma ordenação do antigo subplano
+   (`sent_at desc nulls last, created_at desc`).
 
 ## Escopo
 
 <!-- Globs relativos à raiz. O hook bloqueia edições fora daqui. -->
 
-- `packages/core/src/modules/contacts/**`
-- `packages/core/src/modules/messaging/**`
 - `packages/db/src/schema/messaging.ts`
 - `packages/db/migrations/**`
-- `apps/web/src/server/**`
-- `apps/web/src/app/app/contacts/**`
-- `apps/web/messages/**`
+- `packages/core/src/modules/messaging/**`
 
 ## Fora de escopo
 
-- `inbox-live.tsx` / SSE / `subscribeDomainEvents` (F5/F6 — design).
-- Pipeline de ingestão multi-evento (F7).
-- `listFunnelsWithStages`, board/moves (F8/F9).
-- `getLastInboundAt`, busca ILIKE, imagens/frontend (F13–F15).
-- Desnormalização de preview/direction em `conversations` (F3-b).
-- Qualquer mudança em `withTenant`/`withPlatformScope` ou no pool.
+- F5/F6 (SSE/router.refresh), F7–F9, F13–F15 — design/outros módulos.
+- Mudança de UI/contrato: `ConversationListRow` mantém os mesmos campos.
+- Índices novos — nenhum necessário (colunas são lidas, não filtradas;
+  o filtro `awaitingReply` já anda junto do status).
 
 ## Tarefas
 
-### Task 1 — F1: `listContacts` com LEFT JOIN + GROUP BY
+### Task 1 — schema + migration com backfill
 
-Substituir o count correlacionado por join agrupado. Preservar filtro,
-ordenação, limit/offset e tipo de retorno.
-**Verify**: `service.int.test.ts` de contacts + EXPLAIN (B3) sem Seq Scan
-por linha.
+`conversations.last_message_preview text`, `last_message_direction text`
+→ `pnpm db:generate` → acrescentar `UPDATE` de backfill (DISTINCT ON,
+`private is not true`, mesma ordenação) no arquivo gerado →
+`pnpm db:migrate` local.
+**Verify**: colunas populadas; EXPLAIN B1 sem subplano ao final.
 
-### Task 2 — F3: inbox com UM lookup de última mensagem por linha
+### Task 2 — write path
 
-`LEFT JOIN LATERAL` (ou equivalente) retornando `direction` + `preview` —
-usado tanto nos campos quanto no filtro `awaitingReply` (sem 3ª
-avaliação). Preservar ordem nulls last/tiebreak e views.
-**Verify**: `inbox-views.int.test.ts` + `reads.int.test.ts` verdes;
-EXPLAIN (B1/B2) com 1 subplano.
+`updateConversationLastMessage` passa a receber `{direction, preview}`;
+helper `messagePreviewText(content)` (text ?? caption ?? `[type]` —
+mesma coalesce do SQL antigo); 3 call sites atualizados.
+**Verify**: typecheck; int tests de ingest/outbound/offhours verdes.
 
-### Task 3 — F10: `listMessages` retorna as últimas N
+### Task 3 — refresh em edit/revoke
 
-Desc + reverse (espelhando `listRecentMessages`) mantendo joins,
-reactions/quotes batched e redaction por papel.
-**Verify**: `reads.int.test.ts`, `outbound.int.test.ts`, `message-views`
-verdes + novo caso cobrindo janela >limit.
+`refreshConversationLastMessage(tx, conversationId)`: UPDATE
+correlacionado (não-privadas, sem filtro de revokedAt) chamado após
+`applyMessageEdit` e `markMessageRevoked`.
+**Verify**: message-actions int tests verdes.
 
-### Checkpoint A
+### Task 4 — reads sem subplano
 
-`pnpm typecheck && pnpm lint` + testes alvo dos módulos.
+`listConversations` lê as colunas direto; filtro `awaitingReply` vira
+`eq(coluna, 'inbound')`; remover `LAST_MESSAGE_SQL`/`LAST_MSG_DIRECTION_SQL`;
+map mantém `lastMessagePreview`/`awaitingReply` no tipo.
+**Verify**: inbox-views + reads int verdes; EXPLAIN B1/B2 zero subplanos.
 
-### Task 4 — F2: índice `(channel_connection_id, external_id, created_at desc)`
+### Task 5 — teste da correção comportamental
 
-Schema → `pnpm db:generate` → revisar SQL → `pnpm db:migrate` local.
-**Verify**: EXPLAIN (B4/B5) usando o índice novo; suite int. verde.
+Int test: `addInternalNote` não apaga `awaitingReply` nem muda o preview.
+**Verify**: teste novo verde (falharia sob a semântica antiga).
 
-### Task 5 — F4: dedup por request
+### Checkpoint
 
-`cache()` em `requireTenantContext` (tenant.ts); em services.ts, fetch
-único de `listChannelConnectionsForTenant` compartilhado por
-`listWahaConnections`/`listConnectedChannels`, `cache` em
-`getConversation` e `listTeams`.
-**Verify**: typecheck/lint; comportamento idêntico (redirect paths).
+`pnpm format:check && pnpm typecheck && pnpm lint` + `pnpm test` +
+`pnpm test:integration` + EXPLAIN B1/B2 → relatório seção I atualizada
 
-### Task 6 — F11: paginação em `/app/contacts`
-
-`?page=` (1-based) → offset; links Anterior/Próxima preservando `q`.
-Sem componente novo — links simples na página.
-**Verify**: typecheck/lint; lista muda de página com >50 contatos.
-
-### Checkpoint B
-
-Gate completo + re-rodar `perf-baseline-2026-10-11.sql` e registrar
-antes/depois no relatório da auditoria + `TODO.md`.
+- `TODO.md` + commits atômicos.
 
 ## Critérios de pronto
 
-- [ ] `pnpm format:check && pnpm typecheck && pnpm lint` verdes
-- [ ] Testes alvo: `*.int.test.ts` de contacts e messaging (+ unitários)
-- [ ] EXPLAIN B1–B5 re-executados: 1 subplano no inbox, sem Seq Scan em
-      conversations nos lookups B3–B5
-- [ ] Antes/depois anotado no relatório de auditoria
-- [ ] `TODO.md` atualizado
+- [ ] Gate completo verde
+- [ ] EXPLAIN B1: 0 subplanos (scan+sort direto)
+- [ ] Preview/direction denormalizados idênticos ao subplano antigo
+      (exceto correção intencional das notas privadas)
+- [ ] Relatório e TODO atualizados

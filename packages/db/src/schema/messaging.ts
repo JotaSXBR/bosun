@@ -142,6 +142,12 @@ export const conversations = pgTable(
     snoozedUntil: timestamp({ withTimezone: true }),
     firstResponseAt: timestamp({ withTimezone: true }),
     lastMessageAt: timestamp({ withTimezone: true }),
+    // Denormalized latest-CHANNEL-message fields — written by the same
+    // call sites that bump lastMessageAt (private notes don't touch
+    // them), refreshed on message edit/revoke. Reads never subquery
+    // messages for the inbox list anymore.
+    lastMessagePreview: text(),
+    lastMessageDirection: text(),
     metadata: jsonb().notNull().default({}),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
