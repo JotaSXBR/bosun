@@ -328,14 +328,15 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   sintético + script reproduzível). ✅ Etapa 1 aplicada (2026-10-11):
   `listContacts` via LEFT JOIN + GROUP BY; índice
   `conversations(channel_connection_id, external_id, created_at desc)`
-  (migration 0025); inbox com 1 subplano jsonb/linha (select-list);
-  dedup por request via React `cache()` (ctx, getConversation, sectors,
-  channel connections); `listMessages` retorna as últimas N em ordem
-  cronológica; `/app/contacts` com paginação `?page=`. Restantes:
-  desnormalizar preview/direction em `conversations` no ingest (F3-b —
-  elimina o subplano restante); `router.refresh()` por evento re-executa
-  o grafo por cliente (F5/F6 — design); envelope tx por query simples
-  (decisão de design).
+  (migration 0025); dedup por request via React `cache()`;
+  `listMessages` retorna as últimas N em ordem cronológica;
+  `/app/contacts` com paginação `?page=`. ✅ Etapa 2 (2026-10-12):
+  `last_message_preview`/`last_message_direction` denormalizados em
+  `conversations` (migration 0026 + backfill) — inbox lê colunas direto,
+  **0 subplanos**; notas privadas deixam de poluir preview/awaitingReply.
+  Restantes: `router.refresh()` por evento re-executa o grafo por
+  cliente (F5/F6 — design); ingestão multi-evento (F7); funnels/board
+  (F8/F9); envelope tx por query simples (decisão de design).
 
 - **P3 — Upgrade Coolify** ≥4.4: traz API de registries
   (`POST /servers/{uuid}/registries`) — docker login vira automável via
