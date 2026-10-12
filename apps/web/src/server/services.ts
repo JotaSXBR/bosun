@@ -23,7 +23,7 @@ import {
   listConversationLabels,
   listFunnels,
   listLabels,
-  listStages,
+  listStagesForFunnels,
   searchContacts,
 } from "@crm/core/leads";
 import type {
@@ -159,8 +159,18 @@ export interface FunnelWithStages {
 /** Funnels + their stages — powers the "Virar lead" dialog's stage picker. */
 export async function listFunnelsWithStages(ctx: TenantContext): Promise<FunnelWithStages[]> {
   const funnels = await listFunnels(getDb(), ctx);
-  const stages = await Promise.all(funnels.map((funnel) => listStages(getDb(), ctx, funnel.id)));
-  return funnels.map((funnel, index) => ({ funnel, stages: stages[index] ?? [] }));
+  const stages = await listStagesForFunnels(
+    getDb(),
+    ctx,
+    funnels.map((f) => f.id),
+  );
+  const byFunnel = new Map<string, StageRow[]>();
+  for (const stage of stages) {
+    const list = byFunnel.get(stage.funnelId);
+    if (list) list.push(stage);
+    else byFunnel.set(stage.funnelId, [stage]);
+  }
+  return funnels.map((funnel) => ({ funnel, stages: byFunnel.get(funnel.id) ?? [] }));
 }
 
 export async function getFunnelBoard(ctx: TenantContext, funnelId: string): Promise<BoardData> {

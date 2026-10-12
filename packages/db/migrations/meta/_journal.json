@@ -190,6 +190,13 @@
       "when": 1791764954078,
       "tag": "0026_lucky_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791796683633,
+      "tag": "0027_quiet_korath",
+      "breakpoints": true
     }
   ]
 }

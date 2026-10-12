@@ -339,3 +339,39 @@ o caso "outbound vira o flag" foi reescrito usando o write path real.
 
 Gate: typecheck 14/14 · lint 0 erros · unit 167/167 · int **261/261**
 (+1 teste) · format:check ✅.
+
+### Etapa 3 — leituras desnormalizadas + N+1 restantes (2026-10-12)
+
+**drafts/repository.ts** — `listNudgeCandidates`/`listStaleNudges` (scan
+periódico do `observer-scan`) avaliavam `LAST_DIRECTION_SQL` +
+`LAST_SENT_AT_SQL` como subplanos correlacionados **no WHERE de cada
+linha candidata** — agora leem `last_message_direction`/`last_message_at`
+direto (EXPLAIN: Seq Scan com predicados simples + anti-joins em
+`agent_suggestions`, zero probes em `messages`). Mesma correção
+comportamental do F3-b: nota privada deixava de contar como "última
+mensagem" — antes suprimia o nudge e resetava a ociosidade
+indevidamente. 2 testes novos provam: nota interna **não** tira a
+conversa dos candidatos; outbound pública tira e torna o nudge stale.
+
+**F8** — `listFunnelsWithStages` (1+N por render do conversation-aside):
+`listStagesForFunnels` em batch `inArray` + agrupamento em memória →
+2 queries. Assinatura `FunnelWithStages` preservada.
+
+**F14** — `getLastInboundAt`: medido em conversa de 2k msgs (~1k
+inbound) → Seq Scan + top-N sort (62 buffers, 1,1ms). Índice parcial
+`messages(conversation_id, created_at desc) where direction='inbound'`
+(migration 0027): Seq Scan → Bitmap Heap Scan no índice. O ganho real é
+eliminar o seq scan da tabela inteira (aqui o dataset só tem a conversa
+quente — em produção o seq scan leria todas as mensagens da tabela);
+o sort residual fica limitado às inbound da conversa. Limitação:
+numa tabela de 2k linhas o planner ainda prefere bitmap+sort a index
+scan simples — a forma do plano melhora com o tamanho real da tabela.
+
+Gate: typecheck 14/14 · lint 0 erros · unit 167/167 · int **263/263**
+(+2 testes) · format:check ✅.
+
+Restantes fora das fatias aplicadas: F5/F6 (`router.refresh()` por
+evento; widget read/write — design), F7 (tx por evento no ingest),
+F9 (board sem limite — kanban precisa dos cards; reorder em sets
+pequenos), F13 (ILIKE — scan sobre fatia da org), F15 (mídia CLS/cache).
+Nada medido em produção — evidência local de plano/buffers.

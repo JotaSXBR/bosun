@@ -233,6 +233,11 @@ export const messages = pgTable(
       .on(t.conversationId, sql`(metadata ->> 'autoReplyDay')`)
       .where(sql`${t.metadata} ->> 'system' = 'off_hours'`),
     index("messages_conversation_sent_idx").on(t.conversationId, t.sentAt),
+    // getLastInboundAt (detail render) orders by created_at — the sent_at
+    // index can't serve it. Partial: inbound only, tiny on mixed threads.
+    index("messages_conversation_inbound_created_idx")
+      .on(t.conversationId, t.createdAt.desc())
+      .where(sql`${t.direction} = 'inbound'`),
     check("messages_direction_check", sql`${t.direction} in ('inbound', 'outbound')`),
     check(
       "messages_status_check",

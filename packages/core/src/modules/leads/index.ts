@@ -44,6 +44,7 @@ export {
   getBoard,
   listFunnels,
   listStages,
+  listStagesForFunnels,
   moveStage,
   updateFunnel,
   updateStage,
