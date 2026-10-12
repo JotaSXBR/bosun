@@ -12,8 +12,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AuthorizationError, NotFoundError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import type { ConnectionRef } from "../messaging";
-import { ingestChannelEvent } from "../messaging";
+import { addInternalNote, ingestChannelEvent, sendOutboundMessage } from "../messaging";
 import { listAgentSuggestions } from "../suggestions";
+import { listNudgeCandidates, listStaleNudges } from "./repository";
 import {
   approveDraft,
   createDraftSuggestion,
@@ -291,5 +292,48 @@ describe("drafts", () => {
     await expect(
       reviewNudge(db, agentA(), { suggestionId: draft.id, action: "approved" }),
     ).rejects.toThrowError(NotFoundError);
+  });
+
+  it("nudge scan: idle inbound is a candidate and an internal note does not reset idleness", async () => {
+    const ticket = await newTicket("draft-8@c.us", "false_d8@c.us_1", new Date("2024-05-01"));
+    await withTenant(db, orgA, (tx) =>
+      tx.update(conversations).set({ assigneeId: userId }).where(eq(conversations.id, ticket.id)),
+    );
+
+    const opts = { idleMinutes: 20, cooldownMinutes: 60 * 24 };
+    const before = await withTenant(db, orgA, (tx) => listNudgeCandidates(tx, orgA, opts));
+    expect(before.map((c) => c.id)).toContain(ticket.id);
+
+    // Under the old correlated-subplan semantics this outbound private note
+    // became the "last message" and suppressed the nudge — the denormalized
+    // columns intentionally ignore notes (same rule as the inbox).
+    await addInternalNote(db, agentA(), { conversationId: ticket.id, text: "nota interna" });
+    const after = await withTenant(db, orgA, (tx) => listNudgeCandidates(tx, orgA, opts));
+    expect(after.map((c) => c.id)).toContain(ticket.id);
+  });
+
+  it("nudge scan: a public outbound reply drops the candidate and stales a pending nudge", async () => {
+    const ticket = await newTicket("draft-9@c.us", "false_d9@c.us_1", new Date("2024-05-01"));
+    await withTenant(db, orgA, (tx) =>
+      tx.update(conversations).set({ assigneeId: userId }).where(eq(conversations.id, ticket.id)),
+    );
+    await sendOutboundMessage(
+      db,
+      agentA(),
+      { conversationId: ticket.id, text: "já respondo" },
+      { provider: new FakeChannelProvider() },
+    );
+
+    const opts = { idleMinutes: 20, cooldownMinutes: 60 * 24 };
+    const candidates = await withTenant(db, orgA, (tx) => listNudgeCandidates(tx, orgA, opts));
+    expect(candidates.map((c) => c.id)).not.toContain(ticket.id);
+
+    // A pending nudge whose predicate flipped (human already replied) is stale.
+    const nudge = await createNudgeSuggestion(db, orgA, {
+      conversationId: ticket.id,
+      rationale: "aguardando",
+    });
+    const stale = await withTenant(db, orgA, (tx) => listStaleNudges(tx, orgA));
+    expect(stale.map((s) => s.id)).toContain(nudge.id);
   });
 });

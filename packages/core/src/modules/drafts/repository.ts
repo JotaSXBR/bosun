@@ -2,7 +2,7 @@ import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
 import { and, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 
-const { agentSuggestions, conversations, messages } = schema;
+const { agentSuggestions, conversations } = schema;
 
 export const DRAFT_TARGET_TYPE = "draft";
 export const NUDGE_TARGET_TYPE = "nudge";
@@ -84,17 +84,6 @@ export async function supersedePendingThreadCards(
     );
 }
 
-/** The conversation's most recent message — direction + timestamp (scan predicates). */
-const LAST_MESSAGE_SQL = sql`(
-  select m.direction, m.sent_at from ${messages} m
-  where m.conversation_id = ${conversations.id}
-  order by m.sent_at desc nulls last, m.created_at desc
-  limit 1
-)`;
-
-const LAST_DIRECTION_SQL = sql`(select direction from ${LAST_MESSAGE_SQL} lm)`;
-const LAST_SENT_AT_SQL = sql`(select sent_at from ${LAST_MESSAGE_SQL} lm)`;
-
 /** Pending thread card exists for the conversation (either kind). */
 const PENDING_CARD_SQL = sql`exists (
   select 1 from ${agentSuggestions} s
@@ -107,12 +96,14 @@ export type NudgeCandidate = { id: string; idleSince: Date | null };
 
 /**
  * Interval-scan predicate (docs/product/ai-agents.md): tickets open or
- * in-progress, assigned to a human, whose LAST message is inbound and
- * older than `idleMinutes`. Conversations with a pending thread card or
- * a card inside the cooldown window are skipped — the card already
- * prompts action and re-prompting is spam. The cooldown counts drafts
- * too: without it, an auto_draft org would re-enqueue a paid generation
- * right after the human rejected the previous one.
+ * in-progress, assigned to a human, whose last NON-private message is
+ * inbound and older than `idleMinutes` — the denormalized
+ * `last_message_*` columns (private notes neither reset idleness nor
+ * count as a reply, same semantics as the inbox). Conversations with a
+ * pending thread card or a card inside the cooldown window are skipped —
+ * the card already prompts action and re-prompting is spam. The cooldown
+ * counts drafts too: without it, an auto_draft org would re-enqueue a
+ * paid generation right after the human rejected the previous one.
  */
 export async function listNudgeCandidates(
   executor: DbExecutor,
@@ -122,7 +113,7 @@ export async function listNudgeCandidates(
   const rows = await executor
     .select({
       id: conversations.id,
-      idleSince: sql<Date | null>`${LAST_SENT_AT_SQL}`,
+      idleSince: conversations.lastMessageAt,
     })
     .from(conversations)
     .where(
@@ -130,8 +121,8 @@ export async function listNudgeCandidates(
         eq(conversations.organizationId, organizationId),
         inArray(conversations.status, ["open", "in_progress"]),
         isNotNull(conversations.assigneeId),
-        sql`${LAST_DIRECTION_SQL} = 'inbound'`,
-        sql`${LAST_SENT_AT_SQL} < now() - make_interval(mins => ${opts.idleMinutes})`,
+        eq(conversations.lastMessageDirection, "inbound"),
+        sql`${conversations.lastMessageAt} < now() - make_interval(mins => ${opts.idleMinutes})`,
         sql`not ${PENDING_CARD_SQL}`,
         sql`not exists (
           select 1 from ${agentSuggestions} s
@@ -167,7 +158,7 @@ export async function listStaleNudges(
           isNull(conversations.id),
           sql`${conversations.status} not in ('open', 'in_progress')`,
           isNull(conversations.assigneeId),
-          sql`coalesce(${LAST_DIRECTION_SQL}, 'outbound') <> 'inbound'`,
+          sql`coalesce(${conversations.lastMessageDirection}, 'outbound') <> 'inbound'`,
           sql`exists (
             select 1 from ${agentSuggestions} s
             where s.source_conversation_id = ${conversations.id}
