@@ -11,4 +11,6 @@ architecture decisions live in `docs/adr/`.
 - [rules.md](rules.md) — business rules (assignment, statuses, off-hours, billing, LGPD)
 - [ai-agents.md](ai-agents.md) — AI strategy: observer-first, agents catalog, BYOK, tools
 - [ux-7-leis.md](ux-7-leis.md) — audit + plan: every screen follows the 7 UX laws
+- [ia-navegacao.md](ia-navegacao.md) — information architecture: menus, pages, tabs, settings matrix, flows (approved 2026-10-12)
+- [layout-desktop-app.md](layout-desktop-app.md) — desktop 1920/1536 layout and app-format rules (approved 2026-10-12)
 - [roadmap.md](roadmap.md) — skeleton milestone and phases
