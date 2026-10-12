@@ -168,7 +168,10 @@
     "startConversation": "Abrir conversa",
     "conversationStarted": "Conversa aberta. Envie a primeira mensagem.",
     "connection": "Conexão WhatsApp",
-    "noConnection": "Nenhuma conexão WhatsApp conectada. Configure em Integrações."
+    "noConnection": "Nenhuma conexão WhatsApp conectada. Configure em Integrações.",
+    "pagination": "Paginação de contatos",
+    "previousPage": "Anterior",
+    "nextPage": "Próxima"
   },
   "nav": {
     "home": "Início",

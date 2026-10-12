@@ -56,7 +56,10 @@ export async function findContactById(
 
 /**
  * Contacts page rows — one row per contact with the count of tickets it
- * ever had, name/id search, alphabetical order.
+ * ever had, name/id search, alphabetical order. The count comes from a
+ * grouped LEFT JOIN (single scan), not a per-row correlated subquery —
+ * conversations.contact_id has no index, so a subplan would seq-scan the
+ * whole table once per contact row.
  */
 export async function listContacts(
   executor: DbExecutor,
@@ -71,12 +74,10 @@ export async function listContacts(
       displayName: contacts.displayName,
       metadata: contacts.metadata,
       createdAt: contacts.createdAt,
-      conversationCount: sql<number>`(
-        select count(*)::int from ${conversations}
-        where ${conversations.contactId} = ${contacts.id}
-      )`,
+      conversationCount: sql<number>`count(${conversations.id})::int`,
     })
     .from(contacts)
+    .leftJoin(conversations, eq(conversations.contactId, contacts.id))
     .where(
       and(
         eq(contacts.organizationId, organizationId),
@@ -85,6 +86,7 @@ export async function listContacts(
           : undefined,
       ),
     )
+    .groupBy(contacts.id)
     .orderBy(asc(contacts.displayName), asc(contacts.channelUserId))
     .limit(options.limit)
     .offset(options.offset);

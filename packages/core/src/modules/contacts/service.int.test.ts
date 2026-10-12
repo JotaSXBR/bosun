@@ -130,6 +130,29 @@ describe("contacts service", () => {
     expect(visible).toHaveLength(0);
   });
 
+  it("pages with limit/offset — contacts beyond the first page are reachable", async () => {
+    // Regression: the page only ever asked for the first 50 rows.
+    const prefix = `Pg${crypto.randomUUID().slice(0, 8)}`;
+    for (let i = 0; i < 3; i++) {
+      await createContact(db, ctx(orgA, memberA, "agent"), {
+        displayName: `${prefix} ${String(i).padStart(2, "0")}`,
+        phone: `+5511900${String(Math.floor(Math.random() * 1e6)).padStart(6, "0")}`,
+      });
+    }
+    const page1 = await listOrgContacts(db, ctx(orgA, memberA, "agent"), {
+      query: prefix,
+      limit: 2,
+      offset: 0,
+    });
+    const page2 = await listOrgContacts(db, ctx(orgA, memberA, "agent"), {
+      query: prefix,
+      limit: 2,
+      offset: 2,
+    });
+    expect(page1.map((c) => c.displayName)).toEqual([`${prefix} 00`, `${prefix} 01`]);
+    expect(page2.map((c) => c.displayName)).toEqual([`${prefix} 02`]);
+  });
+
   it("viewer reads but cannot create", async () => {
     await expect(listOrgContacts(db, ctx(orgA, memberA, "viewer"), {})).resolves.toBeDefined();
     await expect(

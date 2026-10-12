@@ -42,9 +42,11 @@ async function resolveTenantContext(
  * Builds the TenantContext for the current request. Redirects to /sign-in
  * when unauthenticated and to /onboarding when the user has no organization.
  * If the session has no active organization but the user belongs to one,
- * the first membership is activated.
+ * the first membership is activated. Request-cached (React `cache`): every
+ * component of the same render shares one membership lookup AND the same
+ * object reference — downstream `cache`ed service calls key on it.
  */
-export async function requireTenantContext(): Promise<TenantContext> {
+export const requireTenantContext = cache(async (): Promise<TenantContext> => {
   const session = await requireSession();
   const db = getDb();
 
@@ -69,7 +71,7 @@ export async function requireTenantContext(): Promise<TenantContext> {
     redirect("/app/setup");
   }
   return ctx;
-}
+});
 
 /**
  * Same TenantContext derivation as requireTenantContext but returns null
