@@ -25,8 +25,8 @@ switch (event) {
       hookSpecificOutput: {
         hookEventName: "SessionStart",
         additionalContext: [
-          "WORKFLOW (docs/development/workflow.md): spec in docs/product/* → /plan writes tasks/plan.md (## Escopo globs = the scope contract) → /build → /test → /review → /ship.",
-          "A PreToolUse hook BLOCKS edits to source/config files outside the plan's Escopo. No plan yet → run /plan or confirm scope with the user before editing code. Docs/markdown are always editable.",
+          "WORKFLOW (docs/development/workflow.md): spec in docs/product/* → /plan-task writes tasks/plan.md (## Escopo globs = the scope contract) → /build → /test → /review → /ship.",
+          "A PreToolUse hook BLOCKS edits to source/config files outside the plan's Escopo. No plan yet → run /plan-task or confirm scope with the user before editing code. Docs/markdown are always editable.",
           "A Stop hook requires the minimal verification gate (typecheck + lint + relevant tests) after any edit session.",
           "Backlog source of truth: TODO.md → 'Produto — backlog' + docs/product/.",
         ].join("\n"),

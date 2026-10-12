@@ -3,7 +3,7 @@
 Spec do esforço "toda tela segue as 7 leis de UX". Primeira parte é a
 auditoria do estado atual (o que já cumpre, o que viola); segunda é a
 proposta de trabalho em slices. As decisões abertas no fim precisam de
-resposta antes do `/plan`.
+resposta antes do `/plan-task`.
 
 ## As leis (contrato)
 

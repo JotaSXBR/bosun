@@ -3,6 +3,7 @@ dist/
 .next/
 out/
 build/
+!.devin/skills/build/
 coverage/
 .turbo/
 *.tsbuildinfo
