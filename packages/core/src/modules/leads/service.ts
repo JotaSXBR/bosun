@@ -133,6 +133,18 @@ export async function listStages(
   });
 }
 
+/** Ordered stages across several funnels in one query. Requires leads:read. */
+export async function listStagesForFunnels(
+  db: Database,
+  ctx: TenantContext,
+  funnelIds: string[],
+): Promise<StageRow[]> {
+  assertPermission(ctx, { leads: ["read"] });
+  return withTenant(db, ctx.organizationId, (tx) =>
+    repo.listStagesByFunnels(tx, ctx.organizationId, funnelIds),
+  );
+}
+
 /** Requires leads:manage. Appends at the end. */
 export async function createStage(
   db: Database,

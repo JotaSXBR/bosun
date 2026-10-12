@@ -1,6 +1,6 @@
 import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 const { contacts, conversations, dealLabels, deals, funnelStages, funnels, labels } = schema;
 
@@ -76,6 +76,25 @@ export async function listStages(executor: DbExecutor, organizationId: string, f
     .from(funnelStages)
     .where(
       and(eq(funnelStages.funnelId, funnelId), eq(funnelStages.organizationId, organizationId)),
+    )
+    .orderBy(asc(funnelStages.position));
+}
+
+/** Ordered stages across several funnels — batched replacement for per-funnel listStages. */
+export async function listStagesByFunnels(
+  executor: DbExecutor,
+  organizationId: string,
+  funnelIds: string[],
+) {
+  if (funnelIds.length === 0) return [];
+  return executor
+    .select()
+    .from(funnelStages)
+    .where(
+      and(
+        eq(funnelStages.organizationId, organizationId),
+        inArray(funnelStages.funnelId, funnelIds),
+      ),
     )
     .orderBy(asc(funnelStages.position));
 }
