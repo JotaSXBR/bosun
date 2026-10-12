@@ -375,3 +375,39 @@ evento; widget read/write — design), F7 (tx por evento no ingest),
 F9 (board sem limite — kanban precisa dos cards; reorder em sets
 pequenos), F13 (ILIKE — scan sobre fatia da org), F15 (mídia CLS/cache).
 Nada medido em produção — evidência local de plano/buffers.
+
+### Etapa 4 — decisões F5/F6/F15 + deferrals (2026-10-12)
+
+**F5 — refresh escopado** (`inbox-live.tsx` + `lib/live-refresh.ts`):
+`InboxLive` é global no layout `/app` — qualquer evento de domínio
+disparava `router.refresh()` (~20 queries de re-render) em **todas** as
+páginas e abas. Agora `shouldRefreshForEvent(pathname, type)` só deixa
+passar eventos que mutam dados visíveis na página atual: inbox ←
+`message|conversation|agent_suggestion`; contacts ← `conversation`
+(conversationCount); integrations/settings ← `connection`/`agent_suggestion`;
+home/deals/setup → nunca. Toasts de suggestion continuam globais (são
+notificação, não sync). 5 testes unitários cobrem a matriz. Limitação
+aceita: refresh continua full-route quando dispara — a invalidação
+direcionada (payload no SSE → estado local) fica como evolução futura.
+
+**F6 — widget sem write por leitura** (`sitechat.ts`):
+`resolveWidgetSession` chamava `touchSiteChatSession` em TODO read —
+cada poll do widget era um UPDATE. Throttle de 5min: sessão fresca não
+escreve (`lastSeenAt` não tem outro consumidor — sinal de atividade
+puro). Int test prova: sessão velha → touch; fresca → read sem write.
+Mux de LISTEN (1 conexão por subscriber) permanece deferido — decisão já
+documentada em `realtime.ts` ("revisit at scale").
+
+**F15 — mídia**: `/api/media/[id]` `max-age=300` →
+`max-age=86400, immutable` (mídia é imutável por message-id —
+`editMessageContent` só toca texto). `<Image>` sem dimensões → caixa
+`aspect-video` reservada + `object-contain` (CLS eliminado; content não
+carrega width/height — caixa fixa é o compromisso sem crop).
+
+**Deferrals documentados**: F7 (tx por evento é deliberado — ordem +
+isolamento de falha; batching mudaria semântica), F9 (kanban precisa dos
+cards; reorder em sets pequenos — revisitar com board grande), F13
+(ILIKE sobre fatia da org — pg_trgm quando busca ficar lenta).
+
+Gate: typecheck 14/14 · lint 0 erros · unit 172/172 · int **264/264**
+(+1 teste) · format:check ✅.

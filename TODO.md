@@ -338,10 +338,12 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `listStaleNudges`) usa `last_message_*` — sem subplano por candidata;
   `listFunnelsWithStages` em batch (1+N → 2 queries); índice parcial
   `messages(conversation_id, created_at desc) where direction='inbound'`
-  (migration 0027, `getLastInboundAt`). Restantes: `router.refresh()`
-  por evento re-executa o grafo por cliente (F5/F6 — design); ingestão
-  multi-evento (F7); board sem limite + reorder (F9 — kanban precisa dos
-  cards); envelope tx por query simples (decisão de design).
+  (migration 0027, `getLastInboundAt`). ✅ Etapa 4 (2026-10-12): F5
+  refresh escopado por (página, evento) via `shouldRefreshForEvent`;
+  F6 widget sem write por poll (throttle 5min); F15 mídia `immutable` +
+  caixa `aspect-video` sem CLS. Deferidos documentados: F7 (tx por
+  evento deliberado), F9 (board), F13 (ILIKE); futuro: invalidação
+  direcionada via payload SSE, mux de LISTEN (comentário em realtime.ts).
 
 - **P3 — Upgrade Coolify** ≥4.4: traz API de registries
   (`POST /servers/{uuid}/registries`) — docker login vira automável via
