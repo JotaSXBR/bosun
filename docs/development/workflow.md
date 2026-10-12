@@ -1,36 +1,38 @@
 # Development workflow
 
 How work flows in this repo — human + Devin agent. The lifecycle commands
-come from the installed `addyosmani/agent-skills` pack (`.devin/skills/`),
-wired to this repo's own gates.
+are thin alias skills in `.devin/skills/` that invoke the installed
+`addyosmani/agent-skills` pack, wired to this repo's own gates.
 
 ## The loop
 
 ```
-/spec  →  /plan  →  /build  →  /test  →  /review  →  /ship
+/spec  →  /plan-task  →  /build  →  /test  →  /review  →  /ship
 ```
 
-Mesma sequência do pack upstream. Adaptações locais:
+Mesma sequência do pack upstream. No Devin, slash command = nome do
+diretório da skill; `/plan` é built-in do Devin (modo Plan), então a
+etapa do ciclo chama-se `/plan-task`. Adaptações locais:
 
 - **`/spec`** escreve/edita o PRD em `docs/product/` (o formato do projeto,
   não `SPEC.md` na raiz); quando o item já é coberto por um doc, `/spec`
   pode ser pulado — ver "Quando /spec é obrigatório".
-- **`/plan`** escreve `tasks/plan.md`, que **também carrega o contrato de
-  escopo** (`## Escopo` globs) que o hook enforça — o plano é o contrato.
-  Não existe passo de "brief" separado.
+- **`/plan-task`** escreve `tasks/plan.md`, que **também carrega o contrato
+  de escopo** (`## Escopo` globs) que o hook enforça — o plano é o
+  contrato. Não existe passo de "brief" separado.
 
 Skills por fase (espelha `skills.addy.ie/lifecycle`): cada comando carrega
 o **conjunto da fase** — as "sempre" definem o método da fase; as
 condicionais se aplicam quando o trabalho toca o eixo delas.
 
-| Stage  | Command   | Skills — sempre                                                                                                                                               | Skills — quando o eixo se aplica                                                                                                                                                                                                                                           |
-| ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Spec   | `/spec`   | `spec-driven-development` (PRD em `docs/product/`; ver "Quando /spec é obrigatório")                                                                          | `interview-me`, `idea-refine` — ideia crua/ambígua                                                                                                                                                                                                                         |
-| Plan   | `/plan`   | `planning-and-task-breakdown` → `tasks/plan.md` (template: `docs/development/plan.template.md`; carrega `## Contexto` + `## Escopo`) + gate de esclarecimento | —                                                                                                                                                                                                                                                                          |
-| Build  | `/build`  | `incremental-implementation` (slices finos), `test-driven-development` (teste junto)                                                                          | `frontend-ui-engineering` (UI), `api-and-interface-design` (contratos novos), `source-driven-development` + `context7-docs` (API de lib/framework — checar docs oficiais), `doubt-driven-development` (decisão arriscada), `context-engineering` (setup de contexto/rules) |
-| Test   | `/test`   | `debugging-and-error-recovery` (triage de falha)                                                                                                              | `browser-testing-with-devtools` — evidência real no browser via chrome-devtools MCP quando há UI/fluxo                                                                                                                                                                     |
-| Review | `/review` | `code-review-and-quality` (diff review antes de commit) + checklist UX das 7 leis (`docs/development/ux-7-leis-checklist.md`) para telas novas/alteradas      | `code-simplification` (complexidade acumulada), `security-and-hardening` (auth/webhooks/dados/deps), `performance-optimization` (queries, N+1, bundle)                                                                                                                     |
-| Ship   | `/ship`   | `git-workflow-and-versioning` (commit convencional — só quando o usuário pedir), `shipping-and-launch` (checklist/rollback)                                   | `ci-cd-and-automation` (pipeline), `documentation-and-adrs` (docs/ADR), `observability-and-instrumentation` (logs/métricas), `deprecation-and-migration` (remoções/migrações)                                                                                              |
+| Stage  | Command      | Skills — sempre                                                                                                                                               | Skills — quando o eixo se aplica                                                                                                                                                                                                                                           |
+| ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Spec   | `/spec`      | `spec-driven-development` (PRD em `docs/product/`; ver "Quando /spec é obrigatório")                                                                          | `interview-me`, `idea-refine` — ideia crua/ambígua                                                                                                                                                                                                                         |
+| Plan   | `/plan-task` | `planning-and-task-breakdown` → `tasks/plan.md` (template: `docs/development/plan.template.md`; carrega `## Contexto` + `## Escopo`) + gate de esclarecimento | —                                                                                                                                                                                                                                                                          |
+| Build  | `/build`     | `incremental-implementation` (slices finos), `test-driven-development` (teste junto)                                                                          | `frontend-ui-engineering` (UI), `api-and-interface-design` (contratos novos), `source-driven-development` + `context7-docs` (API de lib/framework — checar docs oficiais), `doubt-driven-development` (decisão arriscada), `context-engineering` (setup de contexto/rules) |
+| Test   | `/test`      | `debugging-and-error-recovery` (triage de falha)                                                                                                              | `browser-testing-with-devtools` — evidência real no browser via chrome-devtools MCP quando há UI/fluxo                                                                                                                                                                     |
+| Review | `/review`    | `code-review-and-quality` (diff review antes de commit) + checklist UX das 7 leis (`docs/development/ux-7-leis-checklist.md`) para telas novas/alteradas      | `code-simplification` (complexidade acumulada), `security-and-hardening` (auth/webhooks/dados/deps), `performance-optimization` (queries, N+1, bundle)                                                                                                                     |
+| Ship   | `/ship`      | `git-workflow-and-versioning` (commit convencional — só quando o usuário pedir), `shipping-and-launch` (checklist/rollback)                                   | `ci-cd-and-automation` (pipeline), `documentation-and-adrs` (docs/ADR), `observability-and-instrumentation` (logs/métricas), `deprecation-and-migration` (remoções/migrações)                                                                                              |
 
 Comandos standalone fora do loop principal: `/webperf` (audit de
 performance) e `/code-simplify` (rodada de simplificação).
@@ -46,7 +48,7 @@ MCP — companheira de `source-driven-development` no Build).
 Fonte de verdade do pack: `github.com/addyosmani/agent-skills` — clone
 de referência em `research/agent-skills` (gitignored, re-cloneable).
 
-## Gate de esclarecimento (antes de /plan, sempre)
+## Gate de esclarecimento (antes de /plan-task, sempre)
 
 Trabalho não-trivial **começa com perguntas, não com código**. Mudança feita
 sobre suposição é a definição de risco (CRAP: complexo × sem cobertura de
@@ -67,15 +69,15 @@ entendimento). Regra:
 
 ## Quando `/spec` é obrigatório
 
-Todo item entra pelo `/plan` — o que varia é se antes disso um spec precisa
-ser escrito:
+Todo item entra pelo `/plan-task` — o que varia é se antes disso um spec
+precisa ser escrito:
 
 - **`/spec` obrigatório** (PRD em `docs/product/` via
   `spec-driven-development`): feature nova com comportamento visível ao
   usuário, item do TODO sem decisões registradas, ou qualquer ambiguidade
   de produto que o gate de esclarecimento não resolve em 1-2 perguntas.
-- **`/spec` pode ser pulado** (vai direto ao `/plan`, que ainda registra as
-  decisões no `## Contexto`): chore/hardening já especificado — findings de
+- **`/spec` pode ser pulado** (vai direto ao `/plan-task`, que ainda
+  registra as decisões no `## Contexto`): chore/hardening já especificado — findings de
   review com decisões tomadas, itens do TODO com decisão datada, fixes
   mecânicos — e todo item já coberto por um doc em `docs/product/`.
 

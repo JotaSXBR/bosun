@@ -55,9 +55,10 @@ kind is each package's `create*Provider`.
 
 ## Development workflow
 
-Lifecycle: `/spec` (`docs/product/*`) → `/plan` → `/build` → `/test` →
-`/review` → `/ship`. Skill pack lives in `.devin/skills/`
-(addyosmani/agent-skills + project skills). `/plan` writes
+Lifecycle: `/spec` (`docs/product/*`) → `/plan-task` → `/build` →
+`/test` → `/review` → `/ship` — thin alias skills in `.devin/skills/`
+that invoke the addyosmani/agent-skills pack (`/plan` is Devin's built-in
+plan mode, so the plan step is `/plan-task`). `/plan-task` writes
 `tasks/plan.md`, which doubles as the scope contract (`## Escopo` globs).
 
 Hooks (`.devin/hooks.v1.json` → `.devin/hooks/workflow.mjs`): block edits

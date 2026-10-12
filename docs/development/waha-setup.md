@@ -577,8 +577,8 @@ questionários"), star (não tem no GOWS), forward (não tem no GOWS).
   acompanhados de `offline` (com `AUTO_ONLINE=False` provavelmente não —
   mas validar que o celular segue notificando no cenário real).
 
-Todas as decisões de produto estão tomadas — pronto para o `/plan` do
-slice "WAHA go-live + chat features".
+Todas as decisões de produto estão tomadas — pronto para o `/plan-task`
+do slice "WAHA go-live + chat features".
 
 ## Fontes
 
