@@ -152,6 +152,14 @@ export const conversations = pgTable(
     uniqueIndex("conversations_connection_external_idx")
       .on(t.channelConnectionId, t.externalId)
       .where(sql`${t.status} not in ('resolved', 'closed')`),
+    // Full (non-partial) chat key + timeline — serves the terminal-status
+    // follow-up lookup and the widget's latest-ticket fetch, both of which
+    // the active-only partial unique index cannot cover.
+    index("conversations_connection_external_created_idx").on(
+      t.channelConnectionId,
+      t.externalId,
+      t.createdAt.desc(),
+    ),
     index("conversations_org_last_message_idx").on(t.organizationId, t.lastMessageAt.desc()),
     index("conversations_org_status_idx").on(t.organizationId, t.status),
     index("conversations_org_sector_idx").on(t.organizationId, t.sectorId),

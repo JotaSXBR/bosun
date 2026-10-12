@@ -1,0 +1,1 @@
+CREATE INDEX "conversations_connection_external_created_idx" ON "conversations" USING btree ("channel_connection_id","external_id","created_at" DESC NULLS LAST);
