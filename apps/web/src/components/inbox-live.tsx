@@ -57,7 +57,7 @@ export function InboxLive() {
       if (event.type === "contact.presence") return;
       if (event.type === "agent_suggestion.created") {
         toastSuggestion(event, { drafts: tDrafts, nudges: tNudges, ai: tAi }, () =>
-          router.push("/app/settings/ai"),
+          router.push("/app/ai/reviews"),
         );
       }
       if (!shouldRefreshForEvent(pathname, String(event.type ?? ""))) return;

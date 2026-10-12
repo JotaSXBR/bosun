@@ -18,11 +18,14 @@ export function SuggestionsSection({
   agents,
   knowledge,
   canManage,
+  canReviewMemory,
 }: {
   suggestions: AgentSuggestionRow[];
   agents: AgentRow[];
   knowledge: KnowledgeEntryRow[];
   canManage: boolean;
+  /** §7.4 — memory proposals are decided only by owner/admin. */
+  canReviewMemory: boolean;
 }) {
   const t = useTranslations("settings.ai.suggestions");
   const router = useRouter();
@@ -84,7 +87,7 @@ export function SuggestionsSection({
                   {JSON.stringify(s.payload, null, 2)}
                 </pre>
               </details>
-              {canManage && (
+              {canManage && (s.targetType !== "memory" || canReviewMemory) && (
                 <div className="flex gap-2">
                   <Button
                     variant="primary"

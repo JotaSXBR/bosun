@@ -65,6 +65,19 @@
       "online": "online",
       "typing": "digitando…",
       "recording": "gravando áudio…"
+    },
+    "teachAi": {
+      "open": "Ensinar a IA",
+      "title": "Ensinar a IA",
+      "kind": "Tipo",
+      "kindKnowledge": "Conhecimento",
+      "kindMemory": "Memória",
+      "entryTitle": "Título",
+      "memoryType": "Tipo de memória",
+      "content": "Conteúdo (trecho da conversa)",
+      "rationale": "Por que a IA deve saber disso?",
+      "submit": "Propor para revisão",
+      "proposed": "Proposta enviada para Revisões."
     }
   },
   "message": {
@@ -560,12 +573,8 @@
       "manage": "Gerenciar IA",
       "restricted": "Configurações de IA disponíveis para owner, admin, manager e viewer.",
       "tabs": {
-        "suggestions": "Sugestões",
-        "credentials": "Credenciais",
-        "observer": "Observador",
         "agents": "Agentes",
-        "knowledge": "Conhecimento",
-        "brain": "Segundo cérebro"
+        "credentials": "Credenciais e uso"
       },
       "analyzeNow": "Analisar agora",
       "analyzeStarted": "Análise iniciada — sugestões aparecem aqui quando prontas.",
@@ -636,7 +645,16 @@
         "deleted": "Agente removido.",
         "delete": "Excluir",
         "deleteConfirm": "Excluir o agente \"{name}\"?",
-        "empty": "Nenhum agente configurado."
+        "empty": "Nenhum agente configurado.",
+        "save": "Salvar",
+        "systemBadge": "Sistema",
+        "observerMissing": "O agente observador ainda não existe — é criado na primeira análise.",
+        "sections": {
+          "identity": "Identidade",
+          "behavior": "Comportamento",
+          "model": "Modelo",
+          "advanced": "Avançado"
+        }
       },
       "knowledge": {
         "title": "Conhecimento",
@@ -659,9 +677,9 @@
         "empty": "Nenhuma entrada ainda."
       },
       "suggestions": {
-        "title": "Sugestões do observador",
+        "title": "Revisões",
         "description": "O observador analisa conversas resolvidas e propõe mudanças — nada aplica sem aprovação.",
-        "empty": "Nenhuma sugestão pendente.",
+        "empty": "Nenhuma proposta pendente.",
         "pending": "Pendentes",
         "history": "Revisadas",
         "targetAgent": "agente",
@@ -671,14 +689,14 @@
         "fields": "Campos: {fields}",
         "approve": "Aprovar",
         "reject": "Rejeitar",
-        "approved": "Sugestão aprovada e aplicada.",
-        "rejected": "Sugestão rejeitada.",
+        "approved": "Proposta aprovada e aplicada.",
+        "rejected": "Proposta rejeitada.",
         "statusApproved": "aprovada",
         "statusRejected": "rejeitada",
-        "newSuggestion": "Nova sugestão do observador"
+        "newSuggestion": "Nova proposta do observador"
       },
       "brain": {
-        "title": "Segundo cérebro",
+        "title": "Memória",
         "description": "Memória operacional interna — aprendizados promovidos por aprovação. Alimenta o observador e, futuramente, o copiloto. Nunca vai ao cliente.",
         "empty": "Nenhuma memória canônica ainda — propostas aprovadas aparecem aqui.",
         "new": "Propor memória",
@@ -773,9 +791,20 @@
   },
   "ai": {
     "title": "Inteligência",
-    "emptyTitle": "Inteligência em construção",
-    "emptyBody": "Revisões, conhecimento e memória dos agentes chegam aqui em breve.",
-    "restricted": "O módulo Inteligência não está disponível para o seu papel."
+    "tabs": {
+      "reviews": "Revisões",
+      "knowledge": "Conhecimento",
+      "memory": "Memória"
+    },
+    "resumo": {
+      "credential": "Chave:",
+      "observerMode": "Observador:",
+      "lastAnalysis": "Última análise:",
+      "pending": "Pendências:",
+      "pendingCounts": "{reviews} revisões · {stale} memórias vencidas",
+      "noKey": "Nenhuma chave de IA cadastrada.",
+      "noKeyLink": "Cadastrar chave"
+    }
   },
   "account": {
     "title": "Minha conta",

@@ -97,7 +97,7 @@ export const HUB_GROUPS: HubGroup[] = [
     items: [
       {
         key: "ai",
-        href: "/app/settings/ai",
+        href: "/app/settings/ai/agents",
         icon: "sparkles",
         permission: { ai: ["manage"] },
       },

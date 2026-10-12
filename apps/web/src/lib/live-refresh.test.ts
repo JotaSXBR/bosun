@@ -21,6 +21,9 @@ describe("shouldRefreshForEvent", () => {
     expect(shouldRefreshForEvent("/app/settings/channels", "connection.status")).toBe(true);
     expect(shouldRefreshForEvent("/app/settings/channels", "message.created")).toBe(false);
     expect(shouldRefreshForEvent("/app/settings/ai", "agent_suggestion.created")).toBe(true);
+    expect(shouldRefreshForEvent("/app/ai/reviews", "agent_suggestion.created")).toBe(true);
+    expect(shouldRefreshForEvent("/app/ai/memory", "agent_suggestion.approved")).toBe(true);
+    expect(shouldRefreshForEvent("/app/ai/reviews", "message.created")).toBe(false);
     expect(shouldRefreshForEvent("/app/settings", "connection.status")).toBe(true);
     expect(shouldRefreshForEvent("/app/settings", "message.received")).toBe(false);
   });

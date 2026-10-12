@@ -347,8 +347,21 @@ billing,meta,ai}` (platform_admin; link para `/app/setup`). Refs
   breakpoints padrão do Tailwind); vocabulário Rascunho/Aviso na conversa;
   e2e `inbox.spec.ts` atualizado. Verificado no Chrome: 360px@1920,
   320px@1536, sem scroll horizontal, deep links `/app/inbox/<id>`→`?c=`
-  e `?view=pending|all` sem aba ativa. **Próximos**: Slice 5
-  (Inteligência), 6 (Início+sino), 7 (telas PARCIAL/NOVO).
+  e `?view=pending|all` sem aba ativa. **Slice 5 entregue**
+  (2026-10-12): Inteligência — módulo `/app/ai` com faixa Resumo
+  (credencial, modo do observador, última análise, pendências) e 3 tabs
+  (Revisões = fila de propostas + "Analisar agora"; Conhecimento; Memória);
+  settings técnico reduzido a Agentes + Credenciais com detalhe
+  `/settings/ai/agents/[id]` em 4 seções e página híbrida `observer`;
+  redirects 307 dos endereços antigos (suggestions→reviews, brain→memory,
+  knowledge→knowledge, observer→agents/observer, index→agents); **"Ensinar
+  a IA"** na conversa (messaging:write → conhecimento; memória restrita a
+  owner/admin — gate no service `proposeMemoryEntry` + `proposeKnowledgeEntry`
+  novos em `@crm/core`); campos do form de agente extraídos p/
+  `agent-fields.tsx` (reuso lista+detalhe); e2e `ai.spec.ts`. Verificado no
+  Chrome (owner): redirects, tabs, detalhe salvar/excluir, proposta caindo
+  em Revisões, console limpo. **Próximos**: Slice 6 (Início+sino), 7
+  (telas PARCIAL/NOVO).
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
   business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB

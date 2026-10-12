@@ -8,13 +8,22 @@ import type { CreateLlmCredentialInput, UpdateLlmCredentialInput } from "@crm/co
 import { createLlmCredential, deleteLlmCredential, updateLlmCredential } from "@crm/core/ai";
 import type { ProposeEntryInput, RenewEntryInput } from "@crm/core/brain";
 import { archiveBrainEntry, renewBrainEntry } from "@crm/core/brain";
-import type { CreateKnowledgeEntryInput, UpdateKnowledgeEntryInput } from "@crm/core/knowledge";
+import type {
+  CreateKnowledgeEntryInput,
+  ProposeKnowledgeEntryInput,
+  UpdateKnowledgeEntryInput,
+} from "@crm/core/knowledge";
 import {
   createKnowledgeEntry,
   deleteKnowledgeEntry,
   updateKnowledgeEntry,
 } from "@crm/core/knowledge";
-import { approveSuggestion, proposeMemoryEntry, rejectSuggestion } from "@crm/core/suggestions";
+import {
+  approveSuggestion,
+  proposeKnowledgeEntry,
+  proposeMemoryEntry,
+  rejectSuggestion,
+} from "@crm/core/suggestions";
 import { getDb } from "@crm/db";
 import { captureException } from "@crm/observability";
 import { revalidatePath } from "next/cache";
@@ -25,6 +34,8 @@ import { requireTenantContext } from "@/server/tenant";
 export type AiActionResult = { ok: true } | { ok: false; error: string };
 
 const AI_SETTINGS_PATH = "/app/settings/ai";
+// Revisões/Conhecimento/Memória moved to the Inteligência module (IA spec §5).
+const AI_MODULE_PATH = "/app/ai";
 
 function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof z.ZodError) {
@@ -119,7 +130,7 @@ export async function createKnowledgeEntryAction(
   const ctx = await requireTenantContext();
   try {
     await createKnowledgeEntry(getDb(), ctx, input);
-    revalidatePath(AI_SETTINGS_PATH);
+    revalidatePath(AI_MODULE_PATH);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível criar a entrada.") };
@@ -132,7 +143,7 @@ export async function updateKnowledgeEntryAction(
   const ctx = await requireTenantContext();
   try {
     await updateKnowledgeEntry(getDb(), ctx, input);
-    revalidatePath(AI_SETTINGS_PATH);
+    revalidatePath(AI_MODULE_PATH);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível atualizar a entrada.") };
@@ -143,7 +154,7 @@ export async function deleteKnowledgeEntryAction(entryId: string): Promise<AiAct
   const ctx = await requireTenantContext();
   try {
     await deleteKnowledgeEntry(getDb(), ctx, entryId);
-    revalidatePath(AI_SETTINGS_PATH);
+    revalidatePath(AI_MODULE_PATH);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível remover a entrada.") };
@@ -156,7 +167,7 @@ export async function approveSuggestionAction(suggestionId: string): Promise<AiA
   const ctx = await requireTenantContext();
   try {
     await approveSuggestion(getDb(), ctx, suggestionId);
-    revalidatePath(AI_SETTINGS_PATH);
+    revalidatePath(AI_MODULE_PATH);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível aprovar a sugestão.") };
@@ -167,7 +178,7 @@ export async function rejectSuggestionAction(suggestionId: string): Promise<AiAc
   const ctx = await requireTenantContext();
   try {
     await rejectSuggestion(getDb(), ctx, suggestionId);
-    revalidatePath(AI_SETTINGS_PATH);
+    revalidatePath(AI_MODULE_PATH);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível rejeitar a sugestão.") };
@@ -200,10 +211,24 @@ export async function proposeMemoryEntryAction(input: ProposeEntryInput): Promis
   const ctx = await requireTenantContext();
   try {
     await proposeMemoryEntry(getDb(), ctx, input);
-    revalidatePath(AI_SETTINGS_PATH);
+    revalidatePath(AI_MODULE_PATH);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível propor a memória.") };
+  }
+}
+
+/** "Ensinar a IA" — any member with messaging:write stages knowledge for review. */
+export async function proposeKnowledgeEntryAction(
+  input: ProposeKnowledgeEntryInput,
+): Promise<AiActionResult> {
+  const ctx = await requireTenantContext();
+  try {
+    await proposeKnowledgeEntry(getDb(), ctx, input);
+    revalidatePath(AI_MODULE_PATH);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível propor o conhecimento.") };
   }
 }
 
@@ -211,7 +236,7 @@ export async function renewBrainEntryAction(input: RenewEntryInput): Promise<AiA
   const ctx = await requireTenantContext();
   try {
     await renewBrainEntry(getDb(), ctx, input);
-    revalidatePath(AI_SETTINGS_PATH);
+    revalidatePath(AI_MODULE_PATH);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível renovar a memória.") };
@@ -222,7 +247,7 @@ export async function archiveBrainEntryAction(entryId: string): Promise<AiAction
   const ctx = await requireTenantContext();
   try {
     await archiveBrainEntry(getDb(), ctx, entryId);
-    revalidatePath(AI_SETTINGS_PATH);
+    revalidatePath(AI_MODULE_PATH);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível arquivar a memória.") };

@@ -46,11 +46,14 @@ export function BrainSection({
   stale,
   teams,
   canManage,
+  canPropose,
 }: {
   entries: MemoryEntryRow[];
   stale: MemoryEntryRow[];
   teams: Array<{ id: string; name: string }>;
   canManage: boolean;
+  /** §7.4 — "Propor memória" is owner/admin only; curation stays ai:manage. */
+  canPropose: boolean;
 }) {
   const t = useTranslations("settings.ai.brain");
   const router = useRouter();
@@ -163,7 +166,7 @@ export function BrainSection({
           </ul>
         )}
 
-        {canManage && (
+        {canPropose && (
           <Button
             size="sm"
             variant="secondary"

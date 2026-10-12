@@ -5,8 +5,16 @@ export {
   listEntries as listKnowledgeRows,
   updateEntry,
 } from "./repository";
-export type { CreateKnowledgeEntryInput, UpdateKnowledgeEntryInput } from "./schemas";
-export { createKnowledgeEntryInput, knowledgeStatusSchema } from "./schemas";
+export type {
+  CreateKnowledgeEntryInput,
+  ProposeKnowledgeEntryInput,
+  UpdateKnowledgeEntryInput,
+} from "./schemas";
+export {
+  createKnowledgeEntryInput,
+  knowledgeStatusSchema,
+  proposeKnowledgeEntryInput,
+} from "./schemas";
 export {
   createKnowledgeEntry,
   deleteKnowledgeEntry,

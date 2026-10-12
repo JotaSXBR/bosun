@@ -16,6 +16,7 @@ import { DraftCard } from "@/components/draft-card";
 import { MessageItem } from "@/components/message-item";
 import { NudgeCard } from "@/components/nudge-card";
 import { PresenceIndicator } from "@/components/presence-indicator";
+import { TeachAiDialog } from "@/components/teach-ai-dialog";
 import { TicketActions } from "@/components/ticket-actions";
 import { TICKET_STATUS } from "@/lib/ticket-status";
 import {
@@ -171,6 +172,15 @@ export async function ConversationPane({ conversationId }: { conversationId: str
             />
           ),
         )}
+
+      {hasPermission(ctx.role, { messaging: ["write"] }) && (
+        <div className="flex justify-end">
+          <TeachAiDialog
+            conversationId={conversation.id}
+            canTeachMemory={ctx.role === "owner" || ctx.role === "admin" || ctx.isPlatformAdmin}
+          />
+        </div>
+      )}
 
       {!isViewer && (
         <Composer

@@ -13,6 +13,8 @@ export function shouldRefreshForEvent(pathname: string, type: string): boolean {
     return INBOX_EVENTS.some((prefix) => type.startsWith(prefix));
   }
   if (pathname.startsWith("/app/contacts")) return type.startsWith("conversation.");
+  // Inteligência module: reviews/knowledge/memory render suggestion data.
+  if (pathname.startsWith("/app/ai")) return type.startsWith("agent_suggestion.");
   // /app/settings/channels is covered by the /app/settings branch (connection.*).
   if (pathname.startsWith("/app/settings")) {
     return SETTINGS_EVENTS.some((prefix) => type.startsWith(prefix));

@@ -64,7 +64,7 @@ const SETTINGS_DESTINATIONS = [
     id: "settings-ai",
     icon: "sparkles",
     key: "settingsAi",
-    href: "/app/settings/ai",
+    href: "/app/settings/ai/agents",
     permission: { ai: ["manage"] },
   },
 ] as const;

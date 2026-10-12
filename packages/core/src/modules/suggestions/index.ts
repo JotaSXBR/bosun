@@ -14,6 +14,7 @@ export {
   createSystemSuggestions,
   listAgentSuggestions,
   listPendingMemoryContents,
+  proposeKnowledgeEntry,
   proposeMemoryEntry,
   rejectSuggestion,
 } from "./service";

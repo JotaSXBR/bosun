@@ -2,7 +2,7 @@ import type { Database, DbExecutor } from "@crm/db";
 import { emitDomainEvent, withTenant } from "@crm/db";
 import { captureException } from "@crm/observability";
 
-import { DomainError, NotFoundError } from "../../errors";
+import { AuthorizationError, DomainError, NotFoundError } from "../../errors";
 import { isForeignKeyViolation, isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
@@ -15,7 +15,13 @@ import {
   proposeEntryInput,
   updateMemoryEntry,
 } from "../brain";
-import { createKnowledgeEntryInput, findEntryById, insertEntry, updateEntry } from "../knowledge";
+import {
+  createKnowledgeEntryInput,
+  findEntryById,
+  insertEntry,
+  proposeKnowledgeEntryInput,
+  updateEntry,
+} from "../knowledge";
 import type { AgentSuggestionRow } from "./repository";
 import {
   findSuggestionById,
@@ -82,9 +88,10 @@ export async function createSystemSuggestion(
 }
 
 /**
- * Human-proposed staging — requires ai:manage; `proposed_by` records who
- * asked so the four-eyes rule can block self-approval later (owner
- * excepted — sovereign in single-person orgs).
+ * Human-proposed memory staging — owner/admin only (spec §7.4), plus
+ * ai:manage; `proposed_by` records who asked so the four-eyes rule can
+ * block self-approval later (owner excepted — sovereign in single-person
+ * orgs).
  */
 export async function proposeMemoryEntry(
   db: Database,
@@ -92,6 +99,9 @@ export async function proposeMemoryEntry(
   input: unknown,
 ): Promise<AgentSuggestionRow> {
   assertPermission(ctx, { ai: ["manage"] });
+  if (!ctx.isPlatformAdmin && ctx.role !== "owner" && ctx.role !== "admin") {
+    throw new AuthorizationError();
+  }
   const { rationale, ...proposal } = proposeEntryInput.parse(input);
   return withTenant(db, ctx.organizationId, async (tx) => {
     if (!(await scopeRefsExist(tx, ctx.organizationId, proposal))) {
@@ -103,6 +113,37 @@ export async function proposeMemoryEntry(
       payload: proposal,
       rationale,
       proposedBy: ctx.userId,
+    });
+    await emitDomainEvent(tx, {
+      type: "agent_suggestion.created",
+      organizationId: ctx.organizationId,
+      suggestionId: row.id,
+    });
+    return row;
+  });
+}
+
+/**
+ * Human-proposed knowledge staging ("Ensinar a IA") — any member with
+ * messaging:write can teach the AI; proposals wait in Revisões for an
+ * ai:manage reviewer (spec §7.4). The source conversation is stored so the
+ * review card can link back to where the excerpt came from.
+ */
+export async function proposeKnowledgeEntry(
+  db: Database,
+  ctx: TenantContext,
+  input: unknown,
+): Promise<AgentSuggestionRow> {
+  assertPermission(ctx, { messaging: ["write"] });
+  const { rationale, sourceConversationId, ...proposal } = proposeKnowledgeEntryInput.parse(input);
+  return withTenant(db, ctx.organizationId, async (tx) => {
+    const row = await insertSuggestion(tx, {
+      organizationId: ctx.organizationId,
+      targetType: "knowledge_entry",
+      payload: proposal,
+      rationale,
+      proposedBy: ctx.userId,
+      sourceConversationId,
     });
     await emitDomainEvent(tx, {
       type: "agent_suggestion.created",
@@ -309,9 +350,19 @@ async function applyPayload(
  * Conversation-scoped targets (drafts…) have their own review services —
  * the generic review path only handles configuration-class suggestions.
  */
-function assertConfigSuggestion(suggestion: AgentSuggestionRow): void {
+function assertConfigSuggestion(ctx: TenantContext, suggestion: AgentSuggestionRow): void {
   if (!(suggestionTargetSchema.options as readonly string[]).includes(suggestion.targetType)) {
     throw new DomainError("SUGGESTION_TARGET_UNSUPPORTED", suggestion.targetType);
+  }
+  // Memory decisions are owner/admin only (spec §7.4) even though managers
+  // hold ai:manage for the rest of the review queue.
+  if (
+    suggestion.targetType === "memory" &&
+    ctx.role !== "owner" &&
+    ctx.role !== "admin" &&
+    !ctx.isPlatformAdmin
+  ) {
+    throw new AuthorizationError();
   }
 }
 
@@ -325,7 +376,7 @@ export async function approveSuggestion(
   const reviewed = await withTenant(db, ctx.organizationId, async (tx) => {
     const suggestion = await findSuggestionById(tx, ctx.organizationId, suggestionId);
     if (!suggestion) throw new NotFoundError("AgentSuggestion", suggestionId);
-    assertConfigSuggestion(suggestion);
+    assertConfigSuggestion(ctx, suggestion);
     if (suggestion.status === "approved") return suggestion;
     if (suggestion.status !== "pending") {
       throw new DomainError("SUGGESTION_ALREADY_REVIEWED", suggestion.status);
@@ -362,7 +413,7 @@ export async function rejectSuggestion(
   const reviewed = await withTenant(db, ctx.organizationId, async (tx) => {
     const suggestion = await findSuggestionById(tx, ctx.organizationId, suggestionId);
     if (!suggestion) throw new NotFoundError("AgentSuggestion", suggestionId);
-    assertConfigSuggestion(suggestion);
+    assertConfigSuggestion(ctx, suggestion);
     if (suggestion.status === "rejected") return suggestion;
     if (suggestion.status !== "pending") {
       throw new DomainError("SUGGESTION_ALREADY_REVIEWED", suggestion.status);

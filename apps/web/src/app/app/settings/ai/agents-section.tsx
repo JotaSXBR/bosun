@@ -5,20 +5,16 @@ import { Badge } from "@crm/design-system/components/badge";
 import { Button } from "@crm/design-system/components/button";
 import { Card } from "@crm/design-system/components/card";
 import { toast } from "@crm/design-system/components/toast";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import type { AiActionResult } from "@/server/actions/ai";
-import { createAgentAction, deleteAgentAction, updateAgentAction } from "@/server/actions/ai";
+import { createAgentAction, deleteAgentAction } from "@/server/actions/ai";
 
 import type { AgentForm } from "./agent-form-dialog";
-import {
-  AgentFormDialog,
-  agentFormToPayload,
-  agentToForm,
-  EMPTY_AGENT_FORM,
-} from "./agent-form-dialog";
+import { AgentFormDialog, agentFormToPayload, EMPTY_AGENT_FORM } from "./agent-form-dialog";
 
 type Run = (action: Promise<AiActionResult>, success?: string, onSuccess?: () => void) => void;
 
@@ -36,7 +32,6 @@ export function AgentsSection({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<AgentRow | null>(null);
   const [form, setForm] = useState<AgentForm>(EMPTY_AGENT_FORM);
 
   const run: Run = (action, success, onSuccess) =>
@@ -52,23 +47,12 @@ export function AgentsSection({
     });
 
   const openCreate = () => {
-    setEditing(null);
     setForm(EMPTY_AGENT_FORM);
-    setOpen(true);
-  };
-  const openEdit = (agent: AgentRow) => {
-    setEditing(agent);
-    setForm(agentToForm(agent));
     setOpen(true);
   };
 
   const submit = () => {
-    const payload = agentFormToPayload(form);
-    if (editing) {
-      run(updateAgentAction({ agentId: editing.id, ...payload }), t("saved"), () => setOpen(false));
-    } else {
-      run(createAgentAction(payload), t("created"), () => setOpen(false));
-    }
+    run(createAgentAction(agentFormToPayload(form)), t("created"), () => setOpen(false));
   };
 
   const statusLabel = (status: string) =>
@@ -99,26 +83,27 @@ export function AgentsSection({
                 </div>
                 {canManage && (agent.kind !== "observer" || isOwner) && (
                   <div className="flex shrink-0 items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={pending}
-                      onClick={() => openEdit(agent)}
-                    >
-                      {t("edit")}
+                    <Button size="sm" variant="secondary" asChild>
+                      <Link
+                        href={`/app/settings/ai/agents/${agent.kind === "observer" ? "observer" : agent.id}`}
+                      >
+                        {t("edit")}
+                      </Link>
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      disabled={pending}
-                      onClick={() => {
-                        if (window.confirm(t("deleteConfirm", { name: agent.name }))) {
-                          run(deleteAgentAction(agent.id), t("deleted"));
-                        }
-                      }}
-                    >
-                      {t("delete")}
-                    </Button>
+                    {agent.kind === "org" && (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        disabled={pending}
+                        onClick={() => {
+                          if (window.confirm(t("deleteConfirm", { name: agent.name }))) {
+                            run(deleteAgentAction(agent.id), t("deleted"));
+                          }
+                        }}
+                      >
+                        {t("delete")}
+                      </Button>
+                    )}
                   </div>
                 )}
               </li>
@@ -135,7 +120,7 @@ export function AgentsSection({
       <AgentFormDialog
         open={open}
         onOpenChange={setOpen}
-        editing={editing}
+        editing={null}
         form={form}
         setForm={setForm}
         pending={pending}

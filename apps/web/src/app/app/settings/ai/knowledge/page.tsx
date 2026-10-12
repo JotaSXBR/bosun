@@ -1,17 +1,6 @@
-import { hasPermission } from "@crm/permissions";
+import { redirect } from "next/navigation";
 
-import { listOrgKnowledge } from "@/server/services";
-import { requireTenantContext } from "@/server/tenant";
-
-import { KnowledgeSection } from "../knowledge-section";
-
-// Reads the session + database → must never be prerendered at build time.
-export const dynamic = "force-dynamic";
-
-export default async function AiKnowledgePage() {
-  const ctx = await requireTenantContext();
-  const canManage = hasPermission(ctx.role, { ai: ["manage"] });
-  const knowledge = await listOrgKnowledge(ctx);
-
-  return <KnowledgeSection entries={knowledge} canManage={canManage} />;
+// Moved to the Inteligência module (IA spec §5) — keep the deep link alive.
+export default function AiKnowledgeRedirect() {
+  redirect("/app/ai/knowledge");
 }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// /app/settings/ai became a tabbed hub — keep the old deep link alive.
+// Technical AI settings live under Agentes / Credenciais (IA spec §5).
 export default function AiSettingsPage() {
-  redirect("/app/settings/ai/suggestions");
+  redirect("/app/settings/ai/agents");
 }

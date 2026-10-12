@@ -16,3 +16,12 @@ export const updateKnowledgeEntryInput = z.object({
   status: knowledgeStatusSchema.optional(),
 });
 export type UpdateKnowledgeEntryInput = z.input<typeof updateKnowledgeEntryInput>;
+
+/** Human-proposed knowledge ("Ensinar a IA") — staged in agent_suggestions for review. */
+export const proposeKnowledgeEntryInput = z.object({
+  title: z.string().trim().min(1).max(200),
+  content: z.string().trim().min(1).max(20_000),
+  rationale: z.string().trim().min(1).max(4000),
+  sourceConversationId: z.uuid().nullish(),
+});
+export type ProposeKnowledgeEntryInput = z.input<typeof proposeKnowledgeEntryInput>;
