@@ -1,7 +1,7 @@
-# TODO — Perf: etapa 3 (leituras desnormalizadas + N+1 restantes)
+# TODO — Perf: etapa 4 (decisões F5/F6/F15 + deferrals)
 
-- [x] **Task 1**: drafts/repository.ts — `listNudgeCandidates`/`listStaleNudges` leem `last_message_direction`/`last_message_at` (subplanos removidos)
-- [x] **Task 2**: regressão — nota privada não suprime nudge; outbound pública vira stale (2 testes novos, 10/10 no arquivo)
-- [x] **Task 3**: F8 — `listStagesByFunnels` (repo) + `listStagesForFunnels` (service) + `listFunnelsWithStages` em 2 queries
-- [x] **Task 4**: F14 — EXPLAIN (Seq Scan + sort, 62 buffers) → índice parcial `messages(conversation_id, created_at desc) where direction='inbound'` (migration 0027) → Bitmap Heap Scan
-- [x] **Checkpoint**: gate completo (format ✅, typecheck 14/14, lint 0 erros, unit 167/167, int 263/263) + relatório/TODO + commits
+- [x] **Task 1**: F5 — `shouldRefreshForEvent` (lib/live-refresh.ts) + InboxLive escopado + 5 testes unitários
+- [x] **Task 2**: F6 — throttle 5min no `touchSiteChatSession` (write-free em sessão fresca) + int test
+- [x] **Task 3**: F15 — media `max-age=86400, immutable` + caixa `aspect-video`/`object-contain` (sem CLS)
+- [x] **Task 4**: docs — etapa 4 no relatório + deferrals F7/F9/F13 + TODO.md
+- [x] **Checkpoint**: gate completo (format ✅, typecheck 14/14, lint 0 erros, unit 172/172, int 264/264) + commits

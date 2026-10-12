@@ -2,20 +2,44 @@
 
 import { Button } from "@crm/design-system/components/button";
 import { toast } from "@crm/design-system/components/toast";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { shouldRefreshForEvent } from "@/lib/live-refresh";
+import type { DomainEvent } from "@/lib/sse";
 import { subscribeToDomainEvents } from "@/lib/sse";
 
 const REFRESH_DEBOUNCE_MS = 500;
 const INDICATOR_MS = 8_000;
 
+type Translators = {
+  drafts: (key: string) => string;
+  nudges: (key: string) => string;
+  ai: (key: string) => string;
+};
+
+/** Drafts surface as cards in the thread — toast just signals; config suggestions get a link. */
+function toastSuggestion(event: DomainEvent, t: Translators, goToSettings: () => void) {
+  if (event.targetType === "draft") toast.info(t.drafts("newDraftToast"));
+  else if (event.targetType === "nudge") toast.info(t.nudges("newNudgeToast"));
+  else {
+    toast.info(t.ai("newSuggestion"), {
+      action: (
+        <Button variant="secondary" size="sm" onClick={goToSettings}>
+          {t.ai("title")}
+        </Button>
+      ),
+    });
+  }
+}
+
 /**
  * Keeps /app pages live: subscribes to the org-scoped SSE stream and
  * refreshes the current route (debounced) when a persistent domain event
- * arrives. `contact.presence` is transient — it never triggers a refresh
- * (the conversation header renders it directly from the event payload).
+ * arrives that affects this page (see `shouldRefreshForEvent`).
+ * `contact.presence` is transient — it never triggers a refresh (the
+ * conversation header renders it directly from the event payload).
  */
 export function InboxLive() {
   const t = useTranslations("inbox");
@@ -23,6 +47,7 @@ export function InboxLive() {
   const tDrafts = useTranslations("drafts");
   const tNudges = useTranslations("nudges");
   const router = useRouter();
+  const pathname = usePathname();
   const [hasNew, setHasNew] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,29 +56,18 @@ export function InboxLive() {
     return subscribeToDomainEvents((event) => {
       if (event.type === "contact.presence") return;
       if (event.type === "agent_suggestion.created") {
-        // Drafts surface as cards in the conversation thread — the toast
-        // just signals; config suggestions get the settings link.
-        if (event.targetType === "draft") {
-          toast.info(tDrafts("newDraftToast"));
-        } else if (event.targetType === "nudge") {
-          toast.info(tNudges("newNudgeToast"));
-        } else {
-          toast.info(tAi("newSuggestion"), {
-            action: (
-              <Button variant="secondary" size="sm" onClick={() => router.push("/app/settings/ai")}>
-                {tAi("title")}
-              </Button>
-            ),
-          });
-        }
+        toastSuggestion(event, { drafts: tDrafts, nudges: tNudges, ai: tAi }, () =>
+          router.push("/app/settings/ai"),
+        );
       }
+      if (!shouldRefreshForEvent(pathname, String(event.type ?? ""))) return;
       setHasNew(true);
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
       refreshTimer.current = setTimeout(() => router.refresh(), REFRESH_DEBOUNCE_MS);
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = setTimeout(() => setHasNew(false), INDICATOR_MS);
     });
-  }, [router, tAi, tDrafts, tNudges]);
+  }, [router, pathname, tAi, tDrafts, tNudges]);
 
   if (!hasNew) return null;
   return (

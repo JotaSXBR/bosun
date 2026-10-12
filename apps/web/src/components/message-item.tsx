@@ -79,16 +79,19 @@ function MediaContent({ msg, t, tc }: { msg: MessageWithAuthorRow; t: T; tc: T }
   return (
     <div className="space-y-1">
       {content.mediaKind === "image" && (
-        <Image
-          src={src}
-          alt={content.caption ?? t("imageAlt")}
-          width={0}
-          height={0}
-          // eslint-disable-next-line no-restricted-syntax -- next/image sizes attribute (runtime hint, not styling)
-          sizes="320px"
-          unoptimized
-          className="h-auto max-w-full rounded-md"
-        />
+        // Reserved box (message content carries no dimensions) — `fill` +
+        // `object-contain` shows the whole image without a layout shift.
+        <div className="bg-page/60 relative aspect-video w-64 max-w-full overflow-hidden rounded-md">
+          <Image
+            src={src}
+            alt={content.caption ?? t("imageAlt")}
+            fill
+            // eslint-disable-next-line no-restricted-syntax -- next/image sizes attribute (runtime hint, not styling)
+            sizes="256px"
+            unoptimized
+            className="object-contain"
+          />
+        </div>
       )}
       {content.mediaKind === "video" && (
         <video controls src={src} className="max-w-full rounded-md">

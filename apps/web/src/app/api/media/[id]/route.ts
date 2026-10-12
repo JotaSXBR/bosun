@@ -22,8 +22,10 @@ function mediaResponse(
 ): Response {
   const headers: Record<string, string> = {
     "content-type": contentType ?? "application/octet-stream",
-    // Tenant content — cacheable per-session, never shared/public.
-    "cache-control": "private, max-age=300",
+    // Tenant content — cacheable per-session, never shared/public. Media is
+    // immutable per message id (edits only touch text), so long-lived
+    // caching is safe and avoids refetching every rendered image.
+    "cache-control": "private, max-age=86400, immutable",
   };
   if (filename) {
     headers["content-disposition"] = `inline; filename="${filename.replaceAll('"', "")}"`;

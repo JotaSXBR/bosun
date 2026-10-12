@@ -200,6 +200,34 @@ describe("sendWidgetMessage + getWidgetConversation", () => {
     );
     await expect(getWidgetConversation(db, "bad-token")).rejects.toThrow("Widget session");
   });
+
+  it("throttles the session touch: a fresh session does not write on every read", async () => {
+    const { sessionToken: tk } = await createWidgetSession(db, connA.webhookToken, {
+      ...PRE_FORM,
+      email: "throttle@example.com",
+    });
+    const readSeenAt = () =>
+      withServiceAccess(db, async (tx) => {
+        const [row] = await tx
+          .select({ lastSeenAt: siteChatSessions.lastSeenAt })
+          .from(siteChatSessions)
+          .where(eq(siteChatSessions.token, tk));
+        return row!.lastSeenAt;
+      });
+
+    // Stale session → the read refreshes lastSeenAt.
+    const stale = new Date(Date.now() - 10 * 60_000);
+    await withServiceAccess(db, (tx) =>
+      tx.update(siteChatSessions).set({ lastSeenAt: stale }).where(eq(siteChatSessions.token, tk)),
+    );
+    await getWidgetConversation(db, tk);
+    const afterStale = await readSeenAt();
+    expect(afterStale.getTime()).toBeGreaterThan(stale.getTime());
+
+    // Fresh session (inside the 5min window) → a poll must not write again.
+    await getWidgetConversation(db, tk);
+    expect(await readSeenAt()).toEqual(afterStale);
+  });
 });
 
 describe("site_chat_sessions RLS", () => {
