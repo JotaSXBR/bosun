@@ -1,8 +1,7 @@
-# TODO — Perf: etapa 2 (F3-b denormalização)
+# TODO — Perf: etapa 3 (leituras desnormalizadas + N+1 restantes)
 
-- [x] **Task 1**: colunas `last_message_preview/direction` + migration 0026 com backfill
-- [x] **Task 2**: `updateConversationLastMessage` com `{direction, preview}` + `messagePreviewText` + 3 call sites
-- [x] **Task 3**: `refreshConversationLastMessage` em edit/revoke
-- [x] **Task 4**: `listConversations` lê colunas — EXPLAIN com 0 subplanos
-- [x] **Task 5**: int test — nota interna não apaga awaitingReply/preview (+reescrita do caso outbound pelo write path real)
-- [x] **Checkpoint**: gate completo (typecheck 14/14, lint 0 erros, unit 167/167, int 261/261, format:check) + relatório/TODO + commits
+- [x] **Task 1**: drafts/repository.ts — `listNudgeCandidates`/`listStaleNudges` leem `last_message_direction`/`last_message_at` (subplanos removidos)
+- [x] **Task 2**: regressão — nota privada não suprime nudge; outbound pública vira stale (2 testes novos, 10/10 no arquivo)
+- [x] **Task 3**: F8 — `listStagesByFunnels` (repo) + `listStagesForFunnels` (service) + `listFunnelsWithStages` em 2 queries
+- [x] **Task 4**: F14 — EXPLAIN (Seq Scan + sort, 62 buffers) → índice parcial `messages(conversation_id, created_at desc) where direction='inbound'` (migration 0027) → Bitmap Heap Scan
+- [x] **Checkpoint**: gate completo (format ✅, typecheck 14/14, lint 0 erros, unit 167/167, int 263/263) + relatório/TODO + commits

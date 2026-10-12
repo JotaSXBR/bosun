@@ -1,107 +1,107 @@
-# Plan — Perf: etapa 2 (F3-b denormalização do último mensagem)
+# Plan — Perf: etapa 3 (leituras desnormalizadas + N+1 restantes)
 
-- **Origem**: `docs/audits/perf-baseline-2026-10-11.md` (F3-b) ·
-  `TODO.md` → "P2 — Perf: crescimento dos reads quentes" · PR #29 (etapa 1)
+- **Origem**: `docs/audits/perf-baseline-2026-10-11.md` (F8, F14 + follow-up
+  do F3-b em `drafts/repository.ts`) · `TODO.md` → "P2 — Perf" · PR #30 (etapa 2)
 - **Lifecycle**: /spec (auditoria) ✅ → /plan → /build → /test → /review → /ship
-- **Branch**: `perf/audit-etapa-2` (a partir de `main` pós-#29)
+- **Branch**: `perf/audit-etapa-3` (a partir de `main` pós-#30)
 - **Data**: 2026-10-12
 
 ## Objetivo
 
-Eliminar por completo o subplano correlacionado de última mensagem no
-read quente do inbox (`listConversations`), materializando
-`last_message_preview` + `last_message_direction` em `conversations` —
-escritos no mesmo ponto que já atualiza `last_message_at`.
+Eliminar os subplanos correlacionados restantes do repository layer,
+aproveitando as colunas desnormalizadas da etapa 2, e fechar o N+1 de
+`listFunnelsWithStages` — tudo com EXPLAIN antes/depois.
 
 ## Contexto
 
-Decisões já tomadas na etapa 1 e fatos verificados no código:
+Fatos verificados no código (main @ `4c3d8f8`):
 
-1. `updateConversationLastMessage` tem **3 call sites**, todos com o
-   conteúdo da mensagem em mãos: ingest inbound (`service.ts:114`),
-   outbound (`outbound.ts:130`), off-hours auto-reply (`offhours.ts:304`).
-2. Mensagens `private` (notas internas, system notes) **não** chamam
-   `updateConversationLastMessage` — já não movem `last_message_at`.
-   O subplano atual, porém, as conta como "última mensagem": hoje uma
-   nota interna polui o preview e limpa `awaitingReply`. A
-   desnormalização alinha preview/direction a `last_message_at` —
-   **correção comportamental intencional** (nota interna não apaga o
-   indicador de "aguardando resposta" nem vaza no preview da fila).
-3. Edição/revogação (`applyMessageEdit`, `markMessageRevoked`) são paths
-   raros com provider call no meio — recebem um refresh correlacionado
-   para manter paridade (hoje o subplano mostra texto editado; revogação
-   mantém conteúdo original — não filtrar `revokedAt` no refresh).
-4. Replay de webhook dedupado chama `updateConversationLastMessage`
-   mesmo sem insert (linha 114 antes do `if (!message)`) — reescrever os
-   mesmos valores é idempotente, sem ação extra.
-5. `messages.direction` é CHECK `('inbound','outbound')` — domínio de 2
-   valores; `awaitingReply` vira `direction = 'inbound'` na coluna.
-6. Backfill usa `DISTINCT ON (conversation_id)` sobre mensagens
-   **não-privadas**, mesma ordenação do antigo subplano
-   (`sent_at desc nulls last, created_at desc`).
+1. **`drafts/repository.ts`** — `listNudgeCandidates` (scan periódico via
+   `observer-scan.ts`) avalia `LAST_DIRECTION_SQL` + `LAST_SENT_AT_SQL`
+   **no WHERE de cada linha candidata** (pior que select-list: executa
+   antes do filtro reduzir). `listStaleNudges` idem por nudge pendente.
+   As colunas `last_message_direction`/`last_message_at` substituem os
+   dois subplanos — `lastMessageAt` já é o marcador de última mensagem
+   **não-privada** (nota interna não reseta ociosidade: correção
+   comportamental consistente com F3-b; hoje uma nota privada conta
+   como "última mensagem" e suprime o nudge indevidamente).
+   Conversação sem mensagem não-privada: `lastMessageAt` NULL → fora do
+   scan (mesmo resultado do subplano antigo).
+2. **F8 `listFunnelsWithStages`** (`apps/web/src/server/services.ts:160`)
+   — `listFunnels` + `Promise.all(listStages × N funis)` = 1+N queries por
+   render do conversation-aside. Batch `inArray(funnelId, ids)` → 2
+   queries, agrupamento em memória preservando `position`.
+3. **F14 `getLastInboundAt`** (`reads.ts:295`) — ordena por `created_at
+desc` com filtro `direction='inbound'`; o índice existente é
+   `(conversation_id, sent_at)` — não serve a `created_at`. Hipótese:
+   sort da thread inteira por chamada (detail render). **Medir primeiro**;
+   índice parcial só se o plano mostrar sort custoso.
 
 ## Escopo
 
 <!-- Globs relativos à raiz. O hook bloqueia edições fora daqui. -->
 
+- `packages/core/src/modules/drafts/**`
+- `packages/core/src/modules/leads/**`
+- `apps/web/src/server/services.ts`
 - `packages/db/src/schema/messaging.ts`
 - `packages/db/migrations/**`
-- `packages/core/src/modules/messaging/**`
 
 ## Fora de escopo
 
-- F5/F6 (SSE/router.refresh), F7–F9, F13–F15 — design/outros módulos.
-- Mudança de UI/contrato: `ConversationListRow` mantém os mesmos campos.
-- Índices novos — nenhum necessário (colunas são lidas, não filtradas;
-  o filtro `awaitingReply` já anda junto do status).
+- F5/F6 (SSE/router.refresh, widget), F7 (tx por evento no ingest),
+  F9 (board sem limite — kanban precisa dos cards; reorder opera em sets
+  pequenos por estágio), F13 (ILIKE) — design ou baixo risco medido.
+- Mudança de contrato: `NudgeCandidate`, `FunnelWithStages`,
+  `getLastInboundAt` mantêm assinaturas.
 
 ## Tarefas
 
-### Task 1 — schema + migration com backfill
+### Task 1 — drafts: scan sem subplano
 
-`conversations.last_message_preview text`, `last_message_direction text`
-→ `pnpm db:generate` → acrescentar `UPDATE` de backfill (DISTINCT ON,
-`private is not true`, mesma ordenação) no arquivo gerado →
-`pnpm db:migrate` local.
-**Verify**: colunas populadas; EXPLAIN B1 sem subplano ao final.
+`listNudgeCandidates`: `LAST_DIRECTION_SQL = 'inbound'` →
+`eq(conversations.lastMessageDirection, 'inbound')`;
+`LAST_SENT_AT_SQL < now() - idle` → `conversations.lastMessageAt`;
+`idleSince` → coluna. `listStaleNudges`: `coalesce(lastMessageDirection,
+'outbound')`. Remover `LAST_MESSAGE_SQL`/`LAST_*_SQL` e o import de
+`messages` se órfão.
+**Verify**: typecheck; drafts int verdes.
 
-### Task 2 — write path
+### Task 2 — regressão do scan de nudge
 
-`updateConversationLastMessage` passa a receber `{direction, preview}`;
-helper `messagePreviewText(content)` (text ?? caption ?? `[type]` —
-mesma coalesce do SQL antigo); 3 call sites atualizados.
-**Verify**: typecheck; int tests de ingest/outbound/offhours verdes.
+Int test (service.int.test.ts ou arquivo próprio): inbound ociosa →
+candidata; **nota privada por cima → ainda candidata** (falha sob a
+semântica antiga); outbound pública depois → fora; sem assignee/status
+errado → fora. Stale: nudge pendente com direction ≠ inbound vira stale.
+**Verify**: testes novos verdes.
 
-### Task 3 — refresh em edit/revoke
+### Task 3 — F8: stages em batch
 
-`refreshConversationLastMessage(tx, conversationId)`: UPDATE
-correlacionado (não-privadas, sem filtro de revokedAt) chamado após
-`applyMessageEdit` e `markMessageRevoked`.
-**Verify**: message-actions int tests verdes.
+`leads/repository.ts`: `listStagesByFunnels(executor, organizationId,
+funnelIds)` (early return em array vazio) + export no index;
+`listFunnelsWithStages` em services.ts agrupa por `funnelId`.
+**Verify**: typecheck; leads int verdes; 2 queries por render.
 
-### Task 4 — reads sem subplano
+### Task 4 — F14: medir → índice condicional
 
-`listConversations` lê as colunas direto; filtro `awaitingReply` vira
-`eq(coluna, 'inbound')`; remover `LAST_MESSAGE_SQL`/`LAST_MSG_DIRECTION_SQL`;
-map mantém `lastMessagePreview`/`awaitingReply` no tipo.
-**Verify**: inbox-views + reads int verdes; EXPLAIN B1/B2 zero subplanos.
-
-### Task 5 — teste da correção comportamental
-
-Int test: `addInternalNote` não apaga `awaitingReply` nem muda o preview.
-**Verify**: teste novo verde (falharia sob a semântica antiga).
+Seed sintético (conversa quente ~2k msgs) + `EXPLAIN (ANALYZE, BUFFERS)`
+do `getLastInboundAt` como `crm_app`. Se sort custoso: índice parcial
+`(conversation_id, created_at desc) where direction='inbound'` →
+`pnpm db:generate` → revisar SQL → migrar → re-EXPLAIN. Se já barato:
+documentar e pular.
+**Verify**: evidência registrada no relatório.
 
 ### Checkpoint
 
 `pnpm format:check && pnpm typecheck && pnpm lint` + `pnpm test` +
-`pnpm test:integration` + EXPLAIN B1/B2 → relatório seção I atualizada
-
-- `TODO.md` + commits atômicos.
+`pnpm test:integration` + EXPLAINs → relatório seção I + `TODO.md` +
+commits atômicos.
 
 ## Critérios de pronto
 
 - [ ] Gate completo verde
-- [ ] EXPLAIN B1: 0 subplanos (scan+sort direto)
-- [ ] Preview/direction denormalizados idênticos ao subplano antigo
-      (exceto correção intencional das notas privadas)
+- [ ] `listNudgeCandidates`/`listStaleNudges` sem subplano (EXPLAIN)
+- [ ] Nota privada não suprime nudge — teste prova
+- [ ] `listFunnelsWithStages` = 2 queries
+- [ ] F14: decisão por evidência (índice ou deferral documentado)
 - [ ] Relatório e TODO atualizados

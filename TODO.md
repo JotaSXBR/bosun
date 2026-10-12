@@ -334,9 +334,14 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `last_message_preview`/`last_message_direction` denormalizados em
   `conversations` (migration 0026 + backfill) — inbox lê colunas direto,
   **0 subplanos**; notas privadas deixam de poluir preview/awaitingReply.
-  Restantes: `router.refresh()` por evento re-executa o grafo por
-  cliente (F5/F6 — design); ingestão multi-evento (F7); funnels/board
-  (F8/F9); envelope tx por query simples (decisão de design).
+  ✅ Etapa 3 (2026-10-12): scan de nudge (`listNudgeCandidates`/
+  `listStaleNudges`) usa `last_message_*` — sem subplano por candidata;
+  `listFunnelsWithStages` em batch (1+N → 2 queries); índice parcial
+  `messages(conversation_id, created_at desc) where direction='inbound'`
+  (migration 0027, `getLastInboundAt`). Restantes: `router.refresh()`
+  por evento re-executa o grafo por cliente (F5/F6 — design); ingestão
+  multi-evento (F7); board sem limite + reorder (F9 — kanban precisa dos
+  cards); envelope tx por query simples (decisão de design).
 
 - **P3 — Upgrade Coolify** ≥4.4: traz API de registries
   (`POST /servers/{uuid}/registries`) — docker login vira automável via
