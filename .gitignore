@@ -24,9 +24,6 @@ playwright/.cache/
 *.log
 .vercel
 
-# trigger.dev self-host checkout
-.trigger-selfhost/
-
 # External reference material (re-cloneable, see research/README.md)
 research/vibe-coding-toolkit/
 research/agent-skills/
