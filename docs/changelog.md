@@ -5,6 +5,26 @@ a backlog — new entries land here when a `## Concluído` item ages off
 TODO.md (audit AUD-024). `tasks/briefs/` and `tasks/*.done.md` remain the
 local per-task archive.
 
+- **P1 — Correções da auditoria CRMv2 (plano v1.0)** ✅ 2026-10-13 —
+  branch `chore/audit-plano-v1`, 21 commits, 59 arquivos. Segurança:
+  histórico do widget escopado à sessão + expiração 30d (AUD-010/012),
+  mídia inline só p/ allowlist + attachment/octet-stream (AUD-011),
+  `DATABASE_ADMIN_URL` removida do runtime pós-migrate (AUD-013),
+  rate-limit do widget no último hop XFF (AUD-014), FORCE RLS nas 15
+  tabelas pendentes via migração 0029 (AUD-015), lote AUD-016 (log sem
+  token, cursor uuid→400, verify_token timing-safe, WAHA por origem,
+  e-mail de convite oculto, `poweredByHeader:false`), CI `contents:read`
+  - `rollback_ref` validado (AUD-019), compose em `127.0.0.1` (AUD-023).
+    Governança: `.devin/config.json` deny/ask (AUD-005), política de commits
+    única (AUD-003), gate `verify`/`verify:full` (AUD-002), hook de escopo
+    case-insensitive + testes (AUD-004), AGENTS.md enxuto + CLAUDE.md
+    ponteiro (AUD-006), MCP/skills documentados (AUD-007/008), `.dockerignore`
+    c/ secrets+logs (AUD-018). Docs/limpeza: tooling/testing/trigger→pg-boss/
+    viewer/design-system (AUD-021), remoções `packages/ui`+`graft`+log+
+    `apps/web/Dockerfile` (AUD-022), baseline de cobertura medida (AUD-020),
+    Concluído→changelog (AUD-024). Gate: verify ✅, integração 267/267 ✅,
+    build ✅, e2e 17/17 ✅. Plan: `tasks/plan-auditoria-crmv2.done.md`;
+    relatório em `docs/audits/Auditoria-CRMv2/`.
 - **P1 — UX: 7 leis em todas as telas** ✅ 2026-10-11 —
   `control-md` 42→44px (WCAG 2.5.5); componente `Steps` no DS (Passo X de Y
   - check + copy "Quase lá — falta N" na reta final); `<select>` nativos →
