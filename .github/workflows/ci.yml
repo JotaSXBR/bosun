@@ -20,6 +20,7 @@ env:
   DATABASE_URL: postgres://crm_app:crm_app@localhost:5432/crm
   DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/crm
   BETTER_AUTH_SECRET: ci-secret-ci-secret-ci-secret-ci
+  NEXT_TELEMETRY_DISABLED: "1"
   # Test-only AES-256-GCM root key for platform_settings/channel credentials.
   CHANNEL_CREDENTIALS_KEY: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   STORAGE_S3_ENDPOINT: http://localhost:9000
@@ -50,6 +51,16 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
             turbo-${{ runner.os }}-
+      # .next/cache is excluded from turbo outputs on purpose (build artifact
+      # vs incremental-compile cache), so it gets its own cache entry.
+      - name: Cache Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: apps/web/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
       - run: pnpm turbo run lint typecheck test build
 
   integration:
@@ -80,6 +91,25 @@ jobs:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+
+      # Same key as the quality job (same sha) — restores the build outputs it
+      # just produced, so the e2e `turbo run build` below is a cache hit.
+      - name: Cache Turborepo
+        uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
+      - name: Cache Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: apps/web/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
 
       - name: Start RustFS (local S3)
         run: |
@@ -116,9 +146,11 @@ jobs:
         working-directory: apps/web
       # e2e serves the production build — the dev server's compile loop is too
       # heavy for the hosted runner and got the step killed mid-suite.
-      # NODE_ENV=development (workflow env) breaks `next build` prerender
-      # (_global-error useContext), so build under production.
-      - run: pnpm --filter @crm/web build
+      # Goes through turbo so the restored .turbo cache from `quality` makes
+      # this a cache hit instead of a rebuild; NODE_ENV=production is kept as
+      # a fallback for the cold-cache path (dev NODE_ENV breaks `next build`
+      # prerender — _global-error useContext).
+      - run: pnpm turbo run build --filter=@crm/web
         env:
           NODE_ENV: production
       # Standalone layout needs static assets + public next to server.js —

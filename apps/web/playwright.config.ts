@@ -6,7 +6,10 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
   fullyParallel: false,
-  workers: 1,
+  // Specs are isolated per file (each signs up a fresh user/org — RLS keeps
+  // them apart), so CI can run files across workers against the standalone
+  // server. Local stays serial: `pnpm dev` + Chromium + Postgres is heavy.
+  workers: process.env.CI ? 3 : 1,
   retries: process.env.CI ? 1 : 0,
   use: { baseURL },
   webServer: {
