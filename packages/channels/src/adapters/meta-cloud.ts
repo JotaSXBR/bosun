@@ -2,6 +2,8 @@
 // Send: POST /{version}/{phoneNumberId}/messages. Webhooks: signature
 // `x-hub-signature-256: sha256=<hex>` (HMAC-SHA256 of the raw body with the
 // App Secret); subscription handshake: GET challenge with hub.verify_token.
+import { timingSafeEqual } from "node:crypto";
+
 import { z } from "zod";
 
 import type {
@@ -165,10 +167,14 @@ export class MetaCloudChannelProvider implements ChannelProvider {
 
   /** Meta webhook subscription handshake (GET ?hub.mode&hub.verify_token&hub.challenge). */
   verificationChallenge(query: Record<string, string>): string | null {
-    if (
-      query["hub.mode"] === "subscribe" &&
-      query["hub.verify_token"] === this.config.verifyToken
-    ) {
+    // Timing-safe compare: verify_token is a shared secret.
+    const provided = query["hub.verify_token"];
+    const expected = this.config.verifyToken;
+    const tokenMatch =
+      typeof provided === "string" &&
+      provided.length === expected.length &&
+      timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+    if (query["hub.mode"] === "subscribe" && tokenMatch) {
       return query["hub.challenge"] ?? null;
     }
     return null;

@@ -175,6 +175,15 @@ describe("WahaChannelProvider", () => {
     await provider.fetchMedia("https://waha.example.com/api/media/def");
     expect(calls[1]?.url).toBe("https://waha.example.com/api/media/def");
     await expect(provider.fetchMedia("https://evil.example.com/api/media/x")).rejects.toThrow();
+    // Prefix lookalikes must fail the origin check — X-Api-Key never leaves
+    // the WAHA host.
+    await expect(
+      provider.fetchMedia("https://waha.example.com.evil.com/api/media/x"),
+    ).rejects.toThrow();
+    await expect(
+      provider.fetchMedia("https://waha.example.com@evil.com/api/media/x"),
+    ).rejects.toThrow();
+    await expect(provider.fetchMedia("not a url")).rejects.toThrow();
   });
 });
 
@@ -252,6 +261,14 @@ describe("MetaCloudChannelProvider", () => {
       provider.verificationChallenge({
         "hub.mode": "subscribe",
         "hub.verify_token": "wrong",
+        "hub.challenge": "12345",
+      }),
+    ).toBeNull();
+    // Same-length near-miss still fails (timing-safe compare path).
+    expect(
+      provider.verificationChallenge({
+        "hub.mode": "subscribe",
+        "hub.verify_token": "verify-mf",
         "hub.challenge": "12345",
       }),
     ).toBeNull();

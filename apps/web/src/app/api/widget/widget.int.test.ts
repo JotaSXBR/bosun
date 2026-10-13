@@ -160,6 +160,14 @@ describe("GET /api/widget/messages", () => {
     expect((await messagesGET(get("/api/widget/messages"))).status).toBe(400);
     expect((await messagesGET(get("/api/widget/messages?token=nope"))).status).toBe(404);
   });
+
+  it("400s on a non-uuid after cursor instead of 500", async () => {
+    const res = await messagesGET(
+      get(`/api/widget/messages?token=${sessionToken}&after=not-a-uuid`),
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("invalid_after");
+  });
 });
 
 describe("GET /api/widget/stream", () => {

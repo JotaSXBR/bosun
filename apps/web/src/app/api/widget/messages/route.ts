@@ -3,6 +3,7 @@ import { getWidgetConversation } from "@crm/core/messaging";
 import { getDb } from "@crm/db";
 import { captureException } from "@crm/observability";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 
 import { corsJson, corsOptions, rateLimit } from "../../../../lib/widget-http";
 
@@ -26,6 +27,9 @@ export async function GET(request: NextRequest): Promise<Response> {
     return corsJson({ ok: false, error: "rate_limited" }, { status: 429 });
   }
   const after = new URL(request.url).searchParams.get("after") ?? undefined;
+  if (after && !z.uuid().safeParse(after).success) {
+    return corsJson({ ok: false, error: "invalid_after" }, { status: 400 });
+  }
   try {
     const result = await getWidgetConversation(getDb(), token, { after, limit: 50 });
     return corsJson({ ok: true, ...result });
