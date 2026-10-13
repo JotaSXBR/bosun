@@ -152,8 +152,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Retag :prod to ${{ inputs.rollback_ref }}
-        run: docker buildx imagetools create --tag "$IMAGE:prod" "$IMAGE:${{ inputs.rollback_ref }}"
+      # The input travels via env (never interpolated into the script) and
+      # must match the only tag shapes this pipeline produces (semver tags
+      # and sha-<hex> from docker/metadata-action).
+      - name: Retag :prod to the requested ref
+        env:
+          ROLLBACK_REF: ${{ inputs.rollback_ref }}
+        run: |
+          if ! [[ "$ROLLBACK_REF" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+|sha-[0-9a-f]{7,40})$ ]]; then
+            echo "::error::rollback_ref must be v<semver> or sha-<7..40 hex>, got '$ROLLBACK_REF'"
+            exit 1
+          fi
+          docker buildx imagetools create --tag "$IMAGE:prod" "$IMAGE:$ROLLBACK_REF"
 
       - name: Trigger Coolify deploy (production)
         run: |
