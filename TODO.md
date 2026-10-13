@@ -557,7 +557,15 @@ invitation:create`): lista + convites pendentes com **link copiável
   / rollback via dispatch (retag `:prod`); `Dockerfile` multi-stage
   (standalone + migrator isolado), entrypoint roda migrations antes do
   server; `/api/health` com DB ping. ADR 0015, `docs/development/cicd.md` +
-  `deployment-coolify.md`.
+  `deployment-coolify.md`. **e2e hardening** 2026-10-13: CI roda Playwright
+  contra o build standalone (`node .next/standalone/apps/web/server.js`,
+  com `static`+`public` copiados como no Dockerfile) — `pnpm dev` +
+  Chromium + Postgres estourava o runner (4× SIGTERM); `logger.ts` passou
+  a escrever via `console.*` (flood de warnings Edge no `instrumentation`
+  compilava em loop); `server.js` força `NODE_ENV=production`, então
+  `AUTH_REQUIRE_EMAIL_VERIFICATION`/`AUTH_RATE_LIMIT` viraram overrides
+  explícitos de env (on em prod quando ausentes) e o step e2e desliga
+  ambos — specs assinam sem verificar e-mail. Suite CI: 17/17 em ~30s.
 - **P1 — Billing: idempotência do webhook ASAAS** ✅ 2026-10-03 —
   `billing_customers` (1:1 org ↔ customer ASAAS), `billing_subscriptions`,
   `billing_payments` e `billing_webhook_events` (dedup por `event_id`) com
