@@ -32,7 +32,7 @@ com acceptance + verify por task>
 
 ## Critérios de pronto
 
-- [ ] `pnpm typecheck` + `pnpm lint` verdes
+- [ ] `pnpm verify` verde
 - [ ] Testes alvo: <quais — ex.: `*.int.test.ts` do módulo>
 - [ ] Docs atualizadas: <quais>
 - [ ] `TODO.md` movido para Concluído

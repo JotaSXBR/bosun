@@ -29,7 +29,7 @@ pnpm dev               # http://localhost:3000
 3. Follow Conventional Commits (`feat:`, `fix:`, `chore:`...).
 4. Before pushing, run the gate:
    ```bash
-   pnpm format:check && pnpm typecheck && pnpm lint && pnpm test
+   pnpm verify
    ```
    Add integration tests (`*.int.test.ts`) when touching DB/providers, and an
    e2e spec for user-facing flows.
