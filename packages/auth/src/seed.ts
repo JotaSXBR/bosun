@@ -5,6 +5,7 @@ import { createDb, schema } from "@crm/db";
 import { and, eq } from "drizzle-orm";
 
 import { createAuth } from "./auth";
+import { ensureDemoContent } from "./seed-content";
 
 const PASSWORD = "Password123!";
 
@@ -185,6 +186,7 @@ async function main() {
   }
 
   await ensureDemoData(db, orgId, userIdByRole);
+  await ensureDemoContent(db, orgId, userIdByRole);
 
   await db.$client.end();
 
