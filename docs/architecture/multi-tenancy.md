@@ -40,7 +40,7 @@ all rows; scoping them would break sign-in and org switching.
 
 `withPlatformScope` sets `app.platform_scope=on`, which tenant policies treat
 as full access. Use only after verifying `isPlatformAdmin` (platform admin
-operations, Trigger job bootstrapping that must read membership across orgs).
+operations, pg-boss job bootstrapping that must read membership across orgs).
 
 `withServiceAccess` is the same mechanism with a distinct entry point for
 system paths that legitimately have no tenant context yet — webhook ingestion
@@ -48,7 +48,7 @@ authenticates by unguessable `webhook_token` + provider signature, resolves
 the connection under service scope, then enters
 `withTenant(connection.organizationId)` for all tenant writes.
 
-## Trigger jobs
+## pg-boss jobs
 
 Job payloads carry only **identity** (`organizationId`, `actorUserId`). The
 task re-reads membership under platform scope, rebuilds the `TenantContext`,

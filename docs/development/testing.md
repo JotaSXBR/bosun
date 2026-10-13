@@ -15,7 +15,9 @@
   the DB is unavailable — that's a signal, not a pass condition (the storage
   suite skips only when storage env vars are entirely absent).
 - RLS/tenant behavior is covered by integration tests, not unit tests.
-- E2E runs Playwright with a real seeded DB; `webServer` starts `pnpm dev`.
+- E2E runs Playwright with a real seeded DB; `webServer` starts `pnpm dev`
+  locally and the standalone production build in CI (`next dev`'s compile
+  loop was too heavy for hosted runners — see playwright.config.ts).
 
 ## Per-package
 
