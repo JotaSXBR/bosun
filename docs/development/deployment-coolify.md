@@ -142,8 +142,8 @@ escrita de `domains`; `fqdn` não é campo gravável — configurações assim
 escalam ao usuário, nunca via REST/curl pelo agente).
 
 Secrets reais vivem **só** no Coolify + `.env` local (gitignored) —
-`.coolify-secrets.tmp` local guarda os gerados nesta sessão; migrar para
-cofre adequado quando existir (ver roadmap).
+nenhum arquivo temporário de secrets no repo/workspace (qualquer resíduo
+desse tipo é excluído pelo humano ao migrar para o cofre/painel).
 
 ## GHCR — pull da imagem privada
 

@@ -5,7 +5,10 @@
 **/playwright-report
 **/e2e
 **/.env
-**/.env.local
+**/.env.*
+!**/.env.example
+**/.coolify-secrets.tmp
+**/*.log
 .git
 .github
 .vscode
