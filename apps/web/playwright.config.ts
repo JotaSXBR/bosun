@@ -10,7 +10,10 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   use: { baseURL },
   webServer: {
-    command: "pnpm dev",
+    // CI runs the production build (ci.yml builds apps/web first): the dev
+    // server's Turbopack compile loop plus Chromium + Postgres exceeded the
+    // hosted runner's resources and got the e2e step SIGTERM'd mid-suite.
+    command: process.env.CI ? "pnpm start" : "pnpm dev",
     url: `${baseURL}/api/health`,
     timeout: 180_000,
     reuseExistingServer: !process.env.CI,

@@ -134,7 +134,15 @@ export function Select({
         </span>
       )}
       <SelectPrimitive.Root
-        value={value}
+        // Callers commonly pass `value={x || undefined}` for "no selection".
+        // Radix treats undefined as uncontrolled, so the first real selection
+        // flips uncontrolled→controlled and React warns. "" is the controlled
+        // empty state — coerce only when the caller clearly intends controlled
+        // (has onChange and no defaultValue); a true uncontrolled Select keeps
+        // receiving undefined.
+        value={
+          value !== undefined ? value : onChange && defaultValue === undefined ? "" : undefined
+        }
         defaultValue={defaultValue}
         onValueChange={onChange}
         disabled={disabled}

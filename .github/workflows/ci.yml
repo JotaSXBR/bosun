@@ -111,6 +111,9 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
       - run: pnpm exec playwright install --with-deps chromium
         working-directory: apps/web
+      # e2e serves the production build — the dev server's compile loop is too
+      # heavy for the hosted runner and got the step killed mid-suite.
+      - run: pnpm --filter @crm/web build
       - run: pnpm test:e2e
         working-directory: apps/web
       - uses: actions/upload-artifact@v7
