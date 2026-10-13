@@ -1,48 +1,47 @@
-# Plan — Seed demo rico (org vendendo o próprio Bosun)
+# Plan — Forms de auth submetem GET nativo (senha vaza na URL)
 
-- **Origem**: pedido do usuário — avaliar as funções do app com dados realistas
+- **Origem**: report do usuário + reprodução via Chrome DevTools MCP —
+  `form.submit()` nativo navegou para
+  `/sign-in?email=...&password=...` (default HTML é GET; React só
+  intercepta depois de hidratado)
 - **Lifecycle**: /spec → /plan-task → /build → /test → /review → /ship
 - **Data**: 2026-10-13
 
 ## Objetivo
 
-`pnpm db:seed` passa a popular a org Demo com dados realistas (contatos,
-conversas, deals, IA, site chat) retratando uma empresa que vende o próprio
-Bosun pelos canais de atendimento — permitindo avaliar o app com telas cheias.
+Impedir que credenciais vazem para URL/histórico/logs quando o form de
+autenticação é submetido antes da hidratação do React (ou com JS falho).
 
 ## Contexto
 
-- Ambiente: local primeiro; staging fica para depois (NODE_ENV=production
-  bloqueia o seed por design — apontar o script pro banco de staging é
-  decisão separada).
-- Estrutura: estender o seed existente (idempotente como hoje), mantendo
-  users/org/teams/funil atuais.
-- Conteúdo: pt-BR, tema "vendemos o Bosun" — prospects perguntando de preço,
-  integração WhatsApp, multi-tenant, trial; deals de assinatura no funil.
-- Módulos cobertos: Inbox+Contatos, Deals/Funil, IA/Brain, Site chat widget.
+- Bug preexistente no `main` — não relacionado ao seed (PR #35).
+- `<form onSubmit={form.handleSubmit(...)}>` sem `method`: submit nativo
+  usa GET → campos viram query string.
+- Fix mínimo suficiente: `method="post"` — submit nativo passa a mandar os
+  campos no body (POST numa page route retorna 405, mas não vaza nada).
+- Os outros 9 forms do app têm o mesmo padrão mas não carregam credenciais;
+  ficam fora (mesma classe de bug, sem segredo — avaliar depois).
 
 ## Escopo
 
-packages/auth/src/**
-docs/**
+apps/web/src/app/sign-in/page.tsx
+apps/web/src/app/sign-up/page.tsx
 tasks/**
 
 ## Fora de escopo
 
-- Semear staging (banco remoto) — decisão/execução separada.
-- UI/UX (Stitch) — nada de código de interface.
-- Novas tabelas ou migrações.
+- Demais forms do app (profile, settings, etc.) — sem credenciais.
+- Progressive enhancement real (action nativo funcionando sem JS).
+- Mudanças no transporte do authClient (já é POST quando hidratado).
 
 ## Tarefas
 
-1. `seed-content.ts`: dataset demo (contatos, conexões, conversas+mensagens,
-   deals, labels aplicadas, agentes/knowledge/sugestões/uso, site chat sessions)
-   — idempotente por chaves naturais, chamado por `main()` em `seed.ts`.
-2. Rodar `pnpm db:seed` local e conferir contagens/telas.
-3. `pnpm verify` + commit.
+1. Adicionar `method="post"` aos forms de sign-in e sign-up.
+2. `pnpm verify` + reprodução nativa no Chrome (submit deve não vazar).
+3. Commit + push + PR.
 
 ## Critérios de pronto
 
-- [ ] `pnpm db:seed` idempotente (2ª execução sem duplicar)
+- [ ] Submit nativo do form não coloca email/senha na URL
+- [ ] Fluxo React normal (signIn.email via client) continua funcionando
 - [ ] `pnpm verify` verde
-- [ ] Login `owner@crm.local` mostra inbox, funil, IA e widget com dados
