@@ -63,7 +63,7 @@ export function createAuth({ db, env, sendEmail = defaultSendEmail }: AuthOption
     },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: env.nodeEnv === "production",
+      requireEmailVerification: env.auth.requireEmailVerification,
       sendResetPassword: async ({ user, url }) => {
         await sendEmail({
           to: user.email,
@@ -81,7 +81,7 @@ export function createAuth({ db, env, sendEmail = defaultSendEmail }: AuthOption
         });
       },
     },
-    rateLimit: { enabled: env.nodeEnv === "production" },
+    rateLimit: { enabled: env.auth.rateLimit },
     plugins: [
       organization({
         ac,

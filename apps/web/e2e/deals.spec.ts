@@ -61,9 +61,12 @@ test("funnel lifecycle: create from template, manage stages, delete", async ({ p
   await expect(page.getByRole("dialog")).toBeHidden({ timeout: 15_000 });
   await expect(page.getByText("Pré-venda", { exact: true })).toBeHidden();
 
-  // Delete the funnel → deals is back to the empty state.
+  // Delete the funnel → deals is back to the empty state. Wait for the
+  // dialog to close (result.ok) before navigating — in prod the goto would
+  // otherwise race the in-flight action POST and render a stale funnel.
   await page.getByRole("button", { name: "Excluir funil" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Excluir funil" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 15_000 });
   await page.goto("/app/deals");
   await expect(page.getByTestId("empty-funnel")).toBeVisible();
 });

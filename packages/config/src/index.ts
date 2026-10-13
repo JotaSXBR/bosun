@@ -44,6 +44,16 @@ const envSchema = z.object({
   REDIS_URL: optionalString,
 
   BETTER_AUTH_SECRET: z.string().min(32),
+  // Optional overrides — both default to on in production. The standalone
+  // server hardcodes NODE_ENV=production, so e2e needs explicit opt-outs.
+  AUTH_REQUIRE_EMAIL_VERIFICATION: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
+  AUTH_RATE_LIMIT: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
 
   OPENAI_API_KEY: optionalString,
   ANTHROPIC_API_KEY: optionalString,
@@ -101,7 +111,11 @@ const serverEnvSchema = envSchema.transform((env) => ({
     adminUrl: env.DATABASE_ADMIN_URL,
   },
   redis: { url: env.REDIS_URL },
-  auth: { secret: env.BETTER_AUTH_SECRET },
+  auth: {
+    secret: env.BETTER_AUTH_SECRET,
+    requireEmailVerification: env.AUTH_REQUIRE_EMAIL_VERIFICATION ?? env.NODE_ENV === "production",
+    rateLimit: env.AUTH_RATE_LIMIT ?? env.NODE_ENV === "production",
+  },
   ai: {
     openaiApiKey: env.OPENAI_API_KEY,
     anthropicApiKey: env.ANTHROPIC_API_KEY,

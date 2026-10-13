@@ -33,6 +33,11 @@ test("settings pages render and an owner can manage teams", async ({ page }) => 
   await expect(page.getByTestId("hours-form")).toBeVisible();
   await page.getByRole("switch", { name: "Segunda" }).click();
   await page.getByRole("button", { name: "Salvar configurações" }).click();
+  // Wait for the action to commit (success toast) before reloading — a bare
+  // reload can race the in-flight POST and render stale business hours.
+  await expect(page.getByText("Horário de atendimento atualizado.")).toBeVisible({
+    timeout: 15_000,
+  });
   await page.reload();
   await expect(page.getByRole("switch", { name: "Segunda" })).toHaveAttribute(
     "aria-checked",

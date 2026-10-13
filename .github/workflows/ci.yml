@@ -118,8 +118,20 @@ jobs:
       - run: pnpm --filter @crm/web build
         env:
           NODE_ENV: production
+      # Standalone layout needs static assets + public next to server.js —
+      # same copies the Dockerfile does for the deployed image.
+      - name: Assemble standalone runtime
+        working-directory: apps/web
+        run: |
+          cp -r .next/static .next/standalone/apps/web/.next/static
+          cp -r public .next/standalone/apps/web/public
+      # Standalone server.js forces NODE_ENV=production — e2e signs up
+      # without e-mail verification, so both auth gates get explicit opt-outs.
       - run: pnpm test:e2e
         working-directory: apps/web
+        env:
+          AUTH_REQUIRE_EMAIL_VERIFICATION: "false"
+          AUTH_RATE_LIMIT: "false"
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
