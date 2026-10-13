@@ -5,7 +5,16 @@
 // Drizzle property names must match Better Auth field names (camelCase);
 // with casing: "snake_case" the actual columns are snake_case.
 import { relations, sql } from "drizzle-orm";
-import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid()
@@ -22,6 +31,9 @@ export const users = pgTable("users", {
   banned: boolean(),
   banReason: text(),
   banExpires: timestamp({ withTimezone: true }),
+  // Personal preferences — USER scope, never org-scoped (nav spec §6 rule).
+  // Validated shape lives in @crm/core users module; opaque jsonb here.
+  preferences: jsonb().$type<Record<string, unknown>>().notNull().default({}),
 });
 
 export const sessions = pgTable(
@@ -132,6 +144,9 @@ export const organizationInvitations = pgTable(
     inviterId: uuid()
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // Optional team the invitee joins on accept. No .references() here —
+    // auth ↔ teams is a module cycle; the FK is added in the migration.
+    teamId: uuid(),
   },
   (t) => [
     index("organization_invitations_org_id_idx").on(t.organizationId),

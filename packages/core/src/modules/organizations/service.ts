@@ -3,14 +3,22 @@ import { withTenant } from "@crm/db";
 import type { OrgRole } from "@crm/permissions";
 import { isOrgRole } from "@crm/permissions";
 
+import { NotFoundError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
-import type { OrganizationSettingsRow } from "./repository";
+import type {
+  InvitationForAccept,
+  OrganizationSettingsRow,
+  PendingInvitationRow,
+} from "./repository";
 import {
+  findInvitation,
   findMember,
   getOrCreateSettings,
   listMemberships,
   listOrgMembers as repoListOrgMembers,
+  listPendingInvitations,
+  updateInvitationTeam,
   upsertSettings,
 } from "./repository";
 import type { UpdateObserverSettingsInput, UpdateOrgSettingsInput } from "./schemas";
@@ -37,12 +45,60 @@ export type UserOrganization = {
   role: OrgRole;
 };
 
-export type OrgMember = { userId: string; name: string; email: string; role: string };
+export type OrgMember = {
+  memberId: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+};
 
 /** Org members for the transfer/assignee picker — any member may read. */
 export async function listOrgMembers(db: Database, ctx: TenantContext): Promise<OrgMember[]> {
   assertPermission(ctx, { messaging: ["read"] });
   return repoListOrgMembers(db, ctx.organizationId);
+}
+
+/**
+ * Pending invitations for the members page. Requires invitation:create —
+ * owner/admin manage, manager invites (nav spec §4/§6).
+ */
+export async function listOrgInvitations(
+  db: Database,
+  ctx: TenantContext,
+): Promise<PendingInvitationRow[]> {
+  assertPermission(ctx, { invitation: ["create"] });
+  return withTenant(db, ctx.organizationId, (tx) => listPendingInvitations(tx, ctx.organizationId));
+}
+
+/**
+ * Sets the team on a just-created invitation (better-auth writes the row,
+ * we attach team_id). Requires invitation:create; org-scoped update.
+ */
+export async function setInvitationTeam(
+  db: Database,
+  ctx: TenantContext,
+  args: { invitationId: string; teamId: string | null },
+): Promise<void> {
+  assertPermission(ctx, { invitation: ["create"] });
+  const updated = await updateInvitationTeam(
+    db,
+    ctx.organizationId,
+    args.invitationId,
+    args.teamId,
+  );
+  if (!updated) throw new NotFoundError("Invitation", args.invitationId);
+}
+
+/**
+ * Public accept-page lookup — no TenantContext: the invitation id is the
+ * capability token and the invitee has no session/org context yet.
+ */
+export async function getInvitationForAccept(
+  db: Database,
+  invitationId: string,
+): Promise<InvitationForAccept | null> {
+  return findInvitation(db, invitationId);
 }
 
 export async function listUserOrganizations(

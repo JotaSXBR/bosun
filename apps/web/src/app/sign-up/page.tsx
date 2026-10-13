@@ -15,13 +15,18 @@ import { toast } from "@crm/design-system/components/toast";
 import { AuthLayout } from "@crm/design-system/templates/auth-layout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
+
+/** `next` must be an internal path — rejects absolute/protocol-relative URLs. */
+function safeNext(value: string | null): string | null {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+}
 
 export default function SignUpPage() {
   const t = useTranslations("auth.signUp");
@@ -30,6 +35,10 @@ export default function SignUpPage() {
   const tc = useTranslations("common");
   const tAuth = useTranslations("auth");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Invitation links: invitees create the account then return to the invite.
+  const next = safeNext(searchParams.get("next"));
+  const invitedEmail = searchParams.get("email") ?? "";
   const [showPassword, setShowPassword] = useState(false);
   const formSchema = z.object({
     name: z.string().min(2, tVal("nameMin")),
@@ -38,7 +47,7 @@ export default function SignUpPage() {
   });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", email: "", password: "" },
+    defaultValues: { name: "", email: invitedEmail, password: "" },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -51,7 +60,8 @@ export default function SignUpPage() {
       toast.error(error.message ?? t("error"));
       return;
     }
-    router.push("/onboarding");
+    // With a pending invite the org already exists — skip the wizard.
+    router.push(next ?? "/onboarding");
     router.refresh();
   }
 
@@ -141,7 +151,10 @@ export default function SignUpPage() {
           </Button>
           <p className="text-ink-muted text-center text-sm">
             {t("hasAccount")}{" "}
-            <Link href="/sign-in" className="underline">
+            <Link
+              href={next ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in"}
+              className="underline"
+            >
               {t("signInLink")}
             </Link>
           </p>

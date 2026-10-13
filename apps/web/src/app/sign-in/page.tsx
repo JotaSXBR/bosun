@@ -15,13 +15,18 @@ import { toast } from "@crm/design-system/components/toast";
 import { AuthLayout } from "@crm/design-system/templates/auth-layout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
+
+/** `next` must be an internal path — rejects absolute/protocol-relative URLs. */
+function safeNext(value: string | null): string | null {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+}
 
 export default function SignInPage() {
   const t = useTranslations("auth.signIn");
@@ -30,6 +35,10 @@ export default function SignInPage() {
   const tc = useTranslations("common");
   const tAuth = useTranslations("auth");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Invitation links land on /accept-invitation — honor `next` so sign-in
+  // returns the invitee to the pending invite. Internal paths only.
+  const next = safeNext(searchParams.get("next"));
   const [showPassword, setShowPassword] = useState(false);
   const formSchema = z.object({
     email: z.email(tVal("invalidEmail")),
@@ -49,7 +58,7 @@ export default function SignInPage() {
       toast.error(error.message ?? t("error"));
       return;
     }
-    router.push("/app");
+    router.push(next ?? "/app");
     router.refresh();
   }
 
@@ -126,7 +135,10 @@ export default function SignInPage() {
           </Button>
           <p className="text-ink-muted text-center text-sm">
             {t("noAccount")}{" "}
-            <Link href="/sign-up" className="underline">
+            <Link
+              href={next ? `/sign-up?next=${encodeURIComponent(next)}` : "/sign-up"}
+              className="underline"
+            >
               {t("signUpLink")}
             </Link>
           </p>

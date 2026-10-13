@@ -21,10 +21,25 @@ test("settings pages render and an owner can manage teams", async ({ page }) => 
   await page.goto("/app/settings/service/rules");
   await expect(page.getByLabel("Janela de reabertura (horas)")).toHaveValue("48");
   // Product settings are platform_admin-only — a plain org owner never sees them.
-  await expect(page.getByRole("heading", { name: "Plataforma" })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "Plataforma" })).toBeHidden();
 
   await page.goto("/app/settings/teams");
   await page.getByLabel("Nome").fill("Vendas");
   await page.getByRole("button", { name: "Criar equipe" }).click();
   await expect(page.getByTestId("team-list")).toContainText("Vendas");
+
+  // Horário de atendimento — weekly editor persists business_hours.
+  await page.goto("/app/settings/service/hours");
+  await expect(page.getByTestId("hours-form")).toBeVisible();
+  await page.getByRole("switch", { name: "Segunda" }).click();
+  await page.getByRole("button", { name: "Salvar configurações" }).click();
+  await page.reload();
+  await expect(page.getByRole("switch", { name: "Segunda" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await expect(page.getByRole("switch", { name: "Terça" })).toHaveAttribute(
+    "aria-checked",
+    "false",
+  );
 });

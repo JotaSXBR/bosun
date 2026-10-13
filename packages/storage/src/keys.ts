@@ -29,3 +29,15 @@ export function tenantObjectKey(organizationId: string, ...segments: string[]): 
   }
   return `org/${organizationId}/${segments.join("/")}`;
 }
+
+/**
+ * Avatar object key: `user/<userId>/avatar`. Avatars are USER data — they
+ * follow the person across organizations — so this is the sanctioned
+ * exception to tenantObjectKey (still uuid-validated, fixed segments).
+ */
+export function userAvatarKey(userId: string): string {
+  if (!UUID_RE.test(userId)) {
+    throw new Error(`userAvatarKey: invalid user id "${userId}"`);
+  }
+  return `user/${userId}/avatar`;
+}

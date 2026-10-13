@@ -19,14 +19,30 @@ type Translators = {
   ai: (key: string) => string;
 };
 
+/** Toast gates from account/notifications — defaults all on. */
+export interface ToastPrefs {
+  drafts: boolean;
+  nudges: boolean;
+  suggestions: boolean;
+}
+
+interface SuggestionToastArgs {
+  event: DomainEvent;
+  t: Translators;
+  prefs: ToastPrefs;
+  goToReviews: () => void;
+}
+
 /** Drafts surface as cards in the thread — toast just signals; config suggestions get a link. */
-function toastSuggestion(event: DomainEvent, t: Translators, goToSettings: () => void) {
-  if (event.targetType === "draft") toast.info(t.drafts("newDraftToast"));
-  else if (event.targetType === "nudge") toast.info(t.nudges("newNudgeToast"));
-  else {
+function toastSuggestion({ event, t, prefs, goToReviews }: SuggestionToastArgs) {
+  if (event.targetType === "draft") {
+    if (prefs.drafts) toast.info(t.drafts("newDraftToast"));
+  } else if (event.targetType === "nudge") {
+    if (prefs.nudges) toast.info(t.nudges("newNudgeToast"));
+  } else if (prefs.suggestions) {
     toast.info(t.ai("newSuggestion"), {
       action: (
-        <Button variant="secondary" size="sm" onClick={goToSettings}>
+        <Button variant="secondary" size="sm" onClick={goToReviews}>
           {t.ai("title")}
         </Button>
       ),
@@ -41,24 +57,30 @@ function toastSuggestion(event: DomainEvent, t: Translators, goToSettings: () =>
  * `contact.presence` is transient — it never triggers a refresh (the
  * conversation header renders it directly from the event payload).
  */
-export function InboxLive() {
-  const t = useTranslations("inbox");
+// Param defaults keep primitive effect deps — a fresh prefs object each
+// render would resubscribe the SSE.
+function useLiveRefresh(
+  { drafts = true, nudges = true, suggestions = true }: Partial<ToastPrefs> = {},
+  pathname: string,
+) {
   const tAi = useTranslations("settings.ai.suggestions");
   const tDrafts = useTranslations("drafts");
   const tNudges = useTranslations("nudges");
   const router = useRouter();
-  const pathname = usePathname();
   const [hasNew, setHasNew] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    return subscribeToDomainEvents((event) => {
+    const onEvent = (event: DomainEvent) => {
       if (event.type === "contact.presence") return;
       if (event.type === "agent_suggestion.created") {
-        toastSuggestion(event, { drafts: tDrafts, nudges: tNudges, ai: tAi }, () =>
-          router.push("/app/ai/reviews"),
-        );
+        toastSuggestion({
+          event,
+          t: { drafts: tDrafts, nudges: tNudges, ai: tAi },
+          prefs: { drafts, nudges, suggestions },
+          goToReviews: () => router.push("/app/ai/reviews"),
+        });
       }
       if (!shouldRefreshForEvent(pathname, String(event.type ?? ""))) return;
       setHasNew(true);
@@ -66,9 +88,17 @@ export function InboxLive() {
       refreshTimer.current = setTimeout(() => router.refresh(), REFRESH_DEBOUNCE_MS);
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = setTimeout(() => setHasNew(false), INDICATOR_MS);
-    });
-  }, [router, pathname, tAi, tDrafts, tNudges]);
+    };
+    return subscribeToDomainEvents(onEvent);
+  }, [router, pathname, tAi, tDrafts, tNudges, drafts, nudges, suggestions]);
 
+  return hasNew;
+}
+
+export function InboxLive({ toasts }: { toasts?: ToastPrefs }) {
+  const t = useTranslations("inbox");
+  const pathname = usePathname();
+  const hasNew = useLiveRefresh(toasts, pathname);
   if (!hasNew) return null;
   return (
     <div

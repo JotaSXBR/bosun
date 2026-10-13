@@ -376,11 +376,41 @@ billing,meta,ai}` (platform_admin; link para `/app/setup`). Refs
   connection., demais /app só nos eventos raros do sino (perf);
   `home.spec.ts` novo (owner+agent), auth-flow.spec aponta auditoria.
   Verificado Chrome: owner (cards+dot+item), agent (só Esperando+
-  checklist, empty), auditoria real, 1536×740 sem scroll. **Próximo**:
-  Slice 7 (telas PARCIAL/NOVO).
+  checklist, empty), auditoria real, 1536×740 sem scroll. **Slice 7
+  entregue** (2026-10-13): telas PARCIAL/NOVO — **Minha conta**
+  `/app/account` com 4 tabs: Perfil (nome via `auth.api.updateUser` +
+  foto real: `POST /api/avatar` user-scoped `userAvatarKey`, serve
+  `/api/avatar/[userId]` gate self-ou-mesma-org), Segurança (troca de
+  senha com `revokeOtherSessions` + listar/revogar sessões),
+  Preferências (tema claro/escuro real — cookie `bosun-theme` lido no
+  root layout p/ `data-theme` SSR; `sendSeen` persistida, consumer no
+  canal fica p/ E3), Notificações (3 toggles que gateiam os toasts do
+  InboxLive — drafts/nudges/suggestions, primitive deps p/ não
+  reinscrever SSE). `users.preferences` jsonb (migration 0028, módulo
+  `@crm/core/users`, zod merge-on-write, self-scope). **Membros**
+  (`/app/settings/organization/members`, gate `member:create OR
+invitation:create`): lista + convites pendentes com **link copiável
+  sempre exibido** (`sendInvitationEmail` wired best-effort no plugin),
+  dialog com papel capado no rank do ator + equipe opcional (`team_id`
+  novo em `organization_invitations`), mudar papel / remover (owner
+  protegido, sem self). **Aceite**: `/accept-invitation/[id]` público
+  (id=capability), `?next=` com guard open-redirect em sign-in/sign-up
+  (`safeNext`: `/` sem `//`), e-mail da sessão precisa bater com o
+  convite, `assignTeamMember` no aceite + `setActiveOrganization`.
+  **Horário** (`/app/settings/service/hours`): editor semanal 7 dias ×
+  toggle + até 2 janelas, `offHoursMessage`, timezone readonly→Geral,
+  parse via `businessHoursSchema`. e2e: `account.spec.ts` +
+  `members.spec.ts` novos (convite→aceite→org num contexto — SSE do
+  InboxLive travava `browserContext.close`), `settings.spec.ts` cobre
+  horário. Verificado Chrome: upload de foto (200 + render), tema claro
+  persistido após reload, fluxo inteiro do convite (owner cria → link →
+  sign-up `?next` → aceite → agente na org + listado), e-mail errado
+  bloqueado, Segunda 09:00–18:00 persiste, shell fixo 100dvh.
+  **Ciclo de navegação completo** — todos os itens de `ia-navegacao.md`
+  §8 saem de stub/PARCIAL.
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
-  business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB
+  plano/billing UI, `usage_counters` (storage, 500 MB
   free → por GB).
 - **P2 — Canais seguintes**: Instagram/Facebook (Meta), e-mail (decidir
   provedor inbound), Telegram.

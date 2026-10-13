@@ -3,6 +3,7 @@ import "@crm/design-system/globals.css";
 import { Toaster } from "@crm/design-system/components/toast";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
+import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
@@ -38,10 +39,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const locale = await getLocale();
+  // Theme is a user preference mirrored to a cookie so SSR paints the right
+  // tokens on first render (account/preferences writes both).
+  const theme = (await cookies()).get("bosun-theme")?.value === "light" ? "light" : "dark";
   return (
     <html
       lang={locale}
-      data-theme="dark"
+      data-theme={theme}
       className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}
     >
       <body className="antialiased">

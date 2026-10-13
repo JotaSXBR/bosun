@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { InboxLive } from "@/components/inbox-live";
+import { getMyPreferences } from "@/server/account";
 import { loadShellAlerts } from "@/server/alerts";
 import { listMyOrganizations } from "@/server/services";
 import { getTenantContext, requireSession } from "@/server/tenant";
@@ -12,9 +13,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const t = await getTranslations("nav");
   // getTenantContext (never requireTenantContext): /app/setup lives inside
   // this layout and the wizard gate must not redirect from here.
-  const [ctx, organizations] = await Promise.all([
+  const [ctx, organizations, prefs] = await Promise.all([
     getTenantContext(),
     listMyOrganizations(session.user.id),
+    getMyPreferences(session.user.id),
   ]);
   const alerts = ctx ? await loadShellAlerts(ctx, t) : [];
 
@@ -34,7 +36,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       >
         {children}
       </AppShell>
-      <InboxLive />
+      <InboxLive toasts={prefs.toasts} />
     </>
   );
 }

@@ -44,9 +44,15 @@ import {
 } from "@crm/core/messaging";
 import type { OnboardingChecklistRow } from "@crm/core/onboarding";
 import { getChecklist } from "@crm/core/onboarding";
-import type { OrganizationSettingsRow, OrgMember, UserOrganization } from "@crm/core/organizations";
+import type {
+  OrganizationSettingsRow,
+  OrgMember,
+  PendingInvitationRow,
+  UserOrganization,
+} from "@crm/core/organizations";
 import {
   getOrganizationSettings,
+  listOrgInvitations,
   listOrgMembers,
   listUserOrganizations,
 } from "@crm/core/organizations";
@@ -126,6 +132,11 @@ export async function listMessages(
 
 export async function listMembers(ctx: TenantContext): Promise<OrgMember[]> {
   return listOrgMembers(getDb(), ctx);
+}
+
+/** Pending invitations — members page (invitation:create floor). */
+export async function listInvitations(ctx: TenantContext): Promise<PendingInvitationRow[]> {
+  return listOrgInvitations(getDb(), ctx);
 }
 
 /** Request-cached — inbox page and ConversationPane list the same sectors. */

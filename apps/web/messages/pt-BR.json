@@ -486,7 +486,27 @@
       "saved": "Preferências atualizadas."
     },
     "hours": {
-      "saved": "Mensagem fora do horário atualizada."
+      "saved": "Horário de atendimento atualizado.",
+      "weekly": "Horário de atendimento",
+      "weeklyHint": "Janelas em que a organização atende, no fuso {timezone}.",
+      "timezoneReadonly": "O fuso horário é definido em",
+      "timezoneLink": "Organização › Geral",
+      "closed": "Fechado",
+      "addWindow": "+ janela",
+      "removeWindow": "Remover janela",
+      "from": "início",
+      "to": "fim",
+      "invalidWindow": "Horário inválido em {day}: o início deve ser antes do fim.",
+      "invalidEmptyDay": "{day} está aberto sem janela — feche o dia ou adicione um horário.",
+      "days": {
+        "mon": "Segunda",
+        "tue": "Terça",
+        "wed": "Quarta",
+        "thu": "Quinta",
+        "fri": "Sexta",
+        "sat": "Sábado",
+        "sun": "Domingo"
+      }
     },
     "rules": {
       "saved": "Regras atualizadas."
@@ -756,12 +776,37 @@
         "archived": "Memória arquivada.",
         "archiveConfirm": "Arquivar esta memória? Ela sai do canon e para de alimentar o observador."
       }
+    },
+    "members": {
+      "members": "Membros",
+      "invite": "Convidar",
+      "inviteTitle": "Convidar membro",
+      "email": "E-mail",
+      "role": "Papel",
+      "team": "Equipe",
+      "teamNone": "Sem equipe",
+      "send": "Criar convite",
+      "invited": "Convite criado.",
+      "inviteLink": "Link do convite — copie e envie por onde preferir.",
+      "copyLink": "Copiar link",
+      "copied": "Link copiado.",
+      "pending": "Convites pendentes",
+      "expiresAt": "expira em",
+      "cancel": "Cancelar convite",
+      "canceled": "Convite cancelado.",
+      "changeRole": "Alterar papel",
+      "remove": "Remover membro",
+      "removeConfirm": "Remover este membro da organização?",
+      "removed": "Membro removido.",
+      "roleSaved": "Papel atualizado.",
+      "you": "você"
     }
   },
   "validation": {
     "invalidEmail": "Informe um e-mail válido",
     "passwordMin": "A senha deve ter pelo menos 8 caracteres",
-    "nameMin": "Informe seu nome"
+    "nameMin": "Informe seu nome",
+    "avatarUploadFailed": "Não foi possível enviar a foto."
   },
   "auth": {
     "signIn": {
@@ -824,13 +869,72 @@
   },
   "account": {
     "title": "Minha conta",
-    "emptyTitle": "Minha conta em construção",
-    "emptyBody": "Perfil, segurança, preferências e notificações pessoais chegam aqui em breve."
+    "back": "Voltar",
+    "tabs": {
+      "profile": "Perfil",
+      "security": "Segurança",
+      "preferences": "Preferências",
+      "notifications": "Notificações"
+    },
+    "profile": {
+      "photo": "Foto",
+      "photoHint": "PNG, JPG ou WebP até 2 MB.",
+      "upload": "Enviar foto",
+      "name": "Nome",
+      "email": "E-mail",
+      "submit": "Salvar",
+      "saved": "Perfil salvo."
+    },
+    "security": {
+      "password": "Senha",
+      "currentPassword": "Senha atual",
+      "newPassword": "Nova senha",
+      "submit": "Alterar senha",
+      "changed": "Senha alterada. Outras sessões foram encerradas.",
+      "sessions": "Sessões",
+      "sessionsHint": "Dispositivos com acesso à sua conta.",
+      "thisDevice": "este dispositivo",
+      "revoke": "Encerrar",
+      "revoked": "Sessão encerrada."
+    },
+    "preferences": {
+      "theme": "Tema",
+      "themeHint": "Aparência do aplicativo.",
+      "dark": "Escuro",
+      "light": "Claro",
+      "messaging": "Atendimento",
+      "sendSeen": "Marcar mensagens como vistas",
+      "sendSeenHint": "Envia o sinal de leitura ao assumir um ticket."
+    },
+    "notifications": {
+      "toasts": "Avisos na tela",
+      "toastsHint": "Notificações instantâneas enquanto você trabalha.",
+      "drafts": "Novos rascunhos da IA",
+      "nudges": "Novos toques da IA",
+      "suggestions": "Novas sugestões de IA"
+    }
   },
   "platform": {
     "title": "Plataforma",
     "emptyTitle": "Plataforma em construção",
     "emptyBody": "E-mail, cobrança e padrões da instância chegam aqui em breve.",
     "restricted": "Área restrita a administradores da plataforma."
+  },
+  "roles": {
+    "owner": "Proprietário",
+    "admin": "Administrador",
+    "manager": "Gerente",
+    "agent": "Agente",
+    "viewer": "Leitor"
+  },
+  "acceptInvitation": {
+    "title": "Convite para {org}",
+    "description": "Aceite para participar da organização.",
+    "accept": "Aceitar convite",
+    "accepted": "Convite aceito.",
+    "invalidTitle": "Convite indisponível",
+    "invalidBody": "Este convite não existe mais ou já foi usado.",
+    "wrongEmailTitle": "E-mail diferente",
+    "wrongEmailBody": "Este convite foi enviado para {email}. Entre com esse e-mail para aceitar."
   }
 }

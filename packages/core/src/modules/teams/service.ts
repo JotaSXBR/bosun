@@ -109,6 +109,27 @@ export async function addTeamMember(
   });
 }
 
+/**
+ * System-level team join — no TenantContext. Used by the invitation-accept
+ * flow: the trust boundary is the web action, which already accepted the
+ * invitation through better-auth and read team_id off it. Idempotent
+ * (conflict does nothing) so a retried accept stays clean.
+ */
+export async function assignTeamMember(
+  db: Database,
+  args: { organizationId: string; teamId: string; userId: string },
+): Promise<void> {
+  await withTenant(db, args.organizationId, async (tx) => {
+    const team = await findTeamById(tx, args.organizationId, args.teamId);
+    if (!team) throw new NotFoundError("Team", args.teamId);
+    await insertTeamMember(tx, {
+      organizationId: args.organizationId,
+      teamId: team.id,
+      userId: args.userId,
+    });
+  });
+}
+
 /** Requires teams:manage. */
 export async function removeTeamMember(
   db: Database,

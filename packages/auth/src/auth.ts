@@ -93,6 +93,23 @@ export function createAuth({ db, env, sendEmail = defaultSendEmail }: AuthOption
           member: { modelName: "organization_members" },
           invitation: { modelName: "organization_invitations" },
         },
+        // Invitation e-mail — the copyable link is the fallback, so a
+        // provider failure logs but never breaks the invite.
+        sendInvitationEmail: async ({ id, email, organization, inviter }) => {
+          const url = `${env.appUrl}/accept-invitation/${id}`;
+          try {
+            await sendEmail({
+              to: email,
+              subject: `${organization.name} — convite para participar`,
+              text: `${inviter.user.name} convidou você para participar de ${organization.name}. Aceite o convite: ${url}`,
+            });
+          } catch (error) {
+            defaultSendEmailLogger.warn("invitation email failed", {
+              invitationId: id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        },
       }),
       // platform_admin gets the full built-in admin permission set.
       admin({

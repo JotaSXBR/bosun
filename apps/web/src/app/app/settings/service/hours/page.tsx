@@ -1,3 +1,4 @@
+import { businessHoursSchema } from "@crm/core/organizations";
 import { PageHeader } from "@crm/design-system/templates/page-header";
 import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
@@ -25,7 +26,11 @@ export default async function ServiceHoursPage() {
         back={{ href: "/app/settings", label: t("back") }}
         linkComponent={Link}
       />
-      <HoursForm offHoursMessage={settings.offHoursMessage} />
+      <HoursForm
+        businessHours={businessHoursSchema.parse(settings.businessHours)}
+        offHoursMessage={settings.offHoursMessage}
+        timezone={settings.timezone}
+      />
     </main>
   );
 }
