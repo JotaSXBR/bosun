@@ -28,8 +28,17 @@ describe("shouldRefreshForEvent", () => {
     expect(shouldRefreshForEvent("/app/settings", "message.received")).toBe(false);
   });
 
-  it("never refreshes pages without event-driven data", () => {
-    for (const path of ["/app", "/app/deals", "/app/setup"]) {
+  it("refreshes /app home on its card data (queue, AI, connections)", () => {
+    expect(shouldRefreshForEvent("/app", "conversation.updated")).toBe(true);
+    expect(shouldRefreshForEvent("/app", "agent_suggestion.created")).toBe(true);
+    expect(shouldRefreshForEvent("/app", "connection.status")).toBe(true);
+    expect(shouldRefreshForEvent("/app", "message.created")).toBe(false);
+  });
+
+  it("refreshes other /app pages only on rare bell events", () => {
+    for (const path of ["/app/deals", "/app/setup"]) {
+      expect(shouldRefreshForEvent(path, "agent_suggestion.created")).toBe(true);
+      expect(shouldRefreshForEvent(path, "connection.status")).toBe(true);
       expect(shouldRefreshForEvent(path, "message.created")).toBe(false);
       expect(shouldRefreshForEvent(path, "conversation.updated")).toBe(false);
     }

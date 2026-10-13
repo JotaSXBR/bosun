@@ -3,6 +3,7 @@
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@crm/design-system/components/dropdown-menu";
 import { Icon } from "@crm/design-system/components/icon";
@@ -29,6 +30,7 @@ import {
   MODULES,
   type OrgRef,
   paletteGroups,
+  type ShellAlert,
 } from "./app-shell-menu";
 
 interface ShellUser {
@@ -44,6 +46,8 @@ export interface AppShellProps {
   isPlatformAdmin?: boolean;
   currentOrganizationId?: string | null;
   organizations?: OrgRef[];
+  /** Bell items — derived server-side; absent/[] renders the empty state. */
+  alerts?: ShellAlert[];
   children: React.ReactNode;
 }
 
@@ -82,16 +86,33 @@ function useShellActions() {
   return { signOut, switchOrg };
 }
 
-function AlertsMenu() {
+function AlertsMenu({ alerts }: { alerts: ShellAlert[] }) {
   const t = useTranslations("nav");
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <IconButton icon="bell" label={t("alerts")} />
+        <IconButton icon="bell" label={t("alerts")} dot={alerts.length > 0} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72 p-3">
-        <p className="text-ink-strong text-sm font-medium">{t("alertsEmpty")}</p>
-        <p className="text-ink-muted mt-1 text-xs">{t("alertsEmptyBody")}</p>
+        {alerts.length === 0 ? (
+          <>
+            <p className="text-ink-strong text-sm font-medium">{t("alertsEmpty")}</p>
+            <p className="text-ink-muted mt-1 text-xs">{t("alertsEmptyBody")}</p>
+          </>
+        ) : (
+          <ul className="space-y-0.5">
+            {alerts.map((alert) => (
+              <li key={alert.key}>
+                <DropdownMenuItem asChild>
+                  <Link href={alert.href}>
+                    <Icon name={alert.icon} size={16} />
+                    <span className="min-w-0 truncate">{alert.label}</span>
+                  </Link>
+                </DropdownMenuItem>
+              </li>
+            ))}
+          </ul>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -102,11 +123,13 @@ function TopActions({
   canManage,
   items,
   onSearch,
+  alerts,
 }: {
   user: ShellUser;
   canManage: boolean;
   items: UserMenuItem[];
   onSearch: () => void;
+  alerts: ShellAlert[];
 }) {
   const t = useTranslations("nav");
   return (
@@ -117,7 +140,7 @@ function TopActions({
         aria-keyshortcuts="Control+K Meta+K"
         onClick={onSearch}
       />
-      <AlertsMenu />
+      <AlertsMenu alerts={alerts} />
       {canManage && (
         <IconButton asChild label={t("settings")}>
           <Link href="/app/settings">
@@ -144,6 +167,7 @@ function ShellTopBar({
   canManage,
   items,
   onSearch,
+  alerts,
 }: {
   navModules: ModuleNavItem[];
   pathname: string;
@@ -151,13 +175,22 @@ function ShellTopBar({
   canManage: boolean;
   items: UserMenuItem[];
   onSearch: () => void;
+  alerts: ShellAlert[];
 }) {
   return (
     <AppTopBar
       modules={navModules}
       active={activeModule(pathname)}
       linkComponent={Link}
-      actions={<TopActions user={user} canManage={canManage} items={items} onSearch={onSearch} />}
+      actions={
+        <TopActions
+          user={user}
+          canManage={canManage}
+          items={items}
+          onSearch={onSearch}
+          alerts={alerts}
+        />
+      }
     />
   );
 }
@@ -195,6 +228,7 @@ export function AppShell({
   isPlatformAdmin = false,
   currentOrganizationId,
   organizations = [],
+  alerts = [],
   children,
 }: AppShellProps) {
   const t = useTranslations("nav");
@@ -221,6 +255,7 @@ export function AppShell({
             signOut,
           })}
           onSearch={() => setPaletteOpen(true)}
+          alerts={alerts}
         />
       }
     >

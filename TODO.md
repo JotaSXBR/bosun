@@ -360,8 +360,24 @@ billing,meta,ai}` (platform_admin; link para `/app/setup`). Refs
   novos em `@crm/core`); campos do form de agente extraídos p/
   `agent-fields.tsx` (reuso lista+detalhe); e2e `ai.spec.ts`. Verificado no
   Chrome (owner): redirects, tabs, detalhe salvar/excluir, proposta caindo
-  em Revisões, console limpo. **Próximos**: Slice 6 (Início+sino), 7
-  (telas PARCIAL/NOVO).
+  em Revisões, console limpo. **Slice 6 entregue** (2026-10-12): Início
+  "Hoje" — `/app` vira superfície operacional (Esperando por você =
+  fila/minhas; Inteligência = revisões+memórias vencidas, ai:manage;
+  Precisa de atenção = conexões error/disconnected,
+  integrations:manage; checklist só se incompleto) — card conta e
+  auditoria crua removidos; auditoria real em
+  `/app/settings/organization/audit` (gate audit:read, 50 eventos);
+  **sino real**: `loadShellAlerts` deriva itens de dados existentes
+  (revisões+memórias ai:manage, conexões integrations:manage,
+  transferências privadas `metadata.system='transfer'` p/ o usuário,
+  `listMyTransfers` em `messaging/reads-transfers.ts`, 5/14d só tickets
+  ativos) — `dot` no IconButton + itens c/ ícone+href + empty state;
+  live-refresh: /app home refresca em conversation./agent_suggestion./
+  connection., demais /app só nos eventos raros do sino (perf);
+  `home.spec.ts` novo (owner+agent), auth-flow.spec aponta auditoria.
+  Verificado Chrome: owner (cards+dot+item), agent (só Esperando+
+  checklist, empty), auditoria real, 1536×740 sem scroll. **Próximo**:
+  Slice 7 (telas PARCIAL/NOVO).
 - **P2 — Atividades/tasks** em contatos/deals/conversas.
 - **P2 — Settings**: branding (logo/tema, `custom_domain` reservado),
   business hours UI, plano/billing UI, `usage_counters` (storage, 500 MB

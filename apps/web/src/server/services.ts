@@ -32,12 +32,14 @@ import type {
   ConversationView,
   ListConversationsInput,
   MessageWithAuthorRow,
+  TransferToMeRow,
 } from "@crm/core/messaging";
 import {
   getConversationDetail,
   getConversationLastInboundAt,
   listConversationCounts as svcListConversationCounts,
   listConversationMessages,
+  listMyTransfers as svcListMyTransfers,
   listTenantConversations,
 } from "@crm/core/messaging";
 import type { OnboardingChecklistRow } from "@crm/core/onboarding";
@@ -102,6 +104,11 @@ export async function listConversationCounts(
   ctx: TenantContext,
 ): Promise<Record<ConversationView, number>> {
   return svcListConversationCounts(getDb(), ctx);
+}
+
+/** Recent "ticket landed on me" transfer events — alerts bell (messaging:read). */
+export async function listMyTransfers(ctx: TenantContext): Promise<TransferToMeRow[]> {
+  return svcListMyTransfers(getDb(), ctx, { limit: 5, sinceDays: 14 });
 }
 
 /** Request-cached — ConversationPane and ConversationAside read the same ticket. */

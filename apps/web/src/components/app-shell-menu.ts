@@ -11,6 +11,14 @@ export interface OrgRef {
   name: string;
 }
 
+/** One row in the alerts bell — computed server-side in app/layout.tsx. */
+export interface ShellAlert {
+  key: string;
+  icon: "sparkles" | "triangle-alert" | "inbox";
+  label: string;
+  href: string;
+}
+
 export const MODULES = [
   { id: "home", href: "/app", icon: "house", key: "home" },
   { id: "inbox", href: "/app/inbox", icon: "inbox", key: "inbox" },

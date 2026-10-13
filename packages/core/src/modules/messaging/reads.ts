@@ -52,7 +52,7 @@ export type ConversationDetailRow = ConversationRow & {
   precededTicketSeq: number | null;
 };
 
-const ACTIVE_STATUSES = sql`${conversations.status} not in ('resolved', 'closed')`;
+export const ACTIVE_STATUSES = sql`${conversations.status} not in ('resolved', 'closed')`;
 const TERMINAL_STATUSES = sql`${conversations.status} in ('resolved', 'closed')`;
 /** Deferred rows leave the work views until the instant passes — lazy un-snooze. */
 const NOT_SNOOZED = sql`(${conversations.snoozedUntil} is null or ${conversations.snoozedUntil} <= now())`;

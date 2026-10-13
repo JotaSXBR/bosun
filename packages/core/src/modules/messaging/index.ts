@@ -50,6 +50,8 @@ export {
   listMessages,
   listRecentMessages,
 } from "./reads";
+export type { TransferToMeRow } from "./reads-transfers";
+export { listTransfersTo } from "./reads-transfers";
 export type { ContactRow, ConversationRow, MessageRow } from "./repository";
 export { getConversation as getConversationRow } from "./repository";
 export type { MessageEditRow } from "./repository-messages";
@@ -93,6 +95,7 @@ export {
   ingestChannelWebhook,
   listConversationCounts,
   listConversationMessages,
+  listMyTransfers,
   listTenantConversations,
 } from "./service";
 export type {

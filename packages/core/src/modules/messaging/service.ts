@@ -15,6 +15,8 @@ import {
   listConversationViewCounts,
   listMessages,
 } from "./reads";
+import type { TransferToMeRow } from "./reads-transfers";
+import { listTransfersTo } from "./reads-transfers";
 import {
   applyInboundStatusTransition,
   applyMessageEdit,
@@ -390,6 +392,19 @@ export async function listConversationCounts(
 ): Promise<Record<ConversationView, number>> {
   assertPermission(ctx, { messaging: ["read"] });
   return listConversationViewCounts(db, ctx.organizationId, ctx.userId);
+}
+
+/**
+ * Recent "ticket landed on me" events for the alerts bell — the private
+ * transfer notes transferConversation records. Requires messaging:read.
+ */
+export async function listMyTransfers(
+  db: Database,
+  ctx: TenantContext,
+  opts?: { limit?: number; sinceDays?: number },
+): Promise<TransferToMeRow[]> {
+  assertPermission(ctx, { messaging: ["read"] });
+  return listTransfersTo(db, ctx.organizationId, { userId: ctx.userId, ...opts });
 }
 
 /** Roles allowed to inspect revoked originals and edit history. */

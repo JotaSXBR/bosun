@@ -1,5 +1,10 @@
 const INBOX_EVENTS = ["message.", "conversation.", "agent_suggestion."];
 const SETTINGS_EVENTS = ["agent_suggestion.", "connection."];
+// /app home cards: queue counts, AI reviews/stale memories, connection problems.
+const HOME_EVENTS = ["conversation.", "agent_suggestion.", "connection."];
+// Bell data lives in the layout on every /app page; its sources are the
+// rare events only — chatty message./conversation. traffic stays scoped.
+const SHELL_EVENTS = ["agent_suggestion.", "connection."];
 
 /**
  * Whether a domain event mutates data rendered on `pathname` — every
@@ -9,16 +14,15 @@ const SETTINGS_EVENTS = ["agent_suggestion.", "connection."];
  * not data sync.
  */
 export function shouldRefreshForEvent(pathname: string, type: string): boolean {
-  if (pathname.startsWith("/app/inbox")) {
-    return INBOX_EVENTS.some((prefix) => type.startsWith(prefix));
-  }
-  if (pathname.startsWith("/app/contacts")) return type.startsWith("conversation.");
   // Inteligência module: reviews/knowledge/memory render suggestion data.
-  if (pathname.startsWith("/app/ai")) return type.startsWith("agent_suggestion.");
   // /app/settings/channels is covered by the /app/settings branch (connection.*).
-  if (pathname.startsWith("/app/settings")) {
-    return SETTINGS_EVENTS.some((prefix) => type.startsWith(prefix));
-  }
-  // /app home (onboarding), /app/deals, /app/setup — no event-driven data.
-  return false;
+  // Generic /app pages (deals, setup, platform): only the layout bell re-renders.
+  const prefixes =
+    (pathname.startsWith("/app/inbox") && INBOX_EVENTS) ||
+    (pathname.startsWith("/app/contacts") && ["conversation."]) ||
+    (pathname.startsWith("/app/ai") && ["agent_suggestion."]) ||
+    (pathname.startsWith("/app/settings") && SETTINGS_EVENTS) ||
+    ((pathname === "/app" || pathname === "/app/") && HOME_EVENTS) ||
+    (pathname.startsWith("/app") && SHELL_EVENTS);
+  return prefixes ? prefixes.some((prefix) => type.startsWith(prefix)) : false;
 }

@@ -14,7 +14,7 @@ test("document responses carry a nonce-based Content-Security-Policy", async ({ 
   expect(csp).toContain("script-src 'self' 'nonce-");
 });
 
-test("sign up → create organization → app shows org and audit entry", async ({ page }) => {
+test("sign up → create organization → app shows org; audit lives in settings", async ({ page }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const email = `e2e-${suffix}@crm.local`;
   const orgName = `E2E Org ${suffix}`;
@@ -31,5 +31,6 @@ test("sign up → create organization → app shows org and audit entry", async 
 
   await page.waitForURL("**/app");
   await expect(page.getByTestId("org-name")).toHaveText(orgName);
+  await page.goto("/app/settings/organization/audit");
   await expect(page.getByTestId("audit-list")).toContainText("organization.created");
 });

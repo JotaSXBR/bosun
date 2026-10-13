@@ -200,7 +200,7 @@
     "modules": "Módulos",
     "alerts": "Alertas",
     "alertsEmpty": "Nenhum alerta por enquanto.",
-    "alertsEmptyBody": "Avisos de conexões e automações aparecem aqui.",
+    "alertsEmptyBody": "Avisos de conexões, IA e atribuições aparecem aqui.",
     "ai": "Inteligência",
     "myAccount": "Minha conta",
     "platform": "Plataforma",
@@ -212,7 +212,12 @@
     "settingsAi": "Inteligência",
     "actions": "Ações",
     "commandPlaceholder": "Buscar conteúdo e ações",
-    "commandEmpty": "Nenhum resultado para “{query}”."
+    "commandEmpty": "Nenhum resultado para “{query}”.",
+    "alertAiReviews": "{count, plural, one {# revisão de IA pendente} other {# revisões de IA pendentes}}",
+    "alertStaleMemories": "{count, plural, one {# memória desatualizada} other {# memórias desatualizadas}}",
+    "alertConnection": "Conexão com problema: {name}",
+    "alertTransfer": "Ticket #{ticket} transferido para você",
+    "alertTransferBy": "{author} transferiu o ticket #{ticket} para você"
   },
   "leads": {
     "funnel": "Negócios",
@@ -317,13 +322,22 @@
     "submit": "Salvar e continuar"
   },
   "dashboard": {
+    "title": "Hoje",
     "orgFallback": "Organização",
-    "account": "Conta",
-    "user": "Usuário:",
-    "role": "Papel:",
-    "platformAdminSuffix": "(platform admin)",
-    "recentActivity": "Atividade recente",
-    "noEvents": "Nenhum evento registrado.",
+    "waiting": {
+      "title": "Esperando por você",
+      "queue": "Na fila",
+      "mine": "Minhas conversas",
+      "empty": "Tudo em dia por aqui."
+    },
+    "attention": {
+      "title": "Precisa de atenção"
+    },
+    "aiReviews": {
+      "title": "Inteligência",
+      "pending": "Revisões pendentes",
+      "stale": "Memórias desatualizadas"
+    },
     "checklist": {
       "title": "Primeiros passos",
       "subtitle": "Complete a configuração do seu espaço.",
@@ -335,7 +349,9 @@
         "create_funnel": "Criar um funil",
         "first_conversation": "Receber a primeira conversa"
       }
-    }
+    },
+    "recentActivity": "Atividade recente",
+    "noEvents": "Nenhum evento registrado."
   },
   "widgetDemo": {
     "title": "Widget demo",
