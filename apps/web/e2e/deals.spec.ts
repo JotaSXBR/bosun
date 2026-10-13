@@ -14,16 +14,23 @@ test("funnel lifecycle: create from template, manage stages, delete", async ({ p
   await page.getByRole("button", { name: "Criar organização" }).click();
   await page.waitForURL("**/app");
 
-  // Empty state → create funnel from the "Imobiliária" template.
+  // Empty state → "Criar funil" links to the funnels settings page, where
+  // funnel/stage editing lives now (IA spec §5).
   await page.goto("/app/deals");
   await expect(page.getByTestId("empty-funnel")).toBeVisible();
+  await page.getByRole("link", { name: "Criar funil" }).click();
+  await page.waitForURL("**/app/settings/sales/funnels");
+
   await page.getByRole("button", { name: "Criar funil" }).click();
-  await page.getByLabel("Nome").fill("Funil E2E");
-  await page.getByLabel("Modelo").click();
+  const funnelDialog = page.getByRole("dialog");
+  await funnelDialog.getByLabel("Nome").fill("Funil E2E");
+  await funnelDialog.getByLabel("Modelo").click();
   await page.getByRole("option", { name: /Imobiliária/ }).click();
-  await page.getByRole("button", { name: "Criar funil" }).click();
+  await funnelDialog.getByRole("button", { name: "Criar funil" }).click();
+  await page.waitForURL(/funnel=/);
 
   // Board renders with the template's six stages.
+  await page.goto("/app/deals");
   await expect(page.getByTestId("kanban-board")).toBeVisible();
   for (const stage of [
     "Novo lead",
@@ -36,21 +43,27 @@ test("funnel lifecycle: create from template, manage stages, delete", async ({ p
     await expect(page.getByTestId("kanban-board")).toContainText(stage);
   }
 
-  // Add a stage, then delete it via the column menu.
+  // Add a stage, then delete it — management lives on the settings page
+  // (the board's "Editar funil" shortcut lands there with ?funnel=<id>).
+  await page.getByRole("link", { name: "Editar funil" }).click();
+  await page.waitForURL(/\/app\/settings\/sales\/funnels\?funnel=/);
   await page.getByRole("button", { name: "Etapa", exact: true }).click();
-  await page.getByLabel("Nome").fill("Pré-venda");
-  await page.getByRole("button", { name: "Adicionar etapa" }).click();
-  await expect(page.getByTestId("kanban-board")).toContainText("Pré-venda");
+  await page.getByRole("dialog").getByLabel("Nome").fill("Pré-venda");
+  await page.getByRole("dialog").getByRole("button", { name: "Adicionar etapa" }).click();
+  await expect(page.getByText("Pré-venda")).toBeVisible();
 
   await page.getByRole("button", { name: "Ações da etapa Pré-venda" }).click();
   await page.getByRole("menuitem", { name: "Excluir etapa" }).click();
-  await page.getByRole("button", { name: "Excluir etapa" }).click();
-  await expect(page.getByTestId("kanban-board")).not.toContainText("Pré-venda");
+  await page.getByRole("dialog").getByRole("button", { name: "Excluir etapa" }).click();
+  // The dialog stays mounted while the action's router.refresh() commits —
+  // wait for it to close before asserting the row is gone. Exact text:
+  // the dialog's own description mentions the stage name.
+  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 15_000 });
+  await expect(page.getByText("Pré-venda", { exact: true })).toBeHidden();
 
-  // Delete the funnel → back to the empty state. Destructive action lives
-  // under the "Mais ações" menu (7-leis: danger não compete com o primário).
-  await page.getByRole("button", { name: "Mais ações" }).click();
-  await page.getByRole("menuitem", { name: "Excluir funil" }).click();
+  // Delete the funnel → deals is back to the empty state.
+  await page.getByRole("button", { name: "Excluir funil" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Excluir funil" }).click();
+  await page.goto("/app/deals");
   await expect(page.getByTestId("empty-funnel")).toBeVisible();
 });

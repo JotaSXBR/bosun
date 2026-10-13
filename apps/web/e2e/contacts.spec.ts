@@ -48,13 +48,19 @@ test("contacts: manual creation, search and the outbound dialog without WAHA", a
   await expect(convDialog.getByText("Nenhuma conexão WhatsApp conectada")).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // Deal form: the contact picker offers inline contact creation.
+  // Deal form: the contact picker offers inline contact creation. Funnel
+  // creation lives on the settings page — the deals empty state links there.
   await page.goto("/app/deals");
+  await page.getByRole("link", { name: "Criar funil" }).click();
+  await page.waitForURL("**/app/settings/sales/funnels");
   await page.getByRole("button", { name: "Criar funil" }).click();
-  await page.getByLabel("Nome").fill("Funil E2E");
-  await page.getByLabel("Modelo").click();
+  const funnelDialog = page.getByRole("dialog");
+  await funnelDialog.getByLabel("Nome").fill("Funil E2E");
+  await funnelDialog.getByLabel("Modelo").click();
   await page.getByRole("option", { name: /Imobiliária/ }).click();
-  await page.getByRole("button", { name: "Criar funil" }).click();
+  await funnelDialog.getByRole("button", { name: "Criar funil" }).click();
+  await page.waitForURL(/funnel=/);
+  await page.goto("/app/deals");
   await expect(page.getByTestId("kanban-board")).toBeVisible();
 
   await page.getByRole("button", { name: "Deal", exact: true }).first().click();

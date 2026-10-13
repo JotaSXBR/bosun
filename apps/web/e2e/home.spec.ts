@@ -41,9 +41,10 @@ test("hoje shows operational blocks and the bell empty state", async ({ page }) 
   // Precisa de atenção only appears with a problem connection — none here.
   await expect(page.getByText("Precisa de atenção")).toBeHidden();
 
-  // Checklist still surfaces the next step while the space is incomplete.
+  // Checklist still surfaces the next step while the space is incomplete —
+  // the CTA and the row both link to channels, so assert on the first.
   await expect(page.getByText("Primeiros passos")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Conectar um canal" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Conectar um canal" }).first()).toHaveAttribute(
     "href",
     "/app/settings/channels",
   );

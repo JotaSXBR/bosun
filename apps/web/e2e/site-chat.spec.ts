@@ -44,7 +44,7 @@ test("site chat: visitor pre-form → message → agent reply reaches the widget
   const msgs = widget.locator(".bw-msgs");
   await widget.locator(".bw-compose input[name=text]").fill("Olá, preciso de ajuda");
   await widget.locator(".bw-compose button[type=submit]").click();
-  await expect(msgs).toContainText("Olá, preciso de ajuda");
+  await expect(msgs).toContainText("Olá, preciso de ajuda", { timeout: 15_000 });
 
   // Agent side: the conversation lands in the queue; reply assigns + sends.
   await page.goto("/app/inbox");

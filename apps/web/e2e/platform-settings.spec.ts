@@ -25,8 +25,8 @@ test("platform admin: setup gate, then Plataforma section visible", async ({ pag
     await page.waitForURL(/\/app/, { timeout: 30_000 });
   }
 
-  // Any /app page hits the setup gate — settings is the destination anyway.
-  await page.goto("/app/settings");
+  // Any /app page hits the setup gate — platform is the destination anyway.
+  await page.goto("/app/platform");
   await page.waitForLoadState("domcontentloaded");
 
   if (page.url().includes("/app/setup")) {
@@ -37,12 +37,12 @@ test("platform admin: setup gate, then Plataforma section visible", async ({ pag
     // On success the form does router.push("/app"); a failed save stays on
     // /app/setup — waiting proves the action completed before we navigate.
     await page.waitForURL(/\/app$/, { timeout: 30_000 });
-    await page.goto("/app/settings");
+    await page.goto("/app/platform");
   }
 
   await expect(page.getByRole("heading", { name: "Plataforma" })).toBeVisible();
-  // Group titles render inside the DS Card title slot (.bx-card-title), not
-  // semantic headings.
-  await expect(page.locator(".bx-card-title", { hasText: "E-mail" }).first()).toBeVisible();
-  await expect(page.locator(".bx-card-title", { hasText: "Cobrança" })).toBeVisible();
+  // Platform groups are links to /app/platform/<group> (IA spec §3 — a
+  // surface of its own, outside the org settings hub).
+  await expect(page.getByRole("link", { name: /E-mail/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Cobrança/ })).toBeVisible();
 });

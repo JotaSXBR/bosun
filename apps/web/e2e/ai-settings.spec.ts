@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("AI settings: credentials, agents and knowledge CRUD over the observer surface", async ({
-  page,
-}) => {
+test("AI settings: credentials/agents CRUD + reviews/knowledge/memory module", async ({ page }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const email = `e2e-ai-${suffix}@crm.local`;
 
@@ -17,16 +15,15 @@ test("AI settings: credentials, agents and knowledge CRUD over the observer surf
   await page.getByRole("button", { name: "Criar organização" }).click();
   await page.waitForURL("**/app");
 
-  // Navigate from the settings sections card — lands on the suggestions tab.
-  await page.goto("/app/settings");
-  await page.getByRole("link", { name: /Agentes e IA/ }).click();
-  await page.waitForURL("**/app/settings/ai/suggestions");
-  await expect(page.getByRole("heading", { name: "Inteligência artificial" })).toBeVisible();
-
-  // Manual analysis enqueues even without credentials (observer skips silently).
+  // Memory archiving confirms via window.confirm — accept it globally.
   page.on("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Analisar agora" }).click();
-  await expect(page.getByText(/Análise iniciada/)).toBeVisible();
+
+  // Technical settings live under Agentes / Credenciais (IA spec §5).
+  await page.goto("/app/settings");
+  await page.getByRole("link", { name: /Agentes e credenciais/ }).click();
+  await page.waitForURL("**/app/settings/ai/agents");
+  await expect(page.getByRole("tab", { name: "Agentes" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Credenciais" })).toBeVisible();
 
   // Create a BYOK credential — the key is write-only and never re-rendered.
   await page.getByRole("tab", { name: "Credenciais" }).click();
@@ -50,8 +47,13 @@ test("AI settings: credentials, agents and knowledge CRUD over the observer surf
   await agentDialog.getByRole("button", { name: "Criar agente" }).click();
   await expect(page.getByTestId("agent-list")).toContainText("Agente E2E");
 
+  // The working surface is the module: Revisões holds "Analisar agora".
+  await page.goto("/app/ai/reviews");
+  await page.getByRole("button", { name: "Analisar agora" }).click();
+  await expect(page.getByText(/Análise iniciada/)).toBeVisible();
+
   // Create a knowledge entry.
-  await page.getByRole("tab", { name: "Conhecimento" }).click();
+  await page.goto("/app/ai/knowledge");
   await expect(page.getByTestId("knowledge-empty")).toBeVisible();
   await page.getByRole("button", { name: "Nova entrada" }).click();
   const kbDialog = page.getByRole("dialog");
@@ -60,9 +62,9 @@ test("AI settings: credentials, agents and knowledge CRUD over the observer surf
   await kbDialog.getByRole("button", { name: "Adicionar entrada" }).click();
   await expect(page.getByTestId("knowledge-list")).toContainText("FAQ E2E");
 
-  // Second brain — human proposal stages in the suggestion inbox; the
-  // e2e user is the org owner, so self-approval is allowed (sovereign).
-  await page.getByRole("tab", { name: "Segundo cérebro" }).click();
+  // Second brain — human proposal stages in the review queue; the e2e user
+  // is the org owner, so self-approval is allowed (sovereign).
+  await page.goto("/app/ai/memory");
   await expect(page.getByTestId("brain-empty")).toBeVisible();
   await page.getByRole("button", { name: "Propor memória" }).click();
   const brainDialog = page.getByRole("dialog");
@@ -71,16 +73,16 @@ test("AI settings: credentials, agents and knowledge CRUD over the observer surf
   await brainDialog.getByTestId("brain-propose-submit").click();
   await expect(page.getByText(/aguarda revisão/)).toBeVisible();
 
-  // The staged proposal appears in the suggestions inbox as "memória".
-  await page.getByRole("tab", { name: "Sugestões" }).click();
+  // The staged proposal appears in the review queue as "memória".
+  await page.goto("/app/ai/reviews");
   const suggestionList = page.getByTestId("suggestion-list");
   await expect(suggestionList).toContainText("memória");
   await expect(suggestionList).toContainText("Clientes perguntam prazo");
   await suggestionList.getByRole("button", { name: "Aprovar" }).first().click();
   await expect(page.getByText(/aprovada e aplicada/)).toBeVisible();
 
-  // Approval promoted it to canon — the brain section lists it.
-  await page.getByRole("tab", { name: "Segundo cérebro" }).click();
+  // Approval promoted it to canon — the memory section lists it.
+  await page.goto("/app/ai/memory");
   await expect(page.getByTestId("brain-list")).toContainText(
     "Clientes perguntam prazo antes do preço.",
   );
@@ -91,7 +93,7 @@ test("AI settings: credentials, agents and knowledge CRUD over the observer surf
   await expect(page.getByTestId("brain-empty")).toBeVisible();
 
   // Delete the credential back to the empty state.
-  await page.getByRole("tab", { name: "Credenciais" }).click();
+  await page.goto("/app/settings/ai/credentials");
   await page.getByTestId("credential-list").getByRole("button", { name: "Remover" }).click();
   await expect(page.getByTestId("credentials-empty")).toBeVisible();
 });
