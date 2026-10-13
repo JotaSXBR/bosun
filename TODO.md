@@ -461,6 +461,10 @@ invitation:create`): lista + convites pendentes com **link copiável
 
 ## Pesquisa / upgrades futuros
 
+- **Gatilho — `.coolify-secrets.tmp`**: decisão 2026-10-13 mantém o arquivo
+  como referência local de secrets (gitignored + fora do build context)
+  enquanto o produto não tem usuários. Ao primeiro usuário/dado real em
+  produção: migrar tudo para o cofre/painel e excluir o arquivo.
 - **P1 — Node 26**: migrar após 2026-10-28 (vira LTS) + validação da toolchain.
 - **P1 — TypeScript 7**: migrar quando typescript-eslint suportar (acompanhar
   typescript-eslint#10940; API só chega no TS 7.1). `tsgo` como typecheck

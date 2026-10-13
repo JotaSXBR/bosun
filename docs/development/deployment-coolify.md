@@ -142,9 +142,11 @@ auto-gerado do staging foi removido pelo humano (o MCP Coolify não expõe
 escrita de `domains`; `fqdn` não é campo gravável — configurações assim
 escalam ao usuário, nunca via REST/curl pelo agente).
 
-Secrets reais vivem **só** no Coolify + `.env` local (gitignored) —
-nenhum arquivo temporário de secrets no repo/workspace (qualquer resíduo
-desse tipo é excluído pelo humano ao migrar para o cofre/painel).
+Secrets reais vivem no Coolify + `.env` local (gitignored). Decisão
+2026-10-13 (pré-usuários): `.coolify-secrets.tmp` permanece como referência
+local-only dos secrets gerados no provisionamento — gitignored + excluído
+do build context do Docker (`.dockerignore`). Aposentar/migrar para cofre
+quando houver usuários reais (gatilho no TODO.md).
 
 ## GHCR — pull da imagem privada
 
