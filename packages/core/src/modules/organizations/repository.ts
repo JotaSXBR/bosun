@@ -111,15 +111,14 @@ export async function listPendingInvitations(
 export async function updateInvitationTeam(
   db: Database,
   organizationId: string,
-  invitationId: string,
-  teamId: string | null,
+  args: { invitationId: string; teamId: string | null },
 ): Promise<boolean> {
   const rows = await db
     .update(organizationInvitations)
-    .set({ teamId })
+    .set({ teamId: args.teamId })
     .where(
       and(
-        eq(organizationInvitations.id, invitationId),
+        eq(organizationInvitations.id, args.invitationId),
         eq(organizationInvitations.organizationId, organizationId),
       ),
     )

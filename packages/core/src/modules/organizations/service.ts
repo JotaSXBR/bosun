@@ -81,12 +81,7 @@ export async function setInvitationTeam(
   args: { invitationId: string; teamId: string | null },
 ): Promise<void> {
   assertPermission(ctx, { invitation: ["create"] });
-  const updated = await updateInvitationTeam(
-    db,
-    ctx.organizationId,
-    args.invitationId,
-    args.teamId,
-  );
+  const updated = await updateInvitationTeam(db, ctx.organizationId, args);
   if (!updated) throw new NotFoundError("Invitation", args.invitationId);
 }
 
