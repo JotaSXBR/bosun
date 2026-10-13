@@ -201,6 +201,52 @@ describe("sendWidgetMessage + getWidgetConversation", () => {
     await expect(getWidgetConversation(db, "bad-token")).rejects.toThrow("Widget session");
   });
 
+  it("a new session with someone else's email sees nothing from before its creation", async () => {
+    const first = await createWidgetSession(db, connA.webhookToken, {
+      name: "Vitima",
+      email: "vitima@example.com",
+      phone: "5511900000001",
+    });
+    await sendWidgetMessage(db, first.sessionToken, {
+      text: "dados pessoais da vítima",
+      clientMessageId: "itsc-sec-1",
+    });
+    const own = await getWidgetConversation(db, first.sessionToken);
+    expect(own.messages.map((m) => m.text)).toContain("dados pessoais da vítima");
+
+    // Attacker knows only the visitor's email + the public embed token.
+    const attacker = await createWidgetSession(db, connA.webhookToken, {
+      name: "Atacante",
+      email: "vitima@example.com",
+      phone: "5511900000001",
+    });
+    const stolen = await getWidgetConversation(db, attacker.sessionToken);
+    expect(stolen.conversation).toBeNull();
+    expect(stolen.messages).toHaveLength(0);
+
+    // From the new session onward the visitor sees only their own messages.
+    await sendWidgetMessage(db, attacker.sessionToken, {
+      text: "oi de novo",
+      clientMessageId: "itsc-sec-2",
+    });
+    const after = await getWidgetConversation(db, attacker.sessionToken);
+    expect(after.messages.map((m) => m.text)).toEqual(["oi de novo"]);
+  });
+
+  it("rejects sessions idle beyond 30 days", async () => {
+    const { sessionToken: tk } = await createWidgetSession(db, connA.webhookToken, {
+      name: "Dorminhoco",
+      email: "dorme@example.com",
+      phone: "5511900000002",
+    });
+    const stale = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+    await withServiceAccess(db, (tx) =>
+      tx.update(siteChatSessions).set({ lastSeenAt: stale }).where(eq(siteChatSessions.token, tk)),
+    );
+    await expect(getWidgetConversation(db, tk)).rejects.toThrow("Widget session");
+    await expect(sendWidgetMessage(db, tk, { text: "oi" })).rejects.toThrow("Widget session");
+  });
+
   it("throttles the session touch: a fresh session does not write on every read", async () => {
     const { sessionToken: tk } = await createWidgetSession(db, connA.webhookToken, {
       ...PRE_FORM,

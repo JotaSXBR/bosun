@@ -149,3 +149,10 @@ feeds the storage charge.
 | Instagram / Facebook           | spec (Meta adapter reuse)                                                                                 |
 | E-mail                         | spec (provider choice deferred)                                                                           |
 | Telegram                       | later                                                                                                     |
+
+Site chat sessions: the pre-form email claims an identity (no proof of
+ownership) — the contact is deduped by email so agents keep one thread,
+but the **visitor-facing history is scoped to the session**: a session
+only receives messages and conversations created at or after its own
+creation. Resuming a past thread requires the browser token already
+issued. Sessions expire after 30 days idle (`last_seen_at`).
