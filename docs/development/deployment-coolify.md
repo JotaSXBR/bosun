@@ -77,7 +77,8 @@ da aplicação **antes** de migrar:
 
 Isso replica `docker/postgres/init/01-app-role.sh` para qualquer Postgres —
 incluindo os gerenciados (RDS etc.) no futuro. `GRANT CONNECT/USAGE` roda a
-cada boot (idempotente, barato).
+cada boot (idempotente, barato). `DATABASE_ADMIN_URL` é **migration-only**:
+o entrypoint a remove do ambiente antes de iniciar a app.
 
 ## Variáveis de ambiente (app bosun)
 

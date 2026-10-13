@@ -95,9 +95,11 @@ Multi-stage, `node:24-alpine`, non-root (`bosun` user):
    (migrations + script) + `entrypoint.sh`.
 
 `entrypoint.sh` runs `node /migrate/migrate.mjs` (idempotent, uses
-`DATABASE_ADMIN_URL ?? DATABASE_URL`) then execs `apps/web/server.js`.
+`DATABASE_ADMIN_URL ?? DATABASE_URL`), then unsets `DATABASE_ADMIN_URL` —
+it is migration-only — and execs `apps/web/server.js`.
 Health: Docker HEALTHCHECK + route `GET /api/health` (200/503 with DB ping).
-Skip migrations with `SKIP_DB_MIGRATE=true` (debug shells only).
+Skip migrations with `SKIP_DB_MIGRATE=true` (debug shells only; note the
+admin var is unset either way, before the app starts).
 
 ## GitHub secrets (repo → Settings → Secrets → Actions)
 
