@@ -40,18 +40,18 @@ docs call the second one `query-docs` — same thing, new name.
 Pre-resolved IDs for this repo's stack. **Skip `resolve-library-id` for
 anything on this list** — call `get-library-docs` directly with the ID.
 
-| Package in repo (installed)        | Context7 ID                          |
-| ---------------------------------- | ------------------------------------ |
-| `next` (16.x)                      | `/vercel/next.js`                    |
-| `react` (19.x)                     | `/reactjs/react.dev`                 |
-| `drizzle-orm` (0.45.x)             | `/drizzle-team/drizzle-orm-docs`     |
-| `zod` (4.x)                        | `/colinhacks/zod`                    |
-| `better-auth` (1.7.x)              | `/better-auth/better-auth`           |
-| `pg-boss` (12.x)                   | `/websites/deepwiki_timgit_pg-boss`  |
-| `ai` + `@ai-sdk/*` (7.x)           | `/vercel/ai`                         |
-| `vitest` (5.x)                     | `/vitest-dev/vitest`                 |
-| `@playwright/test` (1.63.x)        | `/microsoft/playwright`              |
-| `tailwindcss` (4.x)                | `/tailwindlabs/tailwindcss.com`      |
+| Package in repo (installed) | Context7 ID                         |
+| --------------------------- | ----------------------------------- |
+| `next` (16.x)               | `/vercel/next.js`                   |
+| `react` (19.x)              | `/reactjs/react.dev`                |
+| `drizzle-orm` (0.45.x)      | `/drizzle-team/drizzle-orm-docs`    |
+| `zod` (4.x)                 | `/colinhacks/zod`                   |
+| `better-auth` (1.7.x)       | `/better-auth/better-auth`          |
+| `pg-boss` (12.x)            | `/websites/deepwiki_timgit_pg-boss` |
+| `ai` + `@ai-sdk/*` (7.x)    | `/vercel/ai`                        |
+| `vitest` (5.x)              | `/vitest-dev/vitest`                |
+| `@playwright/test` (1.63.x) | `/microsoft/playwright`             |
+| `tailwindcss` (4.x)         | `/tailwindlabs/tailwindcss.com`     |
 
 Version-qualified IDs (`/org/project/<version>`) exist for some libraries;
 use them when the question is specifically about a versioned API surface,

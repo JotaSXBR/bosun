@@ -14,9 +14,9 @@ Invoke `incremental-implementation` for $ARGUMENTS, together with
 - Slice thin and verifiable; run the relevant tests per slice.
 - Invoke the axis skills when they apply: `frontend-ui-engineering` (UI),
   `api-and-interface-design` (new contracts), `source-driven-development`
-  + `context7-docs` (library/framework APIs — check official docs),
-  `doubt-driven-development` (risky decision), `context-engineering`
-  (context/rules setup).
+  - `context7-docs` (library/framework APIs — check official docs),
+    `doubt-driven-development` (risky decision), `context-engineering`
+    (context/rules setup).
 - Follow `AGENTS.md` code rules (no `any`, surgical diffs, Server Action
   return contract, pg-error helpers, design-system tokens for UI).
 - No commits unless the user explicitly asks — the vendored

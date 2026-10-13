@@ -137,8 +137,9 @@ RustFS recebe `RUSTFS_ACCESS_KEY`/`SECRET_KEY`, `RUSTFS_ADDRESS=:9000`,
 `RUSTFS_VOLUMES=/data`, console desabilitado por padrão. Bucket `bosun`
 permanece **privado** — sem `anonymous` grants. Healthcheck:
 `GET /health/live` na porta 9000. **Sem FQDN** — um domínio sslip
-auto-gerado do staging foi removido (limpar via `PATCH
-/applications/{uuid}` com `{"domains":""}`; `fqdn` não é campo gravável).
+auto-gerado do staging foi removido pelo humano (o MCP Coolify não expõe
+escrita de `domains`; `fqdn` não é campo gravável — configurações assim
+escalam ao usuário, nunca via REST/curl pelo agente).
 
 Secrets reais vivem **só** no Coolify + `.env` local (gitignored) —
 `.coolify-secrets.tmp` local guarda os gerados nesta sessão; migrar para

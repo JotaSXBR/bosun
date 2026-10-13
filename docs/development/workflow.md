@@ -134,9 +134,22 @@ O CI continua sendo a barreira final (roda os mesmos cheques via turbo).
 - **chrome-devtools** (`chrome-devtools-mcp@1.10.1`) — browser real para a
   skill `browser-testing-with-devtools`: DOM, console, network, screenshots.
   Sem credenciais. Carrega em novas sessões.
+- **coolify** (transporte http) — painel de deploy; URL real e token ficam
+  em `.devin/mcp_config.local.json` (gitignored). Uso restrito a leitura +
+  deploy/start/stop/restart; tools cobertas por `ask` em
+  `.devin/config.json` — configurações fora disso (envs, fqdn,
+  healthcheck) escalam ao usuário (ver `deployment-coolify.md`).
 
-Servidores user-level já ativos (não duplicar no projeto): context7
-(docs de libs), github.
+Servidor user-level conhecido: `context7` (docs de libs). Qualquer outro
+(github etc.) só vale se configurado na máquina — não é garantido.
+
+### Atualizando as skills
+
+`.devin/skills/` mistura 9 skills locais (aliases do ciclo + `context7-docs`,
+`.prettierignore` as mantém formatadas) e 25 vendorizadas de
+`addyosmani/agent-skills` (`skills-lock.json`). Atualizar o pack exige PR
+próprio com revisão do diff de `.devin/skills/**` e `ref` fixado no
+lockfile — nunca atualizar no meio de outro trabalho.
 
 ## O que NÃO muda
 
