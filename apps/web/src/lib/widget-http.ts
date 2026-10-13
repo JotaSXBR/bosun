@@ -40,8 +40,18 @@ export function rateLimit(key: string, limit: number, windowMs: number): boolean
   return true;
 }
 
-/** Client IP for rate limiting — first XFF hop when behind a proxy. */
+/**
+ * Client IP for rate limiting. The app runs behind exactly one trusted
+ * proxy (Coolify/Traefik), which appends the peer IP to X-Forwarded-For —
+ * so the LAST hop is the real client. Earlier hops are client-supplied
+ * and must not be trusted: a forged first hop would otherwise let an
+ * attacker rotate the rate-limit key.
+ */
 export function clientIp(request: Request): string {
-  const fwd = request.headers.get("x-forwarded-for");
-  return fwd?.split(",")[0]?.trim() ?? "unknown";
+  const hops = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((hop) => hop.trim())
+    .filter(Boolean);
+  return hops?.at(-1) ?? "unknown";
 }
