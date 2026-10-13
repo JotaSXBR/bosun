@@ -1,6 +1,8 @@
 // Demo content seed — inserts seed-data.ts into the Demo org. Idempotent:
 // every block keys off a natural id (contact channelUserId, conversation
 // externalId, agent name, entry title) and skips what already exists.
+import { createCipheriv, randomBytes } from "node:crypto";
+
 import { type createDb, schema } from "@crm/db";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -47,6 +49,31 @@ function ts(daysAgo: number, hour = 10, minute = 0): Date {
   return d;
 }
 
+// Mirror of @crm/core/lib/crypto.ts encryptJson (auth can't depend on core):
+// `v1.<iv>.<tag>.<ciphertext>` AES-256-GCM under CHANNEL_CREDENTIALS_KEY.
+// Connections must store VALID ciphertext — a plaintext placeholder crashes
+// decryptJson in providerForConnection (e.g. subscribeChatPresenceAction).
+function encryptSeedCredential(value: unknown): string {
+  const hex = process.env.CHANNEL_CREDENTIALS_KEY;
+  if (!hex || !/^[0-9a-f]{64}$/i.test(hex)) {
+    throw new Error("CHANNEL_CREDENTIALS_KEY must be set (64 hex) to seed demo connections");
+  }
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", Buffer.from(hex, "hex"), iv);
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(value), "utf8"), cipher.final()]);
+  return [
+    "v1",
+    iv.toString("base64url"),
+    cipher.getAuthTag().toString("base64url"),
+    ciphertext.toString("base64url"),
+  ].join(".");
+}
+
+const CONNECTION_CREDENTIALS: Record<string, unknown> = {
+  waha: { baseUrl: "http://localhost:3001", apiKey: "seed-demo-key", session: "default" },
+  site_chat: {},
+};
+
 async function ensureConnection(
   db: SeedDb,
   orgId: string,
@@ -55,11 +82,23 @@ async function ensureConnection(
   webhookToken: string,
 ): Promise<string> {
   const [existing] = await db
-    .select({ id: channelConnections.id })
+    .select({
+      id: channelConnections.id,
+      credentialsEncrypted: channelConnections.credentialsEncrypted,
+    })
     .from(channelConnections)
     .where(eq(channelConnections.webhookToken, webhookToken))
     .limit(1);
-  if (existing) return existing.id;
+  if (existing) {
+    // Repair rows from before credentials were stored as real ciphertext.
+    if (!existing.credentialsEncrypted.startsWith("v1.")) {
+      await db
+        .update(channelConnections)
+        .set({ credentialsEncrypted: encryptSeedCredential(CONNECTION_CREDENTIALS[kind] ?? {}) })
+        .where(eq(channelConnections.id, existing.id));
+    }
+    return existing.id;
+  }
 
   const [created] = await db
     .insert(channelConnections)
@@ -69,7 +108,7 @@ async function ensureConnection(
       name,
       externalRef: kind === "waha" ? "5511987654321" : "widget-bosun-io",
       status: "connected",
-      credentialsEncrypted: "seed-placeholder-not-encrypted",
+      credentialsEncrypted: encryptSeedCredential(CONNECTION_CREDENTIALS[kind] ?? {}),
       webhookToken,
       connectedAt: ts(30),
     })
