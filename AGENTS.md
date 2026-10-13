@@ -50,6 +50,10 @@ Lifecycle: `/spec` (`docs/product/*`) → `/plan-task` → `/build` → `/test` 
 `/review` → `/ship`. `tasks/plan.md` doubles as the scope contract
 (`## Escopo` globs) enforced by `.devin/hooks/` — full rules and the hook's
 limits in `docs/development/workflow.md`.
+Never hand-write `tasks/plan.md` — run `/plan-task`, using the pre-plan
+skills as needed first: `interview-me` when the ask is underspecified,
+`idea-refine` to stress-test a vague idea, `doubt-driven-development`
+for high-stakes calls.
 
 ## Commands
 
