@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "deny": [
+      "Exec(git push --force)",
+      "Exec(git push -f)",
+      "Exec(git reset --hard)",
+      "Exec(git clean)",
+      "Write(.env*)",
+      "Write(.coolify-secrets.tmp)"
+    ],
+    "ask": [
+      "Write(AGENTS.md)",
+      "Write(CLAUDE.md)",
+      "Write(.devin/**)",
+      "Write(.github/**)",
+      "Write(packages/db/migrations/**)",
+      "Exec(git push)",
+      "Exec(git commit)",
+      "Exec(pnpm db:migrate)",
+      "Exec(pnpm infra:down)",
+      "mcp__coolify__*"
+    ]
+  }
+}
