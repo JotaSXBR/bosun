@@ -5,14 +5,18 @@ pnpm install
 cp .env.example .env
 pnpm infra:up        # Postgres 18+pgvector, Redis, RustFS (compose project: crmv2)
 pnpm db:migrate
-pnpm db:seed         # idempotent demo org + users
+pnpm db:seed         # idempotent demo org + users + demo content
 pnpm storage:init    # create the RustFS bucket
 pnpm dev             # http://localhost:3000
 ```
 
 Seed logins (dev password `Password123!`): `superadmin@crm.local` (platform admin);
 demo org: `owner@crm.local`, `admin@crm.local`, `manager@crm.local`, `agent@crm.local`.
-Demo org: `Demo` (`demo`).
+Demo org: `Demo` (`demo`) — populated as if it sold Bosun through its own
+channels: ~13 inbox conversations across statuses/sectors/labels (incl. a
+follow-up ticket and a snoozed one), 8 deals over the funnel stages, AI
+agents/knowledge/memory/pending suggestions, and 2 site-chat widget sessions.
+Content lives in `packages/auth/src/seed-data.ts`.
 
 Optional env: `CHANNEL_CREDENTIALS_KEY` (64 hex chars) encrypts
 `channel_connections` credentials — required only for the Integrations
