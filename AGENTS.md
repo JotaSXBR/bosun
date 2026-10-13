@@ -26,6 +26,10 @@ Repo: `github.com/JotaSXBR/bosun` (public, Apache-2.0).
 - **Delegate mechanical work.** When the environment supports it, fan out
   multi-file mechanical edits and exploration to subagents; keep planning and
   review in the main session.
+- **Commits, pushes and PRs only on explicit user request.** Skills that
+  recommend committing per slice (`incremental-implementation`,
+  `git-workflow-and-versioning`) only prepare or describe the commit —
+  never create it unprompted.
 
 ## Architecture & layering
 

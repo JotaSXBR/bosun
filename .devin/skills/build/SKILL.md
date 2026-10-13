@@ -19,3 +19,6 @@ Invoke `incremental-implementation` for $ARGUMENTS, together with
   (context/rules setup).
 - Follow `AGENTS.md` code rules (no `any`, surgical diffs, Server Action
   return contract, pg-error helpers, design-system tokens for UI).
+- No commits unless the user explicitly asks — the vendored
+  `incremental-implementation` "Commit each slice" step is overridden by
+  the `AGENTS.md` working agreement (prepare the commit, don't create it).
