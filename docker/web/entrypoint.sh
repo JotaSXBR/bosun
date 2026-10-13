@@ -8,5 +8,10 @@ if [ "${SKIP_DB_MIGRATE:-}" != "true" ]; then
   node /migrate/migrate.mjs
 fi
 
+# DATABASE_ADMIN_URL is migration-only: the app must never see the owner
+# role (it bypasses RLS). Drop it before exec so it cannot leak into the
+# runtime process env.
+unset DATABASE_ADMIN_URL
+
 cd /app/apps/web
 exec node server.js

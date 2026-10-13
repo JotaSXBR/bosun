@@ -11,21 +11,21 @@ Repo: `github.com/JotaSXBR/bosun` (public, Apache-2.0).
 
 ## Working agreement
 
-- **State assumptions before coding.** If a request has multiple plausible
-  readings, say which one you picked and why — or ask when it's genuinely
-  ambiguous. Don't silently pick an interpretation.
-- **Simplest sufficient solution.** Minimum code that solves the problem: no
-  speculative features, no abstractions for single-use code, no unrequested
-  configurability.
-- **Surgical diffs.** Touch only what the change requires and match the
-  surrounding style. Don't refactor, reformat, or "improve" adjacent code that
-  wasn't part of the task.
-- **Goal-driven execution.** Turn the task into verifiable goals: reproduce
-  the problem → fix → verify. Before finishing, run `pnpm typecheck` and
-  `pnpm lint` (plus the relevant tests) and report what you ran.
-- **Delegate mechanical work.** When the environment supports it, fan out
-  multi-file mechanical edits and exploration to subagents; keep planning and
-  review in the main session.
+- **State assumptions before coding.** Pick an interpretation explicitly —
+  or ask when genuinely ambiguous.
+- **Simplest sufficient solution.** No speculative features, abstractions
+  for single-use code, or unrequested configurability.
+- **Surgical diffs.** Touch only what the change requires; don't refactor
+  or reformat adjacent code.
+- **Goal-driven execution.** Reproduce → fix → verify. Before finishing,
+  run `pnpm verify` and report it (`pnpm --filter @crm/<pkg> test` +
+  `pnpm typecheck`/`pnpm lint` while iterating).
+- **Delegate mechanical work.** Fan out mechanical edits/exploration to
+  subagents; keep planning and review in the main session.
+- **Commits, pushes and PRs only on explicit user request.** Skills that
+  recommend committing per slice (`incremental-implementation`,
+  `git-workflow-and-versioning`) only prepare or describe the commit —
+  never create it unprompted.
 
 ## Architecture & layering
 
@@ -33,50 +33,32 @@ Repo: `github.com/JotaSXBR/bosun` (public, Apache-2.0).
 UI (React) → Server Action / Route Handler → @crm/core service → repository → Postgres
 ```
 
-- `apps/web` — Next.js 16 app (UI, Server Actions, API routes, auth handler).
-- `packages/core` — domain modules (organizations, audit). No provider SDKs.
-- `packages/db` — Drizzle schema, client, `withTenant`/`withPlatformScope`.
-- `packages/auth` — Better Auth composition (organization + admin plugins).
-- `packages/permissions` — role/permission matrix (single source of truth).
-- `packages/config` — Zod-parsed env (`getServerEnv`, `isConfigured`).
-- `packages/observability` — JSON logger + `captureException` facade.
-- `packages/channels|billing|storage|email|ai` — provider abstractions;
-  provider-specific code lives only in `src/adapters/*`.
-- `packages/automation` — pg-boss tasks + enqueue helpers (in-process, ADR 0016).
-- `design-system/` — package `@crm/design-system` (moved from `packages/ui`, ADR 0017):
-  BOSUN tokens, components, templates, showcase, reference HTMLs.
-- `tooling/*` — shared tsconfig/eslint/prettier.
-- `research/` — external reference material (e.g. vibe-coding-toolkit),
-  gitignored; read for ideas, never edit or import from it.
+`apps/web` (Next.js 16) · `packages/core` (domain) · `packages/db` (Drizzle,
+`withTenant`) · `packages/{auth,permissions,config,observability}` ·
+`packages/{channels,billing,storage,email,ai}` (providers — adapters only in
+`src/adapters/*`) · `packages/automation` (pg-boss in-process) ·
+`design-system/` (`@crm/design-system`) · `tooling/*` · `research/` (gitignored
+reference, never import).
 
 Dependency direction: app → core/providers → db/config/permissions. Never
 import an adapter outside its registry factory. The only `switch` on provider
-kind is each package's `create*Provider`.
+kind is each package's `create*Provider`. Detail: `docs/architecture/`.
 
 ## Development workflow
 
-Lifecycle: `/spec` (`docs/product/*`) → `/plan-task` → `/build` →
-`/test` → `/review` → `/ship` — thin alias skills in `.devin/skills/`
-that invoke the addyosmani/agent-skills pack (`/plan` is Devin's built-in
-plan mode, so the plan step is `/plan-task`). `/plan-task` writes
-`tasks/plan.md`, which doubles as the scope contract (`## Escopo` globs).
-
-Hooks (`.devin/hooks.v1.json` → `.devin/hooks/workflow.mjs`): block edits
-outside the plan's `## Escopo` globs (docs/markdown always free) and
-require the verification gate before a session with edits can stop.
-One active plan at a time; expand scope by editing the plan with user
-approval. Non-trivial work starts with clarifying questions — never guess
-scope-affecting decisions (see `docs/development/workflow.md`).
+Lifecycle: `/spec` (`docs/product/*`) → `/plan-task` → `/build` → `/test` →
+`/review` → `/ship`. `tasks/plan.md` doubles as the scope contract
+(`## Escopo` globs) enforced by `.devin/hooks/` — full rules and the hook's
+limits in `docs/development/workflow.md`.
 
 ## Commands
 
-`pnpm install` · `pnpm dev` · `pnpm build` · `pnpm lint` · `pnpm typecheck` ·
-`pnpm test` (unit) · `pnpm test:integration` (needs infra) · `pnpm test:e2e`
-(playwright) · `pnpm infra:up|down` · `pnpm db:generate|migrate|seed|studio` ·
-`pnpm storage:init`. Jobs (pg-boss) start with `pnpm dev` — nothing separate.
-
-`pnpm install` also installs the **lefthook** pre-commit hook (prettier on
-staged files) — skipped automatically under `CI=true`.
+`pnpm install` · `dev` · `build` · `verify` (gate: format:check+lint+
+typecheck+test) · `verify:full` (+integration+e2e+build) · `test` (unit) ·
+`test:integration` (needs infra) · `test:e2e` · `infra:up|down` ·
+`db:generate|migrate|seed|studio` · `storage:init`. Jobs (pg-boss) start with
+`pnpm dev` — nothing separate. `pnpm install` installs the lefthook
+pre-commit (prettier on staged).
 
 ## Code rules
 
@@ -94,26 +76,17 @@ staged files) — skipped automatically under `CI=true`.
 
 ## Design system
 
-- `DESIGN.md` (repo root, versioned) is the visual contract and the **source
-  of truth for tokens** (Google Labs DESIGN.md format). Read it before any UI
-  work. Change a token there first, then in
-  `design-system/src/styles/tokens/*.css` — `tokens.test.ts` fails on drift.
-- New UI comes from the library in `design-system/`
-  (`@crm/design-system/components/<name>`, `@crm/design-system/templates/<name>`). Never hardcode
-  color, font, font size, spacing, radius or shadow: use only the Tailwind
-  vocabulary mapped to tokens (`bg-surface`, `text-ink-muted`, `border-line`,
-  `rounded-card`, `shadow-pop`… — table in DESIGN.md → Implementation). Lint
-  enforces it (`@shadcn/lint` + `tooling/eslint/design-system.js`).
-- Library map: `design-system/README.md`. Usage per component:
-  `design-system/COMPONENTS.md`. Visual references (open in a browser):
-  `design-system/reference/index.html`. Live showcase: `/design-system`
-  (dev only).
-- Copy is pt-BR, "você", sentence case, short sentences with a clear verb, no
-  emoji; nautical words only in brand moments. No logo exists — use
-  `<Wordmark />`, never draw a symbol. App strings still go through
-  next-intl; library defaults are pt-BR and overridable by props.
-- Theme: the app is dark-only (`<html data-theme="dark">`);
-  `[data-theme="light"]` islands exist for the showcase/marketing.
+- `DESIGN.md` is the visual contract and **source of truth for tokens** —
+  read it before UI work; token changes start there, then
+  `design-system/src/styles/tokens/*.css` (`tokens.test.ts` fails on drift).
+- New UI comes from `design-system/` (`@crm/design-system/{components,templates}/<name>`).
+  Never hardcode color, font, font size, spacing, radius or shadow — only the
+  token-mapped Tailwind vocabulary (`bg-surface`, `text-ink-muted`,
+  `border-line`, `rounded-card`, `shadow-pop`… — DESIGN.md → Implementation).
+  Lint enforces it.
+- Map/usage: `design-system/README.md` + `COMPONENTS.md`; showcase:
+  `/design-system` (dev). Copy is pt-BR "você", sentence case, no emoji; no
+  logo exists — use `<Wordmark />`. Dark-only app (`data-theme="dark"`).
 
 ## Database & migrations
 
@@ -122,8 +95,9 @@ staged files) — skipped automatically under `CI=true`.
 2. Never edit an already-applied migration; RLS policies and grants are done
    via custom migrations (see `packages/db/migrations`).
 3. New tenant-owned table checklist: `organization_id` column + `pgPolicy` on
-   `app.organization_id` + `.enableRLS()` + migration granting to `crm_app` +
-   integration test proving cross-org isolation.
+   `app.organization_id` + `.enableRLS()` + `FORCE ROW LEVEL SECURITY` +
+   migration granting to `crm_app` + integration test proving cross-org
+   isolation.
 
 ## Security rules (non-negotiable)
 
@@ -140,88 +114,26 @@ staged files) — skipped automatically under `CI=true`.
 - Errors in domain/packages go through `captureException` — never Sentry
   directly.
 
-## How-tos
-
-- **New domain module**: `packages/core/src/modules/<name>/{index,service,repository,schemas}.ts`,
-  export from module index; take `db` + `TenantContext`, assert permissions
-  inside the service.
-- **New tenant-owned table**: follow the checklist in "Database & migrations"
-  and `docs/database/README.md`.
-- **Channel webhook ingestion**: `POST /api/webhooks/channels/<webhookToken>`
-  resolves the connection under `withServiceAccess` (unguessable token),
-  verifies the provider signature on the raw body, then ingests each
-  `ChannelEvent` via `@crm/core/messaging` inside `withTenant` and enqueues
-  `process-channel-event`. Connection credentials are AES-256-GCM under
-  `CHANNEL_CREDENTIALS_KEY` (`@crm/core/crypto`).
-- **New ChannelProvider** (e.g. Instagram, Telegram): add
-  `packages/channels/src/adapters/<name>.ts` implementing `ChannelProvider`
-  (`src/provider.ts`), normalize webhooks into `ChannelEvent`
-  (`src/domain.ts`), add the kind to `ChannelProviderKind` and one `case` in
-  `createChannelProvider` (`src/registry.ts`). Fixture-based tests for
-  signature verification, parsing and outbound requests.
-- **New BillingProvider**: `packages/billing/src/adapters/<name>.ts`
-  implementing `BillingProvider`; money is integer cents in the domain,
-  conversion only inside the adapter; webhook `eventId` is the idempotency
-  key; register in `createBillingProvider` (`src/registry.ts`).
-- **New AI provider**: add the `@ai-sdk/<provider>` package to `packages/ai`,
-  extend `ModelRef["provider"]` and the switch in `resolveLanguageModel`
-  (`src/model.ts`), add the API key to `@crm/config`. Agents only reference a
-  `ModelRef`; never import a provider SDK elsewhere.
-- **New agent tool**: `defineAgentTool({ requiredPermissions, execute(ctx, input) })`
-  calling `@crm/core` services; register it and list it in the agent's `tools`.
-- **New StorageProvider**: implement `StorageProvider`
-  (`packages/storage/src/domain.ts`) next to `S3StorageProvider`; keep keys
-  produced by `tenantObjectKey`.
-- **New EmailProvider**: `packages/email/src/providers/<name>.ts` +
-  one branch in `createEmailProvider` + `EMAIL_PROVIDER` enum in `@crm/config`.
-- **New job/task**: `packages/automation/src/tasks/<name>.ts` — a zod
-  payload schema + plain async handler; rebuild TenantContext from the DB,
-  never trust payload beyond identity; enqueue helper in `src/enqueue.ts`,
-  pass `tx` when inside a transaction (`boss.send` via `fromDrizzle` is
-  atomic with the write); enqueue must no-op (`{ skipped: true }`) when the
-  boss isn't started. Register queue+work(+schedule) in `boss.ts`. Jobs run
-  in-process — no worker tier (see `docs/development/jobs-pg-boss.md`).
-
-- **New UI component**: check `design-system/COMPONENTS.md` and the
-  showcase first — extend before adding. Otherwise add
-  `design-system/src/components/<kebab>.tsx` (Radix primitive underneath when
-  behavior is non-trivial, `cva` variants, DS utilities only), covering
-  default/hover/active/focus-visible (`shadow-focus`)/disabled plus
-  loading/error/empty/selected where they apply; spread rest props on the
-  interactive root so the showcase's `data-preview` states work. Then add a
-  showcase section (`design-system/src/showcase/`) and its usage to
-  `COMPONENTS.md`. The prop/variant contract is the component's TS type
-  (strict typecheck replaces the dump's per-prop allowlists);
-  `tooling/eslint/design-system.js` covers what TS can't see (raw hex/px,
-  non-DS fonts, imports of DS internals). A missing token goes into
-  DESIGN.md + tokens CSS + `@theme` in `globals.css` in the same change.
-
 ## Running locally
 
 `pnpm install` → `cp .env.example .env` → `pnpm infra:up` → `pnpm db:migrate`
-→ `pnpm db:seed` → `pnpm storage:init` → `pnpm dev` (http://localhost:3000).
-Seed logins (`Password123!`): platform admin `superadmin@crm.local`; demo org
-`owner@`, `admin@`, `manager@`, `agent@crm.local`.
-External integrations are optional; the app boots with only the required env.
+→ `pnpm db:seed` → `pnpm storage:init` → `pnpm dev` (http://localhost:3000;
+seed logins `Password123!`, see `docs/development/getting-started.md`).
 
-## Further reading
+## Testing & docs map
 
-`DESIGN.md` + `design-system/README.md` (visual contract + library map),
-`docs/architecture/` (overview, multi-tenancy, providers, realtime,
-observability, security, stack), `docs/adr/`, `docs/domains/`,
-`docs/database/`, `docs/development/` (incl. `cicd.md` —
-GitHub Actions → GHCR → Coolify pipeline).
+Unit `*.test.ts` · integration `*.int.test.ts` (real Postgres/RustFS) ·
+e2e `apps/web/e2e/*.spec.ts` (playwright) · fakes in each package's `testing`
+export. `pnpm test` = local runner; `turbo run test` = CI.
 
-## Testing
-
-Unit: `*.test.ts` (vitest, no infra). Integration: `*.int.test.ts` (real
-Postgres/RustFS). E2E: `apps/web/e2e/*.spec.ts` (playwright). Fake providers
-live in each package's `testing` export.
+Docs: `DESIGN.md`, `docs/architecture/`, `docs/adr/`, `docs/domains/`,
+`docs/database/`, `docs/development/` (`workflow.md`, `how-tos.md` — recipes
+for domain modules, providers, jobs, UI — `cicd.md`, `getting-started.md`).
 
 ## Definition of done
 
-`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` green, plus
-relevant integration tests for anything touching DB/providers.
+`pnpm verify` green; `pnpm verify:full` (adds integration + e2e + build) for
+anything touching DB/providers — see `docs/development/workflow.md` → Gates.
 
 ## Do NOT
 

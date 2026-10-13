@@ -24,9 +24,6 @@ playwright/.cache/
 *.log
 .vercel
 
-# trigger.dev self-host checkout
-.trigger-selfhost/
-
 # External reference material (re-cloneable, see research/README.md)
 research/vibe-coding-toolkit/
 research/agent-skills/
@@ -35,7 +32,6 @@ research/agent-skills/
 .task-brief*.md
 .devin/config.local.json
 .devin/mcp_config.local.json
-.devin/hooks/.edited-*
 
 # Session secrets staging file (never commit)
 .coolify-secrets.tmp

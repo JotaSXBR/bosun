@@ -8,7 +8,7 @@ sessions are cookie-based via `nextCookies`.
 
 ## Authorization
 
-Org roles (`owner`/`admin`/`manager`/`agent`) are defined once in
+Org roles (`owner`/`admin`/`manager`/`agent`/`viewer`) are defined once in
 `@crm/permissions` and consumed by both Better Auth and application checks
 (`assertPermission(ctx, ...)`, `hasPermission`). `platform_admin` is an admin
 plugin role for platform operations.
@@ -109,8 +109,8 @@ ever passed to a tool — they go through `@crm/core` services.
 
 ## Job isolation
 
-Trigger payloads carry identity only; tasks rebuild TenantContext from the
-membership table before acting.
+pg-boss payloads carry identity only; tasks rebuild TenantContext from the
+membership table before acting (see `docs/development/jobs-pg-boss.md`).
 
 ## Logs
 

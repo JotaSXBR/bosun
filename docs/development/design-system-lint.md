@@ -1,7 +1,7 @@
 # Design-system lint — @shadcn/lint
 
-Status: **adotado** — token rules em `error` em `apps/web` + `packages/ui`
-(hoje `design-system/`, ADR 0017) desde 2026-10-07; `no-inline-styles`/
+Status: **adotado** — token rules em `error` em `apps/web` + `design-system/`
+(ADR 0017) desde 2026-10-07; `no-inline-styles`/
 `require-static-classes` ficam `warn` (escapes dinâmicos legítimos:
 transforms dnd-kit, geometria de chart, overrides numéricos explícitos).
 Desde 2026-10-09 soma-se a **aderência BOSUN** (seção no fim).
@@ -15,7 +15,7 @@ que quebrou, qual token usar e onde achar. Requer Tailwind v4 + ESLint ≥9.30
 
 ## Bugs encontrados pelo spike (corrigidos)
 
-1. **Scan de conteúdo não cobria `packages/ui`** — auto-detection do
+1. **Scan de conteúdo não cobria `design-system/`** — auto-detection do
    Tailwind v4 usa o cwd do build (`apps/web`); toda classe exclusiva dos
    componentes internos (`top-[50%]` + translate do dialog, `min-w-[8rem]`
    do dropdown, `card-action`, animações) gerava **zero CSS**. Dialogs
@@ -44,7 +44,7 @@ classes arbitrárias (`style={{ "--d": "24px" }}` + `size-(--d)`; o
 shorthand `-(--var)` é o escape hatch documentado, não conta como
 valor arbitrário). Restam 3 `eslint-disable` justificados: passthrough
 de `bodyStyle`/`inputStyle` (props de API, estaticamente inverificáveis).
-Allowlist de `packages/ui` cobre: `ring-[3px]`,
+Allowlist de `design-system/` cobre: `ring-[3px]`,
 `grid-rows-[auto_auto]`, `grid-cols-[*]`, `top|left-[50%]`,
 `translate-x|y-[-50%]`, `max-w-[*]`, `min-w-[*]`, `h-[var(*)]`,
 `transition-[color,box-shadow]` — matching é na utility base (variants não

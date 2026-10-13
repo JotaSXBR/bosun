@@ -54,7 +54,7 @@ export default async function AcceptInvitationPage({
       ) : (
         <InvalidInvitation
           title={emailMismatch ? t("wrongEmailTitle") : t("invalidTitle")}
-          body={emailMismatch ? t("wrongEmailBody", { email: invitation.email }) : t("invalidBody")}
+          body={emailMismatch ? t("wrongEmailBody") : t("invalidBody")}
         />
       )}
     </AuthLayout>

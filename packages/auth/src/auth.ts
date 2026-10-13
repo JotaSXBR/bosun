@@ -28,10 +28,10 @@ export type AuthOptions = {
 const defaultSendEmailLogger = createLogger({ bindings: { component: "auth:email" } });
 
 const defaultSendEmail = (message: EmailMessage): Promise<void> => {
+  // Never log `text`: auth emails carry token-bearing URLs (reset/verify).
   defaultSendEmailLogger.info("sending auth email (default hook)", {
     to: message.to,
     subject: message.subject,
-    text: message.text,
   });
   return Promise.resolve();
 };

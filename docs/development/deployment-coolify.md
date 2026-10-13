@@ -77,7 +77,8 @@ da aplicação **antes** de migrar:
 
 Isso replica `docker/postgres/init/01-app-role.sh` para qualquer Postgres —
 incluindo os gerenciados (RDS etc.) no futuro. `GRANT CONNECT/USAGE` roda a
-cada boot (idempotente, barato).
+cada boot (idempotente, barato). `DATABASE_ADMIN_URL` é **migration-only**:
+o entrypoint a remove do ambiente antes de iniciar a app.
 
 ## Variáveis de ambiente (app bosun)
 
@@ -137,12 +138,15 @@ RustFS recebe `RUSTFS_ACCESS_KEY`/`SECRET_KEY`, `RUSTFS_ADDRESS=:9000`,
 `RUSTFS_VOLUMES=/data`, console desabilitado por padrão. Bucket `bosun`
 permanece **privado** — sem `anonymous` grants. Healthcheck:
 `GET /health/live` na porta 9000. **Sem FQDN** — um domínio sslip
-auto-gerado do staging foi removido (limpar via `PATCH
-/applications/{uuid}` com `{"domains":""}`; `fqdn` não é campo gravável).
+auto-gerado do staging foi removido pelo humano (o MCP Coolify não expõe
+escrita de `domains`; `fqdn` não é campo gravável — configurações assim
+escalam ao usuário, nunca via REST/curl pelo agente).
 
-Secrets reais vivem **só** no Coolify + `.env` local (gitignored) —
-`.coolify-secrets.tmp` local guarda os gerados nesta sessão; migrar para
-cofre adequado quando existir (ver roadmap).
+Secrets reais vivem no Coolify + `.env` local (gitignored). Decisão
+2026-10-13 (pré-usuários): `.coolify-secrets.tmp` permanece como referência
+local-only dos secrets gerados no provisionamento — gitignored + excluído
+do build context do Docker (`.dockerignore`). Aposentar/migrar para cofre
+quando houver usuários reais (gatilho no TODO.md).
 
 ## GHCR — pull da imagem privada
 

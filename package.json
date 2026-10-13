@@ -25,6 +25,8 @@
     "infra:logs": "docker compose -f docker/compose.yml logs -f",
     "storage:init": "pnpm --filter @crm/storage init-bucket",
     "test:coverage": "turbo run test:coverage",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "verify:full": "pnpm verify && pnpm test:integration && pnpm test:e2e && pnpm build",
     "prepare": "node -e \"process.env.CI||process.exit(1)\" || lefthook install"
   },
   "devDependencies": {

@@ -10,6 +10,7 @@ loadEnvConfig(resolve(import.meta.dirname, "../.."));
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  poweredByHeader: false,
   // Monorepo: trace deps from the repo root so `standalone` includes the
   // root node_modules the app actually resolves through pnpm.
   outputFileTracingRoot: resolve(import.meta.dirname, "../.."),

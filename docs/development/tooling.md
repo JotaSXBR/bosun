@@ -45,9 +45,11 @@ the test-file relaxations sit _after_ the blocks that enable them in
    at real issues), loosen the option or drop the rule — noise teaches
    people to ignore lint.
 
-Current warn-tier counts (baseline for the burndown): `complexity` 4,
-`max-statements` 3, `@typescript-eslint/no-unnecessary-condition` 4,
-`@typescript-eslint/prefer-nullish-coalescing` 1.
+Warn-tier rules today: `sonarjs/cognitive-complexity`, `max-params`,
+`max-statements`, `max-lines-per-function`, `max-lines`,
+`@typescript-eslint/no-unnecessary-condition`,
+`@typescript-eslint/prefer-nullish-coalescing`. Live counts come from
+`pnpm lint` output — don't hardcode a baseline here.
 
 ## Plugin inventory
 
@@ -67,9 +69,11 @@ Core-rule additions: `no-var`, `prefer-const`, `no-empty`
 (`allowEmptyCatch`), `eqeqeq` (`null: "ignore"`), `no-duplicate-imports`
 (`allowSeparateTypeImports` — the repo splits `import type` from value
 imports on purpose), `no-console` on `**/*.{ts,tsx}`, and the
-size/complexity warn tier on `**/src/**` (`complexity` 12, `max-depth` 4,
-`max-params` 4, `max-statements` 20, `max-nested-callbacks` 3,
-`max-lines-per-function` 150, `max-lines` 350 as error).
+size/complexity tier on `**/src/**` (`sonarjs/cognitive-complexity` warn
+15, `complexity` error 20, `max-depth` error 4, `max-params` warn 3,
+`max-statements` warn 10, `max-nested-callbacks` error 10,
+`max-lines-per-function` warn 50, `max-lines` warn 300 — the last four
+counting with blank lines and comments skipped).
 
 ## Boundaries
 

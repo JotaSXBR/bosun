@@ -935,6 +935,6 @@
     "invalidTitle": "Convite indisponível",
     "invalidBody": "Este convite não existe mais ou já foi usado.",
     "wrongEmailTitle": "E-mail diferente",
-    "wrongEmailBody": "Este convite foi enviado para {email}. Entre com esse e-mail para aceitar."
+    "wrongEmailBody": "Este convite foi enviado para outro e-mail. Entre com o e-mail do convite para aceitar."
   }
 }

@@ -93,11 +93,16 @@ tem resposta de uma frase já escrita em algum lugar, `/spec` primeiro.
 - **PreToolUse** (edit/write): **bloqueia** editar arquivo de código/config
   fora dos globs de `## Escopo` do `tasks/plan.md`. Markdown/docs são
   sempre livres. Sem plan → só lembrete (edições pontuais/docs não travam).
+  Limites conhecidos: só intercepta `edit`/`write`/`notebook_edit` —
+  comandos de shell (`exec`) não passam pelo hook; `.devin/**` e `**/*.md`
+  ficam sempre livres aqui, mas `AGENTS.md`, `CLAUDE.md`, `**/SKILL.md`,
+  `.devin/**` e `.github/**` estão sob `ask` em `.devin/config.json`.
+  O hook é um lembrete com trava, não uma fronteira de segurança —
+  a camada real é `.devin/config.json` + permissões da sessão.
 - **PostToolUse**: marca que a sessão editou arquivos.
 - **Stop**: se a sessão editou, **bloqueia a primeira tentativa de parar**
-  exigindo o gate mínimo — `pnpm typecheck && pnpm lint` + testes
-  relevantes + TODO/docs atualizados. Bloqueia uma vez por sessão (não
-  faz loop).
+  exigindo o gate — `pnpm verify` + TODO/docs atualizados. Bloqueia uma
+  vez por sessão (não faz loop).
 - **SessionEnd**: limpa o marcador.
 
 Para expandir escopo no meio do trabalho: edite o `## Escopo` do plan
@@ -110,11 +115,17 @@ Briefs históricos da era `.task-brief.md` estão arquivados em
 
 ## Gates de qualidade (o que "verde" significa)
 
-Mínimo por sessão com edição: `pnpm typecheck` + `pnpm lint` + testes do
-pacote tocado. Completo antes de commit/review de fase:
-`pnpm format && pnpm lint && pnpm typecheck && pnpm test &&
-pnpm test:integration && pnpm test:e2e && pnpm build`
-(ver `docs/development/tooling.md`).
+Fonte única: os scripts `verify`/`verify:full` do `package.json` raiz —
+toda referência a gate aponta para eles.
+
+- **`pnpm verify`** — `format:check` + `lint` + `typecheck` + `test`
+  (unit). Obrigatório ao fim de qualquer sessão com edição.
+- **`pnpm verify:full`** — `verify` + `test:integration` + `test:e2e` +
+  `build`. Antes de merge e para mudanças que tocam DB/providers.
+- Iterando, o atalho é `pnpm --filter @crm/<pkg> test` + `typecheck`/`lint`.
+- Nunca usar `pnpm format` (mutante) como verificação — só `format:check`.
+
+O CI continua sendo a barreira final (roda os mesmos cheques via turbo).
 
 ## MCP servers do projeto
 
@@ -123,9 +134,22 @@ pnpm test:integration && pnpm test:e2e && pnpm build`
 - **chrome-devtools** (`chrome-devtools-mcp@1.10.1`) — browser real para a
   skill `browser-testing-with-devtools`: DOM, console, network, screenshots.
   Sem credenciais. Carrega em novas sessões.
+- **coolify** (transporte http) — painel de deploy; URL real e token ficam
+  em `.devin/mcp_config.local.json` (gitignored). Uso restrito a leitura +
+  deploy/start/stop/restart; tools cobertas por `ask` em
+  `.devin/config.json` — configurações fora disso (envs, fqdn,
+  healthcheck) escalam ao usuário (ver `deployment-coolify.md`).
 
-Servidores user-level já ativos (não duplicar no projeto): context7
-(docs de libs), github.
+Servidor user-level conhecido: `context7` (docs de libs). Qualquer outro
+(github etc.) só vale se configurado na máquina — não é garantido.
+
+### Atualizando as skills
+
+`.devin/skills/` mistura 9 skills locais (aliases do ciclo + `context7-docs`,
+`.prettierignore` as mantém formatadas) e 25 vendorizadas de
+`addyosmani/agent-skills` (`skills-lock.json`). Atualizar o pack exige PR
+próprio com revisão do diff de `.devin/skills/**` e `ref` fixado no
+lockfile — nunca atualizar no meio de outro trabalho.
 
 ## O que NÃO muda
 

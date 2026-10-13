@@ -58,7 +58,8 @@ edit packages/db/src/schema/* → pnpm db:generate → review SQL → pnpm db:mi
 1. `organization_id` column (uuid, not null, references organizations).
 2. `pgPolicy` using `current_setting('app.organization_id', true)` and
    `app.platform_scope = 'on'` bypass, plus `.enableRLS()`.
-3. Migration grants (SELECT/INSERT/UPDATE/DELETE) to `crm_app` and default
+3. Custom migration: `ALTER TABLE ... FORCE ROW LEVEL SECURITY` plus
+   grants (SELECT/INSERT/UPDATE/DELETE) to `crm_app` and default
    privileges for future tables.
 4. Integration test proving org A can't see org B's rows.
 

@@ -4,6 +4,10 @@
 // withServiceAccess and only then enters withTenant for writes. The
 // session binds to the contact the visitor claimed in the pre-form; there
 // is no proof of email ownership (standard for anonymous chat widgets).
+// Because the claimed email proves nothing, a session only ever receives
+// history created at or after its own creation — resuming a past thread
+// requires the original browser token. Sessions also expire after
+// SESSION_MAX_IDLE_MS of inactivity.
 import { randomBytes } from "node:crypto";
 
 import type { RawWebhookRequest } from "@crm/channels";
@@ -68,8 +72,10 @@ function widgetConfigOf(metadata: unknown): WidgetConfig {
 
 /**
  * Visitor pre-form → session. Resolves the connection by its public
- * embed token, upserts the contact by email (same email anywhere resumes
- * the same thread), then issues the unguessable session token.
+ * embed token, upserts the contact by email (the claimed identity, so
+ * agents keep one thread per email), then issues the unguessable
+ * session token. A re-registration does NOT prove ownership — the new
+ * session only sees what is created from it onward.
  */
 export async function createWidgetSession(
   db: Database,
@@ -102,10 +108,13 @@ export async function createWidgetSession(
 }
 
 type ResolvedWidgetSession = {
-  session: { id: string; lastSeenAt: Date };
+  session: { id: string; createdAt: Date; lastSeenAt: Date };
   contact: { id: string; channelUserId: string; displayName: string | null };
   connection: ConnectionRef & { webhookToken: string; metadata: unknown };
 };
+
+/** Idle sessions die after 30 days — a localStorage token is not forever. */
+const SESSION_MAX_IDLE_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Activity signal granularity — widget polls hit resolveWidgetSession on
@@ -122,7 +131,9 @@ async function resolveWidgetSession(
   return withServiceAccess(db, async (tx) => {
     const found = await findSiteChatSessionByToken(tx, sessionToken);
     if (!found) return undefined;
-    if (Date.now() - found.session.lastSeenAt.getTime() > SESSION_TOUCH_THROTTLE_MS) {
+    const idleMs = Date.now() - found.session.lastSeenAt.getTime();
+    if (idleMs > SESSION_MAX_IDLE_MS) return undefined;
+    if (idleMs > SESSION_TOUCH_THROTTLE_MS) {
       await touchSiteChatSession(tx, found.session.id);
     }
     return found;
@@ -158,7 +169,11 @@ export async function sendWidgetMessage(
   return ingestChannelWebhook(db, found.connection.webhookToken, request, deps);
 }
 
-/** Widget history: latest ticket of the visitor's thread + visible messages. */
+/**
+ * Widget history: the session's thread + visible messages. Both are
+ * scoped to the session — anything created before it (possibly claimed
+ * with someone else's email) is invisible to the holder.
+ */
 export async function getWidgetConversation(
   db: Database,
   sessionToken: string,
@@ -166,6 +181,7 @@ export async function getWidgetConversation(
 ): Promise<WidgetConversation> {
   const found = await resolveWidgetSession(db, sessionToken);
   if (!found) throw new NotFoundError("Widget session");
+  const since = found.session.createdAt;
   const result = await withServiceAccess(db, async (tx) => {
     const conversation = await findLatestConversationForChat(
       tx,
@@ -173,8 +189,13 @@ export async function getWidgetConversation(
       found.contact.channelUserId,
     );
     if (!conversation) return { conversation: null, messages: [] };
-    const rows = await listWidgetMessages(tx, conversation.id, opts);
-    return { conversation, messages: rows };
+    const rows = await listWidgetMessages(tx, conversation.id, { ...opts, since });
+    // The thread predates this session — its messages are still filtered
+    // to the session window, but the conversation itself is not exposed.
+    return {
+      conversation: conversation.createdAt >= since ? conversation : null,
+      messages: rows,
+    };
   });
   return {
     conversation: result.conversation
@@ -211,6 +232,9 @@ export async function getWidgetStreamTarget(
   return {
     organizationId: found.connection.organizationId,
     contactId: found.contact.id,
-    conversationId: conversation?.id ?? null,
+    // Same session scoping as the history: a pre-existing thread is not
+    // this session's to watch (its events would leak activity timing).
+    conversationId:
+      conversation && conversation.createdAt >= found.session.createdAt ? conversation.id : null,
   };
 }

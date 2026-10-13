@@ -7,6 +7,7 @@ import type { Database } from "@crm/db";
 import { getDb } from "@crm/db";
 import { captureException } from "@crm/observability";
 
+import { mediaResponse } from "@/lib/media-response";
 import { getStorage } from "@/server/storage";
 import { getTenantContext } from "@/server/tenant";
 
@@ -14,24 +15,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ROUTE_TAG = "api.media";
-
-function mediaResponse(
-  bytes: Uint8Array,
-  contentType: string | undefined | null,
-  filename: string | undefined,
-): Response {
-  const headers: Record<string, string> = {
-    "content-type": contentType ?? "application/octet-stream",
-    // Tenant content — cacheable per-session, never shared/public. Media is
-    // immutable per message id (edits only touch text), so long-lived
-    // caching is safe and avoids refetching every rendered image.
-    "cache-control": "private, max-age=86400, immutable",
-  };
-  if (filename) {
-    headers["content-disposition"] = `inline; filename="${filename.replaceAll('"', "")}"`;
-  }
-  return new Response(Buffer.from(bytes), { headers });
-}
 
 /** Outbound uploads come from object storage; inbound media is fetched through the provider. */
 async function resolveMedia(

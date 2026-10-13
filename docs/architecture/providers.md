@@ -25,7 +25,7 @@ parse → domain events`. Verification always precedes parsing; unsigned or
   credentials are decrypted (`CHANNEL_CREDENTIALS_KEY`), the signature is
   verified on the raw body, and events are ingested inside the connection's
   `withTenant` scope — idempotent via the messages partial unique index —
-  then fanned out to the `process-channel-event` Trigger task.
+  then fanned out to the `process-channel-event` pg-boss task.
 - Billing webhooks hit `POST /api/webhooks/billing/asaas` (single
   platform-level ASAAS account, credentials in env): `handleAsaasWebhook`
   (`@crm/core` billing) verifies the shared `asaas-access-token` header
