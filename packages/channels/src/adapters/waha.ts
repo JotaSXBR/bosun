@@ -353,7 +353,7 @@ export class WahaChannelProvider implements ChannelProvider {
     // Origin check (not prefix): "http://waha@evil" or "http://waha.evil"
     // would pass a startsWith test and leak X-Api-Key.
     const absolute = url.startsWith("/") ? `${this.baseUrl}${url}` : url;
-    let sameOrigin = false;
+    let sameOrigin: boolean;
     try {
       sameOrigin = new URL(absolute).origin === new URL(this.baseUrl).origin;
     } catch {
