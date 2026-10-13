@@ -1,5 +1,8 @@
 // Minimal structured logger: JSON lines to stdout (info/debug) and stderr
 // (warn/error). No pino — dependency-free by design.
+// console.* writes the line + newline to the same streams and stays valid in
+// the Edge runtime — this file lands in the Edge instrumentation bundle via
+// instrumentation.ts, where process.stdout/stderr would spam warnings.
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 export type LogFields = Record<string, unknown>;
@@ -46,9 +49,9 @@ export function createLogger(options: { level?: LogLevel; bindings?: LogFields }
     };
     const line = JSON.stringify(record);
     if (lvl === "warn" || lvl === "error") {
-      process.stderr.write(line + "\n");
+      console.error(line);
     } else {
-      process.stdout.write(line + "\n");
+      console.log(line);
     }
   };
 

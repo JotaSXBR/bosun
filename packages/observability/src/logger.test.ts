@@ -31,7 +31,7 @@ describe("createLogger", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("filters below the configured level", () => {
-    const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const writeSpy = vi.spyOn(console, "log").mockReturnValue(undefined);
     const log = createLogger({ level: "warn" });
     log.info("hidden");
     log.debug("hidden too");
@@ -40,9 +40,8 @@ describe("createLogger", () => {
 
   it("emits JSON lines with bindings and redacts fields", () => {
     const out: string[] = [];
-    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    vi.spyOn(console, "log").mockImplementation((chunk) => {
       out.push(String(chunk));
-      return true;
     });
     const log = createLogger({ level: "debug", bindings: { service: "crm" } });
     log.info("hello", { token: "abc", ok: 1 });
@@ -58,9 +57,8 @@ describe("createLogger", () => {
 
   it("warn/error go to stderr, child inherits bindings", () => {
     const err: string[] = [];
-    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    vi.spyOn(console, "error").mockImplementation((chunk) => {
       err.push(String(chunk));
-      return true;
     });
     const log = createLogger({ level: "debug", bindings: { service: "crm" } });
     log.child({ requestId: "r1" }).error("boom");
