@@ -16,8 +16,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-crm}
       # Password for the least-privileged app role (see postgres/init).
       CRM_APP_PASSWORD: ${CRM_APP_PASSWORD:-crm_app}
+    # Dev services bind localhost only — these ports must never be
+    # reachable from other machines on the network.
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       # PG18 images keep PGDATA under /var/lib/postgresql/18/docker —
       # the volume must be mounted at /var/lib/postgresql.
@@ -35,7 +37,7 @@ services:
     image: redis:8.8-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -57,8 +59,8 @@ services:
       RUSTFS_CONSOLE_ENABLE: "true"
       RUSTFS_HEALTH_ENDPOINT_ENABLE: "true"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - rustfs_data:/data
     healthcheck:
