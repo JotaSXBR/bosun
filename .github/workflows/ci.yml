@@ -113,7 +113,11 @@ jobs:
         working-directory: apps/web
       # e2e serves the production build — the dev server's compile loop is too
       # heavy for the hosted runner and got the step killed mid-suite.
+      # NODE_ENV=development (workflow env) breaks `next build` prerender
+      # (_global-error useContext), so build under production.
       - run: pnpm --filter @crm/web build
+        env:
+          NODE_ENV: production
       - run: pnpm test:e2e
         working-directory: apps/web
       - uses: actions/upload-artifact@v7
