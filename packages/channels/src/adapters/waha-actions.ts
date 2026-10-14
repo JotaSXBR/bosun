@@ -171,6 +171,7 @@ export type WahaMessageMediaRef = {
   url: string | null;
   filename: string | null;
   mimetype: string | null;
+  s3: { bucket: string; key: string } | null;
   error: string | null;
 };
 
@@ -194,6 +195,7 @@ export async function wahaFetchMessageMediaRef(
           url: z.string().nullish(),
           filename: z.string().nullish(),
           mimetype: z.string().nullish(),
+          s3: z.looseObject({ Bucket: z.string(), Key: z.string() }).nullish(),
           error: z
             .looseObject({ code: z.number().nullish(), details: z.string().nullish() })
             .nullish(),
@@ -208,6 +210,7 @@ export async function wahaFetchMessageMediaRef(
     url: parsed.media?.url ?? parsed.mediaUrl ?? null,
     filename: parsed.media?.filename ?? null,
     mimetype: parsed.media?.mimetype ?? null,
+    s3: parsed.media?.s3 ? { bucket: parsed.media.s3.Bucket, key: parsed.media.s3.Key } : null,
     error: mediaError ? `code ${mediaError.code ?? "?"}: ${mediaError.details ?? ""}` : null,
   };
 }
