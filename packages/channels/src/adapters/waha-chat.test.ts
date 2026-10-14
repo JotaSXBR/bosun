@@ -215,6 +215,17 @@ describe("WahaChannelProvider — chat actions", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("fetchMedia refusal reports only the origin — signed query stays out", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch(() => ({ json: {} }));
+    const error = await provider(fetchImpl)
+      .fetchMedia("http://169.254.169.254/latest/meta?sig=secret-token")
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("origin http://169.254.169.254");
+    expect((error as Error).message).not.toContain("secret-token");
+    expect(calls).toHaveLength(0);
+  });
+
   it("fetchMessageMedia downloads the media url the message GET returns", async () => {
     const { fetch: fetchImpl, calls } = mockFetch((url) =>
       url.includes("downloadMedia=true")
@@ -295,6 +306,30 @@ describe("WahaChannelProvider — chat actions", () => {
       "https://waha.example.com/api/files/default/doc.pdf",
       "https://waha.example.com/api/files/default/M1.pdf",
     ]);
+  });
+
+  it("fetchMessageMedia fetches http S3 pre-signed urls anonymously", async () => {
+    // Internal RustFS/MinIO endpoints are plain http — the url comes from
+    // WAHA's authenticated downloadMedia response, so an anonymous fetch
+    // (no api key) is safe.
+    const { fetch: fetchImpl, calls } = mockFetch((url) =>
+      url.includes("downloadMedia=true")
+        ? {
+            json: {
+              media: {
+                url: "http://rustfs:9000/bucket/default/3EB0.webp?X-Amz-Signature=abc",
+                filename: null,
+                mimetype: "image/webp",
+              },
+            },
+          }
+        : { json: {} },
+    );
+    const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
+    expect(media).not.toBeNull();
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.url).toBe("http://rustfs:9000/bucket/default/3EB0.webp?X-Amz-Signature=abc");
+    expect(calls[1]?.init).toBeUndefined();
   });
 
   it("fetchMessageMedia fetches S3 pre-signed urls anonymously (api key never leaves WAHA)", async () => {
