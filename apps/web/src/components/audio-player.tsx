@@ -16,9 +16,12 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function AudioPlayer({ src }: { src: string }) {
+export function AudioPlayer({ src, durationHint }: { src: string; durationHint?: number }) {
   const t = useTranslations("message");
   const audioRef = useRef<HTMLAudioElement>(null);
+  // MediaRecorder blobs (webm) carry no duration metadata — probingRef
+  // marks the self-heal seek in flight so its timeupdate isn't playback.
+  const probingRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -43,10 +46,37 @@ export function AudioPlayer({ src }: { src: string }) {
         ref={audioRef}
         src={src}
         preload="metadata"
-        onPlay={() => setPlaying(true)}
+        onPlay={(e) => {
+          // Never stay muted from a duration probe still in flight.
+          e.currentTarget.muted = false;
+          setPlaying(true);
+        }}
         onPause={() => setPlaying(false)}
-        onTimeUpdate={(e) => setElapsed(e.currentTarget.currentTime)}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onTimeUpdate={(e) => {
+          const el = e.currentTarget;
+          if (probingRef.current) {
+            probingRef.current = false;
+            if (Number.isFinite(el.duration)) setDuration(el.duration);
+            el.currentTime = 0;
+            el.muted = false;
+            setElapsed(0);
+            return;
+          }
+          setElapsed(el.currentTime);
+        }}
+        onLoadedMetadata={(e) => {
+          const el = e.currentTarget;
+          if (Number.isFinite(el.duration)) {
+            setDuration(el.duration);
+            return;
+          }
+          // No duration metadata (MediaRecorder blob): seek past the end
+          // — the next timeupdate reveals the real duration.
+          if (probingRef.current) return;
+          probingRef.current = true;
+          el.muted = true;
+          el.currentTime = 1e7;
+        }}
         onEnded={() => setElapsed(0)}
       />
       <button
@@ -58,7 +88,7 @@ export function AudioPlayer({ src }: { src: string }) {
         <Icon name={playing ? "pause" : "play"} className="size-4" />
       </button>
       <span className="min-w-9 text-xs tabular-nums">
-        {formatTime(playing || elapsed > 0 ? elapsed : duration)}
+        {formatTime(playing || elapsed > 0 ? elapsed : duration || (durationHint ?? 0))}
       </span>
       <button
         type="button"

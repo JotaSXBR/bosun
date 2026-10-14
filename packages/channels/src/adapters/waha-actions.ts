@@ -159,6 +159,29 @@ export async function wahaDeleteMessage(
   ensureOk(res, "deleteMessage");
 }
 
+/**
+ * On-demand media download: WAHA re-downloads the message's media from
+ * WhatsApp and answers with the message payload carrying a local
+ * /api/files/* url (`media.url`, sometimes `mediaUrl`). Returns null when
+ * the message has no media — the caller fetches the url through the
+ * same-origin guard afterwards.
+ */
+export async function wahaFetchMessageMediaUrl(
+  request: WahaRequest,
+  session: string,
+  target: WahaMessageTarget,
+): Promise<string | null> {
+  const res = await request(`${chatMessagePath(session, target)}?downloadMedia=true`);
+  ensureOk(res, "fetchMessageMedia");
+  const parsed = z
+    .looseObject({
+      media: z.looseObject({ url: z.string().nullish() }).nullish(),
+      mediaUrl: z.string().nullish(),
+    })
+    .parse(await res.json());
+  return parsed.media?.url ?? parsed.mediaUrl ?? null;
+}
+
 /** Inbound media lives on the WAHA host — fetch with the api key and stream. */
 export async function wahaFetchMedia(
   request: WahaRequest,

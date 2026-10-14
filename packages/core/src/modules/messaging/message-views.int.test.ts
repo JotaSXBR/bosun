@@ -215,6 +215,45 @@ describe("resolveMessageMedia — media proxy source", () => {
     expect(resolved!.body).toEqual(new Uint8Array([9]));
   });
 
+  it("falls back to the by-id download when the stored url fails", async () => {
+    // Sticker-style inbound: the stored url is the WhatsApp CDN (.enc) —
+    // the provider refuses to fetch it, so the resolver retries by
+    // (chatId, messageId): conversation.externalId + message.externalId.
+    await withTenant(db, orgA, (tx) =>
+      ingestChannelEvent(tx, connA, {
+        type: "message.received",
+        externalMessageId: "false_md5@c.us_1",
+        from: { channelUserId: "md-5@c.us", displayName: "Views" },
+        content: {
+          type: "media",
+          mediaKind: "image",
+          source: { type: "url", url: "https://mmg.whatsapp.net/v/x.enc" },
+          mimeType: "image/webp",
+        },
+        timestamp: new Date("2024-04-08"),
+      }),
+    );
+    const [inbound] = await withTenant(db, orgA, (tx) =>
+      tx.select().from(messages).where(eq(messages.externalId, "false_md5@c.us_1")),
+    );
+    const calls: string[] = [];
+    const resolved = await resolveMessageMedia(
+      db,
+      ctx(orgA, "agent"),
+      { messageId: inbound!.id },
+      {
+        fetchProviderMedia: () => Promise.reject(new Error("refused: url outside the WAHA host")),
+        fetchMessageMedia: (connectionId, chatId, messageExternalId) => {
+          calls.push(`${connectionId}:${chatId}:${messageExternalId}`);
+          return Promise.resolve({ body: new Uint8Array([7]), contentType: "image/webp" });
+        },
+      },
+    );
+    expect(calls).toEqual([`${connA.id}:md-5@c.us:false_md5@c.us_1`]);
+    expect(resolved).toMatchObject({ contentType: "image/webp" });
+    expect(resolved!.body).toEqual(new Uint8Array([7]));
+  });
+
   it("revoked media is restricted to inspector roles", async () => {
     await newTicket("md-r@c.us", "false_mdr@c.us_1", true);
     const [inbound] = await withTenant(db, orgA, (tx) =>

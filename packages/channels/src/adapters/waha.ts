@@ -22,6 +22,7 @@ import {
   wahaDeleteMessage,
   wahaEditMessage,
   wahaFetchMedia,
+  wahaFetchMessageMediaUrl,
   wahaSendMessage,
   wahaSendPresence,
   wahaSendReaction,
@@ -347,27 +348,51 @@ export class WahaChannelProvider implements ChannelProvider {
     return wahaDeleteMessage(this.request, this.config.session, { chatId, messageExternalId });
   }
 
-  async fetchMedia(url: string): Promise<{ body: Uint8Array; contentType: string | null }> {
-    // GOWS may emit relative media paths — resolve them on the WAHA host.
-    // media.url is provider-generated, but never send the api key off-host.
-    // Origin check (not prefix): "http://waha@evil" or "http://waha.evil"
-    // would pass a startsWith test and leak X-Api-Key.
+  /**
+   * Resolves a provider-stamped media url to a safe absolute target on the
+   * WAHA host. GOWS may emit relative media paths — resolve them on
+   * baseUrl. media.url is provider-generated, but the api key must never
+   * leave the WAHA host: same-origin passes as-is; a foreign /api/files/*
+   * path is the same file on the trusted host (WAHA stamps its own
+   * WAHA_BASE_URL, default http://localhost:3000) so re-root
+   * pathname+search; anything else is refused. Origin check (not prefix):
+   * "http://waha@evil" or "http://waha.evil" would pass a startsWith test
+   * and leak X-Api-Key.
+   */
+  private resolveMediaUrl(url: string): string {
     const absolute = url.startsWith("/") ? `${this.baseUrl}${url}` : url;
-    let target: string;
     try {
       const parsed = new URL(absolute);
       const sameOrigin = parsed.origin === new URL(this.baseUrl).origin;
-      // WAHA stamps its own WAHA_BASE_URL (default http://localhost:3000)
-      // into media.url — a foreign /api/files/* path is the same file on
-      // the trusted host; re-root pathname+search, refuse anything else.
       if (!sameOrigin && !parsed.pathname.startsWith("/api/files/")) {
         throw new Error("WAHA fetchMedia refused: url outside the WAHA host");
       }
-      target = sameOrigin ? absolute : `${this.baseUrl}${parsed.pathname}${parsed.search}`;
+      return sameOrigin ? absolute : `${this.baseUrl}${parsed.pathname}${parsed.search}`;
     } catch {
       throw new Error("WAHA fetchMedia refused: url outside the WAHA host");
     }
-    return wahaFetchMedia(this.request, target);
+  }
+
+  async fetchMedia(url: string): Promise<{ body: Uint8Array; contentType: string | null }> {
+    return wahaFetchMedia(this.request, this.resolveMediaUrl(url));
+  }
+
+  /**
+   * Fallback for inbound media whose stored url isn't fetchable — sticker
+   * payloads carry the WhatsApp CDN .enc blob, not a local path. Asks WAHA
+   * to download the message's media on demand, then fetches the local
+   * /api/files/* url the response carries.
+   */
+  async fetchMessageMedia(
+    chatId: string,
+    messageId: string,
+  ): Promise<{ body: Uint8Array; contentType: string | null } | null> {
+    const url = await wahaFetchMessageMediaUrl(this.request, this.config.session, {
+      chatId,
+      messageExternalId: messageId,
+    });
+    if (!url) return null;
+    return wahaFetchMedia(this.request, this.resolveMediaUrl(url));
   }
 
   /**

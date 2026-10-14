@@ -72,6 +72,15 @@ export interface ChannelProvider {
    */
   fetchMedia?(url: string): Promise<{ body: Uint8Array; contentType: string | null }>;
   /**
+   * On-demand media download by message id — fallback for inbound media
+   * whose stored url isn't fetchable (WhatsApp CDN .enc blobs). chatId is
+   * the conversation's external id. Null when the message has no media.
+   */
+  fetchMessageMedia?(
+    chatId: string,
+    messageId: string,
+  ): Promise<{ body: Uint8Array; contentType: string | null } | null>;
+  /**
    * Contact profile picture — null when the contact has none or the
    * provider doesn't expose photos (site_chat). Bytes, not URLs: remote
    * CDNs expire.

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { AudioPlayer } from "@/components/audio-player";
 import { sendMediaMessageAction } from "@/server/actions/chat";
 
 type Phase = "idle" | "recording" | "preview";
@@ -83,27 +84,26 @@ function RecordingBar({
 
 function PreviewBar({
   previewUrl,
+  elapsed,
   sending,
   onRerecord,
   onDiscard,
   onSend,
 }: {
   previewUrl: string;
+  elapsed: number;
   sending: boolean;
   onRerecord: () => void;
   onDiscard: () => void;
   onSend: () => void;
 }) {
   const t = useTranslations("composer");
-  const tc = useTranslations("common");
   return (
     <div
       className="flex items-center gap-2 rounded-md border px-3 py-2"
       data-testid="voice-preview"
     >
-      <audio controls src={previewUrl} className="h-8 max-w-48">
-        <track kind="captions" label={tc("noCaptions")} />
-      </audio>
+      <AudioPlayer src={previewUrl} durationHint={elapsed} />
       <Button type="button" size="sm" variant="ghost" onClick={onRerecord}>
         {t("rerecord")}
       </Button>
@@ -240,6 +240,7 @@ export function VoiceRecorder({
     return (
       <PreviewBar
         previewUrl={state.previewUrl}
+        elapsed={state.elapsed}
         sending={state.sending}
         onRerecord={() => void start()}
         onDiscard={reset}
