@@ -55,6 +55,38 @@ export async function findContactById(
 }
 
 /**
+ * Ficha edit (E2) — `displayName` column update plus a metadata jsonb
+ * patch for email/phone/notes; empty string removes the key.
+ */
+export async function updateContactProfileRow(
+  executor: DbExecutor,
+  contactId: string,
+  values: { displayName?: string; email?: string; phone?: string; notes?: string },
+): Promise<void> {
+  const patch: Record<string, string> = {};
+  const drops: string[] = [];
+  for (const key of ["email", "phone", "notes"] as const) {
+    const value = values[key];
+    if (value === undefined) continue;
+    if (value === "") drops.push(key);
+    else patch[key] = value;
+  }
+  // `jsonb - text` removes a key; `||` merges the patch — bound params keep
+  // this parameterized (keys are compile-time constants from the loop above).
+  let metaExpr = sql`${contacts.metadata}`;
+  for (const key of drops) metaExpr = sql`${metaExpr} - ${key}`;
+  metaExpr = sql`${metaExpr} || ${JSON.stringify(patch)}::jsonb`;
+  await executor
+    .update(contacts)
+    .set({
+      ...(values.displayName !== undefined ? { displayName: values.displayName } : {}),
+      ...(drops.length > 0 || Object.keys(patch).length > 0 ? { metadata: metaExpr } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(contacts.id, contactId));
+}
+
+/**
  * Records the avatar fetch result: proxy URL + storage key on success,
  * `avatarFetchedAt` either way — the stamp is what throttles heal
  * attempts on later inbound messages.

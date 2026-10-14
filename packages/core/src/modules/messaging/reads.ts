@@ -48,10 +48,16 @@ export type MessageWithAuthorRow = MessageRow & {
   quoted: QuotedMessageView | null;
 };
 
+/** Pre-enrichment row — message plus joined author name. */
+type FetchedMessageRow = MessageRow & { authorName: string | null };
+
 /** Conversation plus contact identity, names and the preceding ticket's numbers. */
 export type ConversationDetailRow = ConversationRow & {
   contactDisplayName: string | null;
   contactChannelUserId: string;
+  contactAvatarUrl: string | null;
+  /** Ficha fields (email/phone/notes) live in the contacts jsonb bag. */
+  contactMetadata: Record<string, unknown>;
   assigneeName: string | null;
   sectorName: string | null;
   precededTicketNumber: number | null;
@@ -242,6 +248,83 @@ function quotedExternalIdOf(content: unknown): string | null {
   return typeof quoted === "string" && quoted.length > 0 ? quoted : null;
 }
 
+/** Reactions + quote resolution for a fetched window of message rows. */
+async function enrichMessages(
+  executor: DbExecutor,
+  conversationId: string,
+  list: FetchedMessageRow[],
+): Promise<MessageWithAuthorRow[]> {
+  const ids = list.map((m) => m.id);
+  const quotedIds = [
+    ...new Set(list.map((m) => quotedExternalIdOf(m.content)).filter((v) => v !== null)),
+  ];
+
+  const [reactionRows, quotedRows] = await Promise.all([
+    ids.length === 0
+      ? Promise.resolve([])
+      : executor
+          .select()
+          .from(messageReactions)
+          .where(inArray(messageReactions.messageId, ids))
+          .orderBy(asc(messageReactions.createdAt)),
+    quotedIds.length === 0
+      ? Promise.resolve([])
+      : executor
+          .select({
+            externalId: messages.externalId,
+            preview: MESSAGE_PREVIEW_SQL,
+            direction: messages.direction,
+            authorName: users.name,
+            revokedAt: messages.revokedAt,
+          })
+          .from(messages)
+          .leftJoin(users, eq(users.id, messages.authorId))
+          .where(
+            and(
+              eq(messages.conversationId, conversationId),
+              inArray(messages.externalId, quotedIds),
+            ),
+          ),
+  ]);
+
+  const reactionsByMessage = new Map<string, MessageReactionView[]>();
+  for (const r of reactionRows) {
+    const bucket = reactionsByMessage.get(r.messageId) ?? [];
+    bucket.push({
+      emoji: r.emoji,
+      reactorKey: r.reactorKey,
+      fromMe: r.fromMe,
+      actorUserId: r.actorUserId,
+    });
+    reactionsByMessage.set(r.messageId, bucket);
+  }
+  const quotedByExternalId = new Map(
+    quotedRows
+      .filter((r) => r.externalId !== null)
+      .map((r) => [
+        r.externalId!,
+        {
+          preview: r.preview,
+          direction: r.direction,
+          authorName: r.authorName,
+          revoked: r.revokedAt !== null,
+        },
+      ]),
+  );
+
+  return list.map((m) => {
+    const quotedId = quotedExternalIdOf(m.content);
+    return {
+      ...m,
+      reactions: reactionsByMessage.get(m.id) ?? [],
+      quoted: quotedId ? (quotedByExternalId.get(quotedId) ?? null) : null,
+    };
+  });
+}
+
+/** The list sort key — `sentAt desc nulls last` treats null as oldest, so the range key is coalesced to -infinity. */
+const MESSAGE_SORT_KEY = sql`coalesce(${messages.sentAt}, '-infinity'::timestamptz)`;
+
 export async function listMessages(
   db: Database,
   organizationId: string,
@@ -262,75 +345,129 @@ export async function listMessages(
           eq(messages.organizationId, organizationId),
         ),
       )
-      .orderBy(sql`${messages.sentAt} desc nulls last`, desc(messages.createdAt))
+      .orderBy(sql`${messages.sentAt} desc nulls last`, desc(messages.createdAt), desc(messages.id))
       .limit(limit);
     const list = rows.map(({ message, ...rest }) => ({ ...message, ...rest })).reverse();
-    const ids = list.map((m) => m.id);
-    const quotedIds = [
-      ...new Set(list.map((m) => quotedExternalIdOf(m.content)).filter((v) => v !== null)),
-    ];
+    return enrichMessages(tx, conversationId, list);
+  });
+}
 
-    const [reactionRows, quotedRows] = await Promise.all([
-      ids.length === 0
-        ? Promise.resolve([])
-        : tx
-            .select()
-            .from(messageReactions)
-            .where(inArray(messageReactions.messageId, ids))
-            .orderBy(asc(messageReactions.createdAt)),
-      quotedIds.length === 0
-        ? Promise.resolve([])
-        : tx
-            .select({
-              externalId: messages.externalId,
-              preview: MESSAGE_PREVIEW_SQL,
-              direction: messages.direction,
-              authorName: users.name,
-              revokedAt: messages.revokedAt,
-            })
-            .from(messages)
-            .leftJoin(users, eq(users.id, messages.authorId))
-            .where(
-              and(
-                eq(messages.conversationId, conversationId),
-                inArray(messages.externalId, quotedIds),
-              ),
-            ),
+export type MessageSearchHit = {
+  id: string;
+  direction: string;
+  preview: string | null;
+  sentAt: Date | null;
+  createdAt: Date;
+};
+
+/**
+ * In-thread text search (B1) — matches `content.text`/`content.caption`
+ * case-insensitively, newest first. `%`/`_`/`\` are escaped so the query
+ * is literal.
+ */
+export async function searchConversationMessages(
+  db: Database,
+  organizationId: string,
+  conversationId: string,
+  query: string,
+  limit = 20,
+): Promise<MessageSearchHit[]> {
+  const escaped = query.replace(/[\\%_]/g, (c) => `\\${c}`);
+  const pattern = `%${escaped}%`;
+  return withTenant(db, organizationId, (tx) =>
+    tx
+      .select({
+        id: messages.id,
+        direction: messages.direction,
+        preview: MESSAGE_PREVIEW_SQL,
+        sentAt: messages.sentAt,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, conversationId),
+          eq(messages.organizationId, organizationId),
+          sql`(${messages.content} ->> 'text' ilike ${pattern} or ${messages.content} ->> 'caption' ilike ${pattern})`,
+        ),
+      )
+      .orderBy(sql`${MESSAGE_SORT_KEY} desc`, desc(messages.createdAt), desc(messages.id))
+      .limit(limit),
+  );
+}
+
+/**
+ * Jump target window (B1): `radius` messages on each side of `messageId`
+ * plus the target itself, chronological. Mirrors the `listMessages`
+ * ordering (sentAt nulls last ⇒ coalesced to -infinity in the sort key).
+ * Returns null when the target isn't in the conversation.
+ */
+export async function listMessagesAround(
+  db: Database,
+  organizationId: string,
+  conversationId: string,
+  messageId: string,
+  radius = 20,
+): Promise<MessageWithAuthorRow[] | null> {
+  return withTenant(db, organizationId, async (tx) => {
+    const [target] = await tx
+      .select({
+        message: messages,
+        authorName: users.name,
+      })
+      .from(messages)
+      .leftJoin(users, eq(users.id, messages.authorId))
+      .where(
+        and(
+          eq(messages.id, messageId),
+          eq(messages.conversationId, conversationId),
+          eq(messages.organizationId, organizationId),
+        ),
+      )
+      .limit(1);
+    if (!target) return null;
+
+    // Null sentAt means "oldest" under `desc nulls last` — coalesce mirrors
+    // it. ISO strings: postgres.js can't serialize Date params inside raw
+    // sql fragments.
+    const targetSentAt = target.message.sentAt?.toISOString() ?? null;
+    const targetCreatedAt = target.message.createdAt.toISOString();
+    const targetKey = sql`coalesce(${targetSentAt}::timestamptz, '-infinity'::timestamptz)`;
+    const [older, newer] = await Promise.all([
+      tx
+        .select({ message: messages, authorName: users.name })
+        .from(messages)
+        .leftJoin(users, eq(users.id, messages.authorId))
+        .where(
+          and(
+            eq(messages.conversationId, conversationId),
+            eq(messages.organizationId, organizationId),
+            sql`(${MESSAGE_SORT_KEY}, ${messages.createdAt}, ${messages.id}) < (${targetKey}, ${targetCreatedAt}::timestamptz, ${target.message.id})`,
+          ),
+        )
+        .orderBy(sql`${MESSAGE_SORT_KEY} desc`, desc(messages.createdAt), desc(messages.id))
+        .limit(radius),
+      tx
+        .select({ message: messages, authorName: users.name })
+        .from(messages)
+        .leftJoin(users, eq(users.id, messages.authorId))
+        .where(
+          and(
+            eq(messages.conversationId, conversationId),
+            eq(messages.organizationId, organizationId),
+            sql`(${MESSAGE_SORT_KEY}, ${messages.createdAt}, ${messages.id}) > (${targetKey}, ${targetCreatedAt}::timestamptz, ${target.message.id})`,
+          ),
+        )
+        .orderBy(sql`${MESSAGE_SORT_KEY} asc`, asc(messages.createdAt), asc(messages.id))
+        .limit(radius),
     ]);
 
-    const reactionsByMessage = new Map<string, MessageReactionView[]>();
-    for (const r of reactionRows) {
-      const bucket = reactionsByMessage.get(r.messageId) ?? [];
-      bucket.push({
-        emoji: r.emoji,
-        reactorKey: r.reactorKey,
-        fromMe: r.fromMe,
-        actorUserId: r.actorUserId,
-      });
-      reactionsByMessage.set(r.messageId, bucket);
-    }
-    const quotedByExternalId = new Map(
-      quotedRows
-        .filter((r) => r.externalId !== null)
-        .map((r) => [
-          r.externalId!,
-          {
-            preview: r.preview,
-            direction: r.direction,
-            authorName: r.authorName,
-            revoked: r.revokedAt !== null,
-          },
-        ]),
-    );
-
-    return list.map((m) => {
-      const quotedId = quotedExternalIdOf(m.content);
-      return {
-        ...m,
-        reactions: reactionsByMessage.get(m.id) ?? [],
-        quoted: quotedId ? (quotedByExternalId.get(quotedId) ?? null) : null,
-      };
-    });
+    const list = [
+      ...older.map(({ message, ...rest }) => ({ ...message, ...rest })).reverse(),
+      { ...target.message, authorName: target.authorName },
+      ...newer.map(({ message, ...rest }) => ({ ...message, ...rest })),
+    ];
+    return enrichMessages(tx, conversationId, list);
   });
 }
 
@@ -393,6 +530,8 @@ export async function getConversationDetail(
       conversation: conversations,
       contactDisplayName: contacts.displayName,
       contactChannelUserId: contacts.channelUserId,
+      contactAvatarUrl: contacts.avatarUrl,
+      contactMetadata: contacts.metadata,
       assigneeName: users.name,
       sectorName: teams.name,
       precededTicketNumber: preceded.ticketNumber,

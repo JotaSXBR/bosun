@@ -5,17 +5,20 @@ import { DomainError, NotFoundError } from "../../errors";
 import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
+import { findContactById } from "../contacts";
 import * as repo from "./repository";
 import type { LabelRow } from "./repository-labels";
 import * as labelRepo from "./repository-labels";
 import type {
   CreateLabelInput,
+  SetContactLabelsInput,
   SetConversationLabelsInput,
   SetDealLabelsInput,
   UpdateLabelInput,
 } from "./schemas";
 import {
   createLabelInput,
+  setContactLabelsInput,
   setConversationLabelsInput,
   setDealLabelsInput,
   updateLabelInput,
@@ -148,4 +151,34 @@ export async function listConversationLabels(
   return withTenant(db, ctx.organizationId, (tx) =>
     labelRepo.listConversationLabels(tx, conversationId),
   );
+}
+
+/** Requires leads:read — the tags on the contact ficha. */
+export async function listContactLabels(
+  db: Database,
+  ctx: TenantContext,
+  contactId: string,
+): Promise<LabelRow[]> {
+  assertPermission(ctx, { leads: ["read"] });
+  return withTenant(db, ctx.organizationId, (tx) => labelRepo.listContactLabels(tx, contactId));
+}
+
+/** Requires leads:write. Replace semantics — omitted tags are removed. */
+export async function setContactLabels(
+  db: Database,
+  ctx: TenantContext,
+  input: SetContactLabelsInput,
+): Promise<void> {
+  assertPermission(ctx, { leads: ["write"] });
+  const parsed = setContactLabelsInput.parse(input);
+  await withTenant(db, ctx.organizationId, async (tx) => {
+    const contact = await findContactById(tx, parsed.contactId);
+    if (!contact) throw new NotFoundError("Contact", parsed.contactId);
+    await assertLabelsExist(tx, ctx.organizationId, parsed.labelIds);
+    await labelRepo.replaceContactLabels(tx, {
+      organizationId: ctx.organizationId,
+      contactId: parsed.contactId,
+      labelIds: parsed.labelIds,
+    });
+  });
 }

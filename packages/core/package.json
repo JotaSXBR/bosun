@@ -19,6 +19,7 @@
     "./leads": "./src/modules/leads/index.ts",
     "./leads/schemas": "./src/modules/leads/schemas.ts",
     "./leads/templates": "./src/modules/leads/templates.ts",
+    "./macros": "./src/modules/macros/index.ts",
     "./messaging": "./src/modules/messaging/index.ts",
     "./onboarding": "./src/modules/onboarding/index.ts",
     "./organizations": "./src/modules/organizations/index.ts",

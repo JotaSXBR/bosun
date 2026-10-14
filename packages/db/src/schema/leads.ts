@@ -187,6 +187,34 @@ export const dealLabels = pgTable(
   ],
 ).enableRLS();
 
+/** Contact ↔ label join — contact tags (E2). `organization_id` denormalized for uniform RLS. */
+export const contactLabels = pgTable(
+  "contact_labels",
+  {
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    contactId: uuid()
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    labelId: uuid()
+      .notNull()
+      .references(() => labels.id, { onDelete: "cascade" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.contactId, t.labelId] }),
+    index("contact_labels_org_idx").on(t.organizationId),
+    index("contact_labels_label_idx").on(t.labelId),
+    pgPolicy("contact_labels_tenant_isolation", {
+      for: "all",
+      to: crmAppRole,
+      using: tenantPredicate,
+      withCheck: tenantPredicate,
+    }),
+  ],
+).enableRLS();
+
 /** Conversation ↔ label join. `organization_id` denormalized for uniform RLS. */
 export const conversationLabels = pgTable(
   "conversation_labels",

@@ -81,7 +81,8 @@ export const contacts = pgTable(
     // Per-contact ticket sequence source — incremented in the same tx that
     // creates a ticket, so ticket_seq is that contact's Nth attendance.
     ticketCounter: bigint({ mode: "number" }).notNull().default(0),
-    metadata: jsonb().notNull().default({}),
+    // Ficha fields (email/phone/notes) + provider extras (source, avatarKey…).
+    metadata: jsonb().$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
@@ -373,6 +374,38 @@ export const conversationReads = pgTable(
     uniqueIndex("conversation_reads_conv_user_idx").on(t.conversationId, t.userId),
     index("conversation_reads_org_idx").on(t.organizationId),
     pgPolicy("conversation_reads_tenant_isolation", {
+      for: "all",
+      to: crmAppRole,
+      using: tenantPredicate,
+      withCheck: tenantPredicate,
+    }),
+  ],
+).enableRLS();
+
+/**
+ * Org-level quick reply template ("macro"). `name` is the `/trigger`
+ * slug typed in the composer; agents propose macros through
+ * `agent_suggestions`, manager/admin/owner creates them directly.
+ */
+export const macros = pgTable(
+  "macros",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    content: text().notNull(),
+    createdBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("macros_org_name_idx").on(t.organizationId, t.name),
+    index("macros_org_idx").on(t.organizationId),
+    pgPolicy("macros_tenant_isolation", {
       for: "all",
       to: crmAppRole,
       using: tenantPredicate,

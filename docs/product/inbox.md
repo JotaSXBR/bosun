@@ -91,16 +91,31 @@ A row only shows a marker when the marker discriminates:
 
 ## Keyboard
 
-Minimal for E1: `j`/`k` move selection in the list, `Enter` opens.
-Richer shortcuts (take, resolve, snooze) arrive with E3 composer
-power-ups.
+`j`/`k` move selection in the list, `Enter` opens, `a`/`r`/`s` take /
+resolve / snooze on an open ticket.
+
+## Delivered with E2/E3
+
+- **Contact ficha** — right-panel card (Google-People-style inline edit):
+  avatar, display name, email/phone/notes in `contacts.metadata`,
+  contact tags (`contact_labels`) and the conversation's etiquetas —
+  local only, no channel/People-API sync.
+- **Macros `/`** — org-scoped quick replies; `/slug` picker in the
+  composer filters by prefix. Managers/admins write directly in
+  `/app/settings/service/macros`; agents propose via `agent_suggestions`
+  (`targetType: 'macro'`, four-eyes — proposer can't self-approve).
+- **Thread search** — header field; picking a hit re-renders a ±20
+  window via `?around=<id>` with `:target` highlight and "voltar ao
+  final".
+- **Context menu** — right-click on a message opens the same actions as
+  the `▾` menu, as a floating panel at the cursor (Esc/click-away/scroll
+  dismiss).
+- **sendSeen** — read signal, not reply: on ticket pickup and on
+  `markConversationRead` when the last message is inbound (assignee or
+  unowned thread); the `users.sendSeen` pref gates the human path.
 
 ## Non-goals (later slices)
 
-- **E2** — right-panel contact ficha + Google-People-style cadastro
-  (local-only, no People API sync yet) + conversation/contact tags.
-- **E3** — composer power-ups: `/` macros, native right-click message
-  menu, thread search, sendSeen on/off toggle.
 - **E4** — "não virou negócio" attendance list (Synthor concept; pairs
   with observer nudges).
 - Intake mode itself (what actually writes `status='pending'`).

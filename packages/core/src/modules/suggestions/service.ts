@@ -22,6 +22,7 @@ import {
   proposeKnowledgeEntryInput,
   updateEntry,
 } from "../knowledge";
+import { proposeMacroInput } from "../macros";
 import type { AgentSuggestionRow } from "./repository";
 import {
   findSuggestionById,
@@ -152,6 +153,47 @@ export async function proposeKnowledgeEntry(
     });
     return row;
   });
+}
+
+/**
+ * Agent-proposed macro staging — any member with messaging:write can
+ * propose a quick reply; managers+ approve in settings/service/macros.
+ * `proposedBy` records who asked so the four-eyes rule blocks
+ * self-approval (owner excepted).
+ */
+export async function proposeMacroEntry(
+  db: Database,
+  ctx: TenantContext,
+  input: unknown,
+): Promise<AgentSuggestionRow> {
+  assertPermission(ctx, { messaging: ["write"] });
+  const { rationale, ...proposal } = proposeMacroInput.parse(input);
+  return withTenant(db, ctx.organizationId, async (tx) => {
+    const row = await insertSuggestion(tx, {
+      organizationId: ctx.organizationId,
+      targetType: "macro",
+      payload: proposal,
+      rationale,
+      proposedBy: ctx.userId,
+    });
+    await emitDomainEvent(tx, {
+      type: "agent_suggestion.created",
+      organizationId: ctx.organizationId,
+      suggestionId: row.id,
+    });
+    return row;
+  });
+}
+
+/** Pending macro proposals — the settings/service/macros review section. */
+export async function listPendingMacroSuggestions(
+  db: Database,
+  ctx: TenantContext,
+): Promise<AgentSuggestionRow[]> {
+  assertPermission(ctx, { messaging: ["read"] });
+  return withTenant(db, ctx.organizationId, (tx) =>
+    listPendingByTargetType(tx, ctx.organizationId, "macro"),
+  );
 }
 
 /** Pending memory proposal contents — observer dedupe context (normalized). */

@@ -127,6 +127,8 @@ export default async function InboxPage({
     ? (sp.view as ConversationView)
     : "queue";
   const selectedId = sp.c && UUID_RE.test(sp.c) ? sp.c : undefined;
+  // B1 jump: `around` re-renders the thread centered on a search hit.
+  const aroundId = sp.around && UUID_RE.test(sp.around) ? sp.around : undefined;
   const canWrite = hasPermission(ctx.role, { messaging: ["write"] });
 
   const params = {
@@ -236,7 +238,11 @@ export default async function InboxPage({
             >
               {t("backToList")}
             </Link>
-            <ConversationPane conversationId={selectedId} />
+            <ConversationPane
+              conversationId={selectedId}
+              around={aroundId}
+              backHref={`/app/inbox?${queryString(params)}`}
+            />
           </>
         ) : (
           <div className="flex h-full items-center justify-center">

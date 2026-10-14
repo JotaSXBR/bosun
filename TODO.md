@@ -144,6 +144,24 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `metadata.unsupportedMedia` → nota interna no bubble — **pendente**:
   config por-org p/ IA responder "não entendi o arquivo" ou ignorar
   mídia não suportada (não existe auto-responder ainda);
+  **mergeado 2026-10-13** — PR #38 squash `366120e` na main (checks
+  quality/scan/integration verdes);
+  **plano 3 implementado 2026-10-14** (C1/B1/B2/B3 do inbox-ui-review):
+  migration `0031` (`macros` + `contact_labels`, FORCE RLS + grants),
+  módulo `macros` com CRUD manager+ e leitura geral, proposta de agente
+  via `agent_suggestions` (`targetType:'macro'` fora do enum config-class
+  — review dedicado na página de macros, não no Revisões de IA) com
+  quatro-olhos, página `/app/settings/service/macros` + hub (zap),
+  composer `/` com picker por prefixo + form de proposta inline para
+  agent, ficha do contato no aside (displayName/email/phone/notes em
+  `contacts.metadata` + `contact_labels`, inline-edit estilo Google
+  People; etiquetas da conversa preservadas no card), busca no thread
+  (`searchConversationMessages` ILIKE escapado + `listMessagesAround`
+  janela ±N) com jump via `?around=<id>#msg-<id>` (ring `:target` +
+  `JumpAnchor` scroll + "voltar ao final"), menu de contexto por botão
+  direito (`MessageContextMenu`, display:contents event boundary, fecha
+  Esc/click-outside/scroll) — verify:full ✅ (295 int/17 e2e/build) —
+  `/review` ✅; plano arquivado em `tasks/plan-inbox-backend.done.md`;
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);

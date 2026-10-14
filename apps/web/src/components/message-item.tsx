@@ -11,6 +11,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { AudioPlayer } from "@/components/audio-player";
 import {
   EditedIndicator,
+  MessageContextMenu,
   MessageMenu,
   ResendButton,
   RevokedActions,
@@ -344,43 +345,54 @@ export async function MessageItem({
 
   return (
     <li className={cn("group flex", outbound ? "justify-end" : "justify-start")}>
-      <div className="max-w-4/5">
-        <div
-          className={cn(
-            "relative rounded-lg px-3 py-2",
-            outbound ? "bg-signal text-ink-on-signal" : "bg-raised",
-          )}
-        >
-          {msg.quoted && <QuoteBlock quoted={msg.quoted} outbound={outbound} t={t} />}
-          <BubbleBody msg={msg} canInspect={canInspect} t={t} tc={tc} />
-          <BubbleMeta
-            msg={msg}
-            outbound={outbound}
-            isChannelMessage={isChannelMessage}
-            canInspect={canInspect}
-            t={t}
-            format={format}
-            menu={
-              <MessageMenu
-                conversationId={msg.conversationId}
-                messageId={msg.id}
-                currentText={messageText(content, t)}
-                canReact={canReact}
-                canEdit={canEdit}
-                canDelete={canDelete}
-                replyTarget={replyTarget}
-              />
-            }
+      <MessageContextMenu
+        conversationId={msg.conversationId}
+        messageId={msg.id}
+        currentText={messageText(content, t)}
+        canReact={canReact}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        replyTarget={replyTarget}
+      >
+        <div className="max-w-4/5">
+          <div
+            id={`msg-${msg.id}`}
+            className={cn(
+              "target:ring-line-accent relative scroll-mt-32 rounded-lg px-3 py-2 target:ring-2",
+              outbound ? "bg-signal text-ink-on-signal" : "bg-raised",
+            )}
+          >
+            {msg.quoted && <QuoteBlock quoted={msg.quoted} outbound={outbound} t={t} />}
+            <BubbleBody msg={msg} canInspect={canInspect} t={t} tc={tc} />
+            <BubbleMeta
+              msg={msg}
+              outbound={outbound}
+              isChannelMessage={isChannelMessage}
+              canInspect={canInspect}
+              t={t}
+              format={format}
+              menu={
+                <MessageMenu
+                  conversationId={msg.conversationId}
+                  messageId={msg.id}
+                  currentText={messageText(content, t)}
+                  canReact={canReact}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  replyTarget={replyTarget}
+                />
+              }
+            />
+          </div>
+          <ReactionChips
+            conversationId={msg.conversationId}
+            messageId={msg.id}
+            reactions={msg.reactions}
+            currentUserId={currentUserId}
+            interactive={canInteract}
           />
         </div>
-        <ReactionChips
-          conversationId={msg.conversationId}
-          messageId={msg.id}
-          reactions={msg.reactions}
-          currentUserId={currentUserId}
-          interactive={canInteract}
-        />
-      </div>
+      </MessageContextMenu>
     </li>
   );
 }

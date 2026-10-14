@@ -1,8 +1,8 @@
 "use server";
 
 import { DomainError } from "@crm/core";
-import type { CreateContactInput } from "@crm/core/contacts";
-import { createContact } from "@crm/core/contacts";
+import type { CreateContactInput, UpdateContactProfileInput } from "@crm/core/contacts";
+import { createContact, updateContactProfile } from "@crm/core/contacts";
 import type { StartOutboundConversationInput } from "@crm/core/messaging";
 import { startOutboundConversation } from "@crm/core/messaging";
 import { getDb } from "@crm/db";
@@ -35,6 +35,20 @@ export async function createContactAction(
     return { ok: true, id: contact.id };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível criar o contato.") };
+  }
+}
+
+/** Ficha edit (E2) — name + metadata fields, local only (no channel sync). */
+export async function updateContactProfileAction(
+  input: UpdateContactProfileInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await requireTenantContext();
+  try {
+    await updateContactProfile(getDb(), ctx, input);
+    revalidatePath("/app/inbox");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível atualizar o contato.") };
   }
 }
 

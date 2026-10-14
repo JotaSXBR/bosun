@@ -50,8 +50,14 @@
     "entryQueue": "Fila de entrada",
     "awaitingReply": "Aguardando resposta",
     "awaitingFor": "Aguardando {time}",
+    "backToEnd": "Voltar ao final",
     "contactHistory": "Atendimentos anteriores",
     "contactHistoryEmpty": "Primeiro atendimento deste contato.",
+    "searchPlaceholder": "Buscar na conversa",
+    "searchNoResults": "Nenhuma mensagem encontrada.",
+    "searchInbound": "Cliente",
+    "searchOutbound": "Você",
+    "searchWindowNotice": "Vendo trecho da busca — parte da conversa está oculta.",
     "openAside": "Abrir detalhes",
     "closeAside": "Fechar detalhes",
     "mediaKinds": {
@@ -77,6 +83,17 @@
       "online": "online",
       "typing": "digitando…",
       "recording": "gravando áudio…"
+    },
+    "ficha": {
+      "title": "Contato",
+      "name": "Nome",
+      "namePlaceholder": "Nome do contato",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "notes": "Notas",
+      "add": "Adicionar",
+      "contactTags": "Tags do contato",
+      "conversationLabels": "Etiquetas da conversa"
     }
   },
   "message": {
@@ -139,7 +156,16 @@
     "draftImprove": "Melhorar resposta",
     "draftImproveHint": "Escreva algo primeiro para melhorar",
     "draftNoCredential": "Configure uma credencial de IA em Configurações > IA",
-    "draftRequested": "Gerando rascunho — aparece aqui em instantes."
+    "draftRequested": "Gerando rascunho — aparece aqui em instantes.",
+    "macros": {
+      "empty": "Nenhuma macro para \"/{query}\".",
+      "propose": "Propor \"/{name}\"",
+      "proposed": "Macro enviada para aprovação.",
+      "contentPlaceholder": "Texto que a macro insere",
+      "rationalePlaceholder": "Por que essa macro ajuda?",
+      "sendProposal": "Enviar",
+      "cancel": "Cancelar"
+    }
   },
   "tickets": {
     "reopen": "Reabrir ticket",
@@ -481,6 +507,8 @@
         "hoursDesc": "Mensagem enviada fora do horário de atendimento",
         "rules": "Regras de ticket",
         "rulesDesc": "Janela para reabrir uma conversa resolvida",
+        "macros": "Macros",
+        "macrosDesc": "Respostas rápidas acionadas por / no composer",
         "channels": "Conexões",
         "channelsDesc": "Canais, webhooks e widget do site",
         "funnels": "Funis e etapas",
@@ -521,6 +549,36 @@
     },
     "rules": {
       "saved": "Regras atualizadas."
+    },
+    "macros": {
+      "newTitle": "Nova macro",
+      "proposeTitle": "Propor macro",
+      "newSubtitle": "Resposta rápida acionada digitando / no composer.",
+      "name": "Gatilho",
+      "namePlaceholder": "saudacao",
+      "content": "Conteúdo",
+      "contentPlaceholder": "Olá! Em que posso ajudar?",
+      "rationale": "Por que essa macro?",
+      "rationalePlaceholder": "Clientes perguntam isso toda hora…",
+      "create": "Criar macro",
+      "propose": "Enviar para aprovação",
+      "proposed": "Macro enviada para aprovação.",
+      "created": "Macro criada.",
+      "saved": "Macro atualizada.",
+      "deleted": "Macro excluída.",
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "listTitle": "Macros",
+      "empty": "Nenhuma macro ainda. Crie a primeira acima.",
+      "pendingTitle": "Pendentes de aprovação",
+      "pendingSubtitle": "Macros propostas por agentes aguardando revisão.",
+      "ownProposal": "sua proposta",
+      "approve": "Aprovar",
+      "reject": "Rejeitar",
+      "approved": "Macro aprovada.",
+      "rejected": "Proposta rejeitada."
     },
     "org": {
       "title": "Organização",
@@ -733,6 +791,7 @@
         "history": "Revisadas",
         "targetAgent": "agente",
         "targetKnowledge": "conhecimento",
+        "targetMacro": "macro",
         "targetMemory": "memória",
         "targetNew": "novo",
         "fields": "Campos: {fields}",

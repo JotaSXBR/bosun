@@ -68,6 +68,12 @@ export const HUB_GROUPS: HubGroup[] = [
         icon: "timer",
         permission: { organization: ["update"] },
       },
+      {
+        key: "macros",
+        href: "/app/settings/service/macros",
+        icon: "zap",
+        permission: { messaging: ["read"] },
+      },
     ],
   },
   {

@@ -118,3 +118,9 @@ export const setConversationLabelsInput = z.object({
   labelIds: z.array(id).max(20),
 });
 export type SetConversationLabelsInput = z.input<typeof setConversationLabelsInput>;
+
+export const setContactLabelsInput = z.object({
+  contactId: id,
+  labelIds: z.array(id).max(20),
+});
+export type SetContactLabelsInput = z.input<typeof setContactLabelsInput>;

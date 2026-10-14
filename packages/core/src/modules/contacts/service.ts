@@ -6,9 +6,14 @@ import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import { normalizeWhatsAppChatId } from "./phone";
 import type { ContactListRow, ContactRow } from "./repository";
-import { findContactById, insertOrGetContact, listContacts } from "./repository";
-import type { CreateContactInput, ListContactsInput } from "./schemas";
-import { createContactInput, listContactsInput } from "./schemas";
+import {
+  findContactById,
+  insertOrGetContact,
+  listContacts,
+  updateContactProfileRow,
+} from "./repository";
+import type { CreateContactInput, ListContactsInput, UpdateContactProfileInput } from "./schemas";
+import { createContactInput, listContactsInput, updateContactProfileInput } from "./schemas";
 
 /**
  * Requires messaging:write. Creates a contact manually — today the only
@@ -58,4 +63,27 @@ export async function getContact(
   const contact = await withTenant(db, ctx.organizationId, (tx) => findContactById(tx, contactId));
   if (!contact) throw new NotFoundError("Contact", contactId);
   return contact;
+}
+
+/**
+ * Requires messaging:write — the ficha edit (E2). `displayName` is the
+ * column; email/phone/notes merge into `metadata` (empty string clears
+ * the key). `channelUserId` is never editable — it's the channel
+ * identity the provider maps inbound messages to.
+ */
+export async function updateContactProfile(
+  db: Database,
+  ctx: TenantContext,
+  input: UpdateContactProfileInput,
+): Promise<ContactRow> {
+  assertPermission(ctx, { messaging: ["write"] });
+  const { contactId, ...patch } = updateContactProfileInput.parse(input);
+  return withTenant(db, ctx.organizationId, async (tx) => {
+    const contact = await findContactById(tx, contactId);
+    if (!contact) throw new NotFoundError("Contact", contactId);
+    await updateContactProfileRow(tx, contactId, patch);
+    const updated = await findContactById(tx, contactId);
+    if (!updated) throw new NotFoundError("Contact", contactId);
+    return updated;
+  });
 }
