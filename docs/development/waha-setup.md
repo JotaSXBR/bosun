@@ -87,16 +87,18 @@ parser (`dc43179`):
      `/api/files/*` re-enraizado no `baseUrl`);
   2. `media.url` anônimo — com `WAHA_MEDIA_STORAGE=S3` e
      `WAHA_S3_PROXY_FILES=False` o WAHA estampa uma URL **pré-assinada
-     https** do storage, buscável **sem** `X-Api-Key` (o `request` do
-     adapter sempre anexa a key — a chamada anônima usa `fetch` cru;
-     hosts `*.whatsapp.net` nunca são buscados, o blob `.enc` é
-     criptografado e inútil mesmo);
+     http(s)** do storage (endpoints internos RustFS/MinIO saem `http://`),
+     buscável **sem** `X-Api-Key` (o `request` do adapter sempre anexa a
+     key — a chamada anônima usa `fetch` cru; hosts `*.whatsapp.net` nunca
+     são buscados, o blob `.enc` é criptografado e inútil mesmo);
   3. `/api/files/{session}/{filename}` — `MediaLocalStorage` grava em
      `{session}/{messageId}.{ext}`; `media.filename` é o filename
      original do WhatsApp e nem sempre coincide, então também tenta
      `{session}/{bareMessageId}.{ext}` (bareId = último segmento do
      externalId serializado) e o path flat por compat.
-     Se nada resolver, o erro carrega `media.error` + a última falha.
+     Se nada resolver, o erro carrega `media.error` + a última falha —
+     e a recusa de origem loga só o `origin` da URL (protocolo+host,
+     nunca path/query assinado — smoke 4, 2026-10-14).
      Atenção: `WHATSAPP_FILES_LIFETIME` > ~24,8 dias estoura o `setTimeout`
      32-bit do WAHA (issue #2018 — "saved" e 404 imediato); manter ≤ 24d.
 
@@ -135,13 +137,13 @@ parser (`dc43179`):
 
 ### Media
 
-| Env                          | Valor                                                          | Nota                                                                                                                                                      |
-| ---------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WHATSAPP_FILES_FOLDER`      | `/app/.media`                                                  | Volume já montado.                                                                                                                                        |
-| `WAHA_MEDIA_STORAGE`         | `S3` (decidido)                                                | **RustFS** do mesmo ambiente.                                                                                                                             |
-| `WAHA_S3_*`                  | endpoint RustFS, bucket, keys, `WAHA_S3_FORCE_PATH_STYLE=True` | Manter `WAHA_S3_PROXY_FILES=True` — o `fetchMedia` só aceita URLs no host WAHA (guard SSRF); `False` devolveria URL do storage e quebraria mídia inbound. |
-| Retenção de mídia            | **7 dias** (decidido)                                          | Com S3, expiração é lifecycle rule no bucket RustFS (não env do WAHA).                                                                                    |
-| `WAHA_EVENTS_DOWNLOAD_MEDIA` | `true` (default)                                               | Download da mídia nos eventos de webhook.                                                                                                                 |
+| Env                          | Valor                                                          | Nota                                                                                                                                                                                  |
+| ---------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WHATSAPP_FILES_FOLDER`      | `/app/.media`                                                  | Volume já montado.                                                                                                                                                                    |
+| `WAHA_MEDIA_STORAGE`         | `S3` (decidido)                                                | **RustFS** do mesmo ambiente.                                                                                                                                                         |
+| `WAHA_S3_*`                  | endpoint RustFS, bucket, keys, `WAHA_S3_FORCE_PATH_STYLE=True` | **Manter `WAHA_S3_PROXY_FILES=True`** — com S3 e proxy off, `/api/files/*` não serve o objeto (404 confirmado no smoke 4, 2026-10-14) e a mídia fica dependente de presign `http://`. |
+| Retenção de mídia            | **7 dias** (decidido)                                          | Com S3, expiração é lifecycle rule no bucket RustFS (não env do WAHA).                                                                                                                |
+| `WAHA_EVENTS_DOWNLOAD_MEDIA` | `true` (default)                                               | Download da mídia nos eventos de webhook.                                                                                                                                             |
 
 ### Filtros na fonte (economiza webhook + evita ticket lixo)
 

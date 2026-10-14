@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AudioPlayer } from "@/components/audio-player";
+import { AUDIO_WAVE_BARS, decodeAudioPeaks } from "@/lib/audio-peaks";
 import { sendMediaMessageAction } from "@/server/actions/chat";
 
 type Phase = "idle" | "recording" | "preview";
@@ -18,6 +19,7 @@ type RecorderState = {
   phase: Phase;
   elapsed: number;
   previewUrl: string | null;
+  peaks: number[] | null;
   sending: boolean;
 };
 
@@ -85,6 +87,7 @@ function RecordingBar({
 function PreviewBar({
   previewUrl,
   elapsed,
+  peaks,
   sending,
   onRerecord,
   onDiscard,
@@ -92,6 +95,7 @@ function PreviewBar({
 }: {
   previewUrl: string;
   elapsed: number;
+  peaks: number[] | null;
   sending: boolean;
   onRerecord: () => void;
   onDiscard: () => void;
@@ -103,7 +107,7 @@ function PreviewBar({
       className="flex items-center gap-2 rounded-md border px-3 py-2"
       data-testid="voice-preview"
     >
-      <AudioPlayer src={previewUrl} durationHint={elapsed} />
+      <AudioPlayer src={previewUrl} durationHint={elapsed} peaks={peaks ?? undefined} />
       <Button type="button" size="sm" variant="ghost" onClick={onRerecord}>
         {t("rerecord")}
       </Button>
@@ -141,6 +145,7 @@ export function VoiceRecorder({
     phase: "idle",
     elapsed: 0,
     previewUrl: null,
+    peaks: null,
     sending: false,
   });
 
@@ -162,7 +167,7 @@ export function VoiceRecorder({
     if (media.current.recorder?.state === "recording") media.current.recorder.stop();
     cleanup();
     presence.pause();
-    setState({ phase: "idle", elapsed: 0, previewUrl: null, sending: false });
+    setState({ phase: "idle", elapsed: 0, previewUrl: null, peaks: null, sending: false });
   };
 
   const start = async () => {
@@ -184,6 +189,14 @@ export function VoiceRecorder({
         media.current.stream?.getTracks().forEach((t) => t.stop());
         media.current.stream = null;
         setState((s) => ({ ...s, phase: "preview", previewUrl: url }));
+        // Waveform for the preview — decoded from the blob we already
+        // hold (a fetch() of the blob: url would hit connect-src). Decode
+        // failure leaves peaks null and the player falls back.
+        void media.current.blob
+          .arrayBuffer()
+          .then((bytes) => decodeAudioPeaks(bytes, AUDIO_WAVE_BARS))
+          .then((peaks) => setState((s) => (s.phase === "preview" ? { ...s, peaks } : s)))
+          .catch(() => {});
       };
       media.current.recorder = recorder;
       recorder.start(250);
@@ -241,6 +254,7 @@ export function VoiceRecorder({
       <PreviewBar
         previewUrl={state.previewUrl}
         elapsed={state.elapsed}
+        peaks={state.peaks}
         sending={state.sending}
         onRerecord={() => void start()}
         onDiscard={reset}

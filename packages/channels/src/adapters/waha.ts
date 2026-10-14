@@ -361,16 +361,18 @@ export class WahaChannelProvider implements ChannelProvider {
    */
   private resolveMediaUrl(url: string): string {
     const absolute = url.startsWith("/") ? `${this.baseUrl}${url}` : url;
+    let parsed: URL;
     try {
-      const parsed = new URL(absolute);
-      const sameOrigin = parsed.origin === new URL(this.baseUrl).origin;
-      if (!sameOrigin && !parsed.pathname.startsWith("/api/files/")) {
-        throw new Error("WAHA fetchMedia refused: url outside the WAHA host");
-      }
-      return sameOrigin ? absolute : `${this.baseUrl}${parsed.pathname}${parsed.search}`;
+      parsed = new URL(absolute);
     } catch {
-      throw new Error("WAHA fetchMedia refused: url outside the WAHA host");
+      throw new Error("WAHA fetchMedia refused: unparseable url");
     }
+    if (parsed.origin === new URL(this.baseUrl).origin) return absolute;
+    if (parsed.pathname.startsWith("/api/files/")) {
+      return `${this.baseUrl}${parsed.pathname}${parsed.search}`;
+    }
+    // Origin only — the path/query of a signed url must never hit logs.
+    throw new Error(`WAHA fetchMedia refused: url outside the WAHA host (origin ${parsed.origin})`);
   }
 
   async fetchMedia(url: string): Promise<{ body: Uint8Array; contentType: string | null }> {
@@ -385,7 +387,7 @@ export class WahaChannelProvider implements ChannelProvider {
    *  1. media.url through the origin guard (local /api/files/* paths and
    *     same-origin urls pass; foreign /api/files/* re-roots onto baseUrl)
    *  2. media.url anonymous — WAHA_MEDIA_STORAGE=s3 with S3 proxy off
-   *     stamps a pre-signed https url, fetchable without the api key
+   *     stamps a pre-signed http(s) url, fetchable without the api key
    *  3. /api/files/{session}/{filename|messageId.ext} — MediaLocalStorage
    *     keeps files under a per-session directory
    * The WhatsApp CDN (*.whatsapp.net .enc blobs) is never fetched — the
@@ -426,15 +428,17 @@ export class WahaChannelProvider implements ChannelProvider {
   }
 
   /**
-   * https urls on non-WhatsApp hosts may be pre-signed media (S3/MinIO)
-   * — safe to fetch anonymously: the url is stamped by WAHA's own media
-   * layer, and the api key must never ride along. *.whatsapp.net hosts are
-   * the encrypted CDN — skipped, the blob is undecryptable here anyway.
+   * http(s) urls on non-WhatsApp hosts may be pre-signed media (S3/MinIO/
+   * RustFS) — internal S3 endpoints are plain http. Safe to fetch
+   * anonymously: the url is stamped by WAHA's own media layer in response
+   * to our authenticated downloadMedia call, and the api key must never
+   * ride along. *.whatsapp.net hosts are the encrypted CDN — skipped, the
+   * blob is undecryptable here anyway.
    */
   private static isAnonymousFetchable(url: string): boolean {
     try {
       const parsed = new URL(url);
-      if (parsed.protocol !== "https:") return false;
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
       const host = parsed.hostname;
       return host !== "whatsapp.net" && !host.endsWith(".whatsapp.net");
     } catch {

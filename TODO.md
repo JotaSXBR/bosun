@@ -216,6 +216,22 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `WAHA_S3_PROXY_FILES=True` (volta tudo para `/api/files/*` no host);
   e `WHATSAPP_FILES_LIFETIME` > ~24,8d estoura setTimeout do WAHA
   (issue #2018 — apaga o arquivo na hora → 404 eterno);
+  **re-smoke 4 2026-10-14** (PR #43 deployado): áudio **tocou** ✅ (CSP
+  `media-src` resolveu) mas sem waveform; figurinha seguia quebrada —
+  warns confirmaram dois modos: `last: refused` (media.url da resposta
+  `downloadMedia` não era `https` fetchável — provável presign `http://`
+  do endpoint interno do RustFS, `isAnonymousFetchable` só aceitava
+  `https:`) e `last: HTTP 404` (`filename` presente mas `/api/files/*`
+  404 — `WAHA_MEDIA_STORAGE=S3` e sem `WAHA_S3_PROXY_FILES` o disco local
+  não tem o objeto). Fix: fetch anônimo aceita `http:`+`https:` (só pra
+  URL da resposta autenticada, `*.whatsapp.net` segue fora) + recusa loga
+  o `origin` da URL (sem path/query assinado); waveform navegável no
+  `AudioPlayer` (peaks via `OfflineAudioContext` em `lib/audio-peaks`,
+  fill por progresso, click/drag/teclado seek, fallback de barras planas;
+  gravador decodifica o blob e passa `peaks` — `fetch(blob:)` seria
+  bloqueado pelo `connect-src 'self'`). Ops pendente: aplicar
+  `WAHA_S3_PROXY_FILES=True` no WAHA staging (env confirmadas pelo
+  usuário: `WHATSAPP_FILES_LIFETIME=604800` ✅ correto, `WAHA_MEDIA_STORAGE=S3`);
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);
@@ -225,7 +241,8 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `pending` prende tickets invisíveis).
 - **Deploy — envs WAHA (Coolify)**: ✅ aplicado no staging (IGNORE_*,
   `WAHA_APPS_ON=brazilian-phone-numbers`, `WAHA_PRESENCE_AUTO_ONLINE=False`,
-  `WHATSAPP_FILES_LIFETIME=7d`, session restart envs, logs JSON).
+  `WHATSAPP_FILES_LIFETIME=604800` (7d em segundos — a env espera número),
+  `WAHA_MEDIA_STORAGE=S3`, session restart envs, logs JSON).
   Resend ✅ (`EMAIL_PROVIDER=resend` + `EMAIL_FROM=Bosun APP
 <noreply@send.fluxie.com.br>`) — verificação de email funciona.
   Restam do checklist: API key como hash sha512 (exige update conjunto no

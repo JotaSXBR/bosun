@@ -117,6 +117,7 @@
     "audioPlay": "Reproduzir áudio",
     "audioPause": "Pausar áudio",
     "audioSpeed": "Velocidade de reprodução",
+    "audioSeek": "Buscar posição no áudio",
     "stickerAlt": "Figurinha",
     "unsupportedMedia": "O contato enviou um arquivo que não conseguimos exibir.",
     "menuAria": "Ações da mensagem",
