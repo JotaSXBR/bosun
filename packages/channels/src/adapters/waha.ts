@@ -355,9 +355,10 @@ export class WahaChannelProvider implements ChannelProvider {
    * leave the WAHA host: same-origin passes as-is; a foreign /api/files/*
    * path is the same file on the trusted host (WAHA stamps its own
    * WAHA_BASE_URL, default http://localhost:3000) so re-root
-   * pathname+search; anything else is refused. Origin check (not prefix):
-   * "http://waha@evil" or "http://waha.evil" would pass a startsWith test
-   * and leak X-Api-Key.
+   * pathname+search; a localhost-family origin is WAHA's own view of
+   * itself — any path there is a WAHA url, re-root it the same way.
+   * Anything else is refused. Origin check (not prefix): "http://waha@evil"
+   * or "http://waha.evil" would pass a startsWith test and leak X-Api-Key.
    */
   private resolveMediaUrl(url: string): string {
     const absolute = url.startsWith("/") ? `${this.baseUrl}${url}` : url;
@@ -368,7 +369,16 @@ export class WahaChannelProvider implements ChannelProvider {
       throw new Error("WAHA fetchMedia refused: unparseable url");
     }
     if (parsed.origin === new URL(this.baseUrl).origin) return absolute;
-    if (parsed.pathname.startsWith("/api/files/")) {
+    const isLocalhost =
+      parsed.hostname === "localhost" ||
+      parsed.hostname === "127.0.0.1" ||
+      parsed.hostname === "::1" ||
+      parsed.hostname === "[::1]";
+    // /api/s3/{bucket}/{key} is WAHA's S3 proxy route (WAHA_S3_PROXY_FILES)
+    // — the stamped media.url path is /api/s3/*, not /api/files/*.
+    const isWahaFilePath =
+      parsed.pathname.startsWith("/api/files/") || parsed.pathname.startsWith("/api/s3/");
+    if (isLocalhost || isWahaFilePath) {
       return `${this.baseUrl}${parsed.pathname}${parsed.search}`;
     }
     // Origin only — the path/query of a signed url must never hit logs.
@@ -409,6 +419,13 @@ export class WahaChannelProvider implements ChannelProvider {
       if (WahaChannelProvider.isAnonymousFetchable(mediaUrl)) {
         attempts.push(() => this.fetchAnonymousMedia(mediaUrl));
       }
+    }
+    // S3 storage stamps the exact object location — the proxy route is
+    // /api/s3/{bucket}/{key} (WAHA_S3_PROXY_FILES). Works even when
+    // media.url is null or stamped with WAHA's localhost base.
+    if (ref.s3) {
+      const s3Path = `/api/s3/${ref.s3.bucket}/${ref.s3.key}`;
+      attempts.push(() => wahaFetchMedia(this.request, this.resolveMediaUrl(s3Path)));
     }
     for (const path of this.mediaFilePaths(ref.filename, messageId, ref.mimetype)) {
       attempts.push(() => wahaFetchMedia(this.request, this.resolveMediaUrl(path)));

@@ -62,11 +62,12 @@ parser (`dc43179`):
 - **Media**: `media.url` vem com o host que o **WAHA** montou (o
   `WAHA_BASE_URL` dele, default `http://localhost:3000`) — nunca bate com
   o host interno que o app usa (`http://bosun-<env>-waha:3000`). O
-  `fetchMedia` aceita: relativo, mesma origem, ou origem diferente com
-  path `/api/files/*` — nesse caso re-enraíza `pathname+search` no
-  `baseUrl` confiável. Outra origem/path é recusada (não vazar o
-  `X-Api-Key`). Sem isso toda mídia inbound quebra (bug do smoke
-  2026-10-14).
+  `fetchMedia` aceita: relativo, mesma origem, origem loopback (a visão do
+  WAHA de si mesmo — qualquer path é re-enraizado), ou origem diferente
+  com path `/api/files/*` ou `/api/s3/*` — nesse caso re-enraíza
+  `pathname+search` no `baseUrl` confiável. Outra origem/path é recusada
+  (não vazar o `X-Api-Key`). Sem isso toda mídia inbound quebra (bug do
+  smoke 2026-10-14).
 - **Sticker/mídia sem arquivo local**: GOWS pode emitir `media.url` =
   `https://mmg.whatsapp.net/….enc` (CDN criptografado do WhatsApp — não
   serve pra renderizar). Quando o fetch por URL falha, o resolver cai em
@@ -80,13 +81,10 @@ parser (`dc43179`):
   por estágio (`media url fetch failed` / `media by-id download failed`
   / `media unresolved`, component `messaging.media`) — sem logs a falha
   era um 404 invisível (smoke 2026-10-14).
-- **Cadeia de fetch do `fetchMessageMedia`** (smoke 3–5, 2026-10-14 —
-  evidência no access log do WAHA: `GET /api/files/{session}/3EB0....webp`
-  e `GET /api/files/3EB0....webp` 404avam porque o objeto é nomeado pelo
-  **externalId serializado completo** `false_<chat>_<stanza>`, não pelo
-  bare stanza que `media.filename` traz):
-  1. `media.url` pelo guard de origem (mesma origem ou path
-     `/api/files/*` re-enraizado no `baseUrl`);
+- **Cadeia de fetch do `fetchMessageMedia`** (smokes 3–5, 2026-10-14):
+  1. `media.url` pelo guard de origem — mesma origem passa; origem
+     `localhost`/loopback **ou** path `/api/files/*` ou `/api/s3/*` em
+     qualquer origem é re-enraizado no `baseUrl` confiável;
   2. `media.url` anônimo — com `WAHA_MEDIA_STORAGE=S3` e
      `WAHA_S3_PROXY_FILES=False` o WAHA estampa uma URL **pré-assinada
      http(s)** do storage (endpoints internos RustFS/MinIO saem `http://`),
@@ -96,17 +94,18 @@ parser (`dc43179`):
      `localhost`/`127.0.0.1`/`::1` também não — uma URL `localhost:3000`
      do WAHA é a visão _dele_ de si mesmo e bateria no nosso próprio
      container);
-  3. `/api/files/*` candidatos, nesta ordem:
-     a. `/{serializedExternalId}.{ext}` — flat (a forma que a doc do WAHA
-     mostra em `media.url` sob proxy S3);
-     b. `/{session}/{serializedExternalId}.{ext}` — a chave real do objeto
-     no S3 (`{session}/false_...@lid_3EB0....webp`);
-     c. `/{session}/{filename}` + `/{filename}` — `MediaLocalStorage` com
-     o filename que `media.filename` reporta;
-     d. `/{session}/{bareId}.{ext}` + `/{bareId}.{ext}` — bareId = último
-     segmento do externalId (compat).
-     A extensão vem do filename ou do `media.mimetype` (`image/webp` →
-     `.webp` etc.) — sticker sem filename ainda resolve o candidato.
+  3. **`/api/s3/{bucket}/{key}`** — com `WAHA_S3_PROXY_FILES=True` a rota
+     de proxy é **`/api/s3/*`, não `/api/files/*`** (`/api/files` só serve
+     o storage local — causa raiz do 404 no smoke 5: o `media.url`
+     estampado era `http://localhost:3000/api/s3/bosun/{key}` e era
+     recusado por não ser `/api/files`). A resposta `downloadMedia` traz
+     `media.s3.{Bucket,Key}` com a chave exata
+     (`{session}/{externalIdSerializado}.{ext}` — ver
+     `MediaS3Storage.getKey` no WAHA);
+  4. `/api/files/*` candidatos (só resolvem com storage LOCAL):
+     `/{serializedId}.{ext}`, `/{session}/{serializedId}.{ext}`,
+     `/{session}/{filename}`, `/{filename}`, `/{session}/{bareId}.{ext}`,
+     `/{bareId}.{ext}` — extensão do filename ou do `media.mimetype`.
      Se nada resolver, o erro carrega `media.error` + a última falha —
      e a recusa de origem loga só o `origin` da URL (protocolo+host,
      nunca path/query assinado — smoke 4, 2026-10-14).
@@ -148,13 +147,13 @@ parser (`dc43179`):
 
 ### Media
 
-| Env                          | Valor                                                          | Nota                                                                                                                                                                                  |
-| ---------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WHATSAPP_FILES_FOLDER`      | `/app/.media`                                                  | Volume já montado.                                                                                                                                                                    |
-| `WAHA_MEDIA_STORAGE`         | `S3` (decidido)                                                | **RustFS** do mesmo ambiente.                                                                                                                                                         |
-| `WAHA_S3_*`                  | endpoint RustFS, bucket, keys, `WAHA_S3_FORCE_PATH_STYLE=True` | **Manter `WAHA_S3_PROXY_FILES=True`** — com S3 e proxy off, `/api/files/*` não serve o objeto (404 confirmado no smoke 4, 2026-10-14) e a mídia fica dependente de presign `http://`. |
-| Retenção de mídia            | **7 dias** (decidido)                                          | Com S3, expiração é lifecycle rule no bucket RustFS (não env do WAHA).                                                                                                                |
-| `WAHA_EVENTS_DOWNLOAD_MEDIA` | `true` (default)                                               | Download da mídia nos eventos de webhook.                                                                                                                                             |
+| Env                          | Valor                                                          | Nota                                                                                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WHATSAPP_FILES_FOLDER`      | `/app/.media`                                                  | Volume já montado.                                                                                                                                                                  |
+| `WAHA_MEDIA_STORAGE`         | `S3` (decidido)                                                | **RustFS** do mesmo ambiente.                                                                                                                                                       |
+| `WAHA_S3_*`                  | endpoint RustFS, bucket, keys, `WAHA_S3_FORCE_PATH_STYLE=True` | **Manter `WAHA_S3_PROXY_FILES=True`** — proxy serve em `/api/s3/{bucket}/{key}` (não `/api/files`); com proxy off a mídia fica dependente de presign `http://` do endpoint interno. |
+| Retenção de mídia            | **7 dias** (decidido)                                          | Com S3, expiração é lifecycle rule no bucket RustFS (não env do WAHA).                                                                                                              |
+| `WAHA_EVENTS_DOWNLOAD_MEDIA` | `true` (default)                                               | Download da mídia nos eventos de webhook.                                                                                                                                           |
 
 ### Filtros na fonte (economiza webhook + evita ticket lixo)
 

@@ -402,6 +402,58 @@ describe("WahaChannelProvider — chat actions", () => {
     expect(calls.every((c) => !c.url.includes("whatsapp.net"))).toBe(true);
   });
 
+  it("fetchMessageMedia re-roots WAHA's localhost /api/s3 proxy url onto baseUrl", async () => {
+    // WAHA_S3_PROXY_FILES=True stamps media.url as
+    // {WAHA_BASE_URL}/api/s3/{bucket}/{key} — the base is WAHA's own
+    // localhost view, so the path must be re-rooted onto our WAHA host.
+    const { fetch: fetchImpl, calls } = mockFetch((url) =>
+      url.includes("downloadMedia=true")
+        ? {
+            json: {
+              media: {
+                url: "http://localhost:3000/api/s3/bosun/default/false_7911@c.us_M1.webp",
+                filename: null,
+                mimetype: "image/webp",
+                s3: { Bucket: "bosun", Key: "default/false_7911@c.us_M1.webp" },
+              },
+            },
+          }
+        : { json: {} },
+    );
+    const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
+    expect(media).not.toBeNull();
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.url).toBe(
+      "https://waha.example.com/api/s3/bosun/default/false_7911@c.us_M1.webp",
+    );
+    expect(calls[1]?.init?.headers?.["X-Api-Key"]).toBe("key-1");
+  });
+
+  it("fetchMessageMedia falls back to /api/s3/{bucket}/{key} when media.url is unusable", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch((url) =>
+      url.includes("downloadMedia=true")
+        ? {
+            json: {
+              media: {
+                url: "https://mmg.whatsapp.net/v/t62.x/abc.enc?sig=1",
+                filename: null,
+                mimetype: "image/webp",
+                s3: { Bucket: "bosun", Key: "default/false_7911@c.us_M1.webp" },
+              },
+            },
+          }
+        : url.includes("/api/s3/")
+          ? { json: {} }
+          : { status: 404 },
+    );
+    const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
+    expect(media).not.toBeNull();
+    expect(calls[1]?.url).toBe(
+      "https://waha.example.com/api/s3/bosun/default/false_7911@c.us_M1.webp",
+    );
+    expect(calls[1]?.init?.headers?.["X-Api-Key"]).toBe("key-1");
+  });
+
   it("fetchMessageMedia surfaces WAHA's download error when nothing is fetchable", async () => {
     const { fetch: fetchImpl, calls } = mockFetch(() => ({
       json: {

@@ -242,6 +242,17 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   diretório de sessão), extensão derivada do `media.mimetype` quando
   filename é null, `localhost` excluído do fetch anônimo (bateria no
   nosso próprio container);
+  **re-smoke 6 2026-10-14** (PR #45 deployado): serialized-id também 404 —
+  causa raiz na fonte do WAHA (`MediaS3UrlResolver.S3ProxyUrl`): com
+  `WAHA_S3_PROXY_FILES=True` o `media.url` é
+  `{WAHA_BASE_URL}/api/s3/{bucket}/{key}` — rota **`/api/s3/*`**, não
+  `/api/files/*` (que só serve storage local). Fix: re-root de origem
+  loopback e de path `/api/s3/*` no guard + candidato
+  `/api/s3/{Bucket}/{Key}` do `media.s3` da resposta. Obs (não-Bosun):
+  visualizar chat no WhatsApp Web do dispositivo linkado não dispara
+  blue ticks pro contato — recibo nativo do WhatsApp sai só em
+  interação; no Bosun o `sendSeen` ao abrir o ticket é o caminho
+  equivalente;
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);
