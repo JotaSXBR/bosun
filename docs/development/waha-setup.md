@@ -76,12 +76,29 @@ parser (`dc43179`):
 - **`downloadMedia` pode responder 200 sem `media.url` utilizável** — no
   GOWS a resposta às vezes traz `media.url: null` (ou o `.enc` de novo)
   com `media.filename` = nome do arquivo que o WAHA salvou e `media.error`
-  = `{code, details}` quando o download falhou. O adapter tenta `url`
-  primeiro e cai para `/api/files/{filename}`; sem nenhum dos dois, o erro
-  carrega o `media.error` do WAHA. O resolver loga `warn` por estágio
-  (`media url fetch failed` / `media by-id download failed` / `media
-unresolved`, component `messaging.media`) — sem logs a falha era um 404
-  invisível (smoke 2026-10-14).
+  = `{code, details}` quando o download falhou. O resolver loga `warn`
+  por estágio (`media url fetch failed` / `media by-id download failed`
+  / `media unresolved`, component `messaging.media`) — sem logs a falha
+  era um 404 invisível (smoke 2026-10-14).
+- **Cadeia de fetch do `fetchMessageMedia`** (smoke 3, 2026-10-14 —
+  evidência nos logs: `GET /api/files/3EB0....webp` 404ava porque o path
+  vinha sem o diretório da sessão):
+  1. `media.url` pelo guard de origem (mesma origem ou path
+     `/api/files/*` re-enraizado no `baseUrl`);
+  2. `media.url` anônimo — com `WAHA_MEDIA_STORAGE=S3` e
+     `WAHA_S3_PROXY_FILES=False` o WAHA estampa uma URL **pré-assinada
+     https** do storage, buscável **sem** `X-Api-Key` (o `request` do
+     adapter sempre anexa a key — a chamada anônima usa `fetch` cru;
+     hosts `*.whatsapp.net` nunca são buscados, o blob `.enc` é
+     criptografado e inútil mesmo);
+  3. `/api/files/{session}/{filename}` — `MediaLocalStorage` grava em
+     `{session}/{messageId}.{ext}`; `media.filename` é o filename
+     original do WhatsApp e nem sempre coincide, então também tenta
+     `{session}/{bareMessageId}.{ext}` (bareId = último segmento do
+     externalId serializado) e o path flat por compat.
+     Se nada resolver, o erro carrega `media.error` + a última falha.
+     Atenção: `WHATSAPP_FILES_LIFETIME` > ~24,8 dias estoura o `setTimeout`
+     32-bit do WAHA (issue #2018 — "saved" e 404 imediato); manter ≤ 24d.
 
 ## Envs do container WAHA (produção)
 

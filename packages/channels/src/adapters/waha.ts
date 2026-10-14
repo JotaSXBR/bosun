@@ -380,10 +380,16 @@ export class WahaChannelProvider implements ChannelProvider {
   /**
    * Fallback for inbound media whose stored url isn't fetchable — sticker
    * payloads carry the WhatsApp CDN .enc blob, not a local path. Asks WAHA
-   * to download the message's media on demand, then fetches what the
-   * response offers: media.url through the origin guard, else
-   * /api/files/{media.filename} (GOWS returns url:null with the saved
-   * filename when it stamped the CDN url into url instead).
+   * to download the message's media on demand, then tries what the
+   * response offers, in order:
+   *  1. media.url through the origin guard (local /api/files/* paths and
+   *     same-origin urls pass; foreign /api/files/* re-roots onto baseUrl)
+   *  2. media.url anonymous — WAHA_MEDIA_STORAGE=s3 with S3 proxy off
+   *     stamps a pre-signed https url, fetchable without the api key
+   *  3. /api/files/{session}/{filename|messageId.ext} — MediaLocalStorage
+   *     keeps files under a per-session directory
+   * The WhatsApp CDN (*.whatsapp.net .enc blobs) is never fetched — the
+   * bytes are encrypted and useless anyway.
    */
   async fetchMessageMedia(
     chatId: string,
@@ -394,20 +400,81 @@ export class WahaChannelProvider implements ChannelProvider {
       messageExternalId: messageId,
     });
     if (!ref) return null;
-    if (ref.url) {
-      try {
-        return await wahaFetchMedia(this.request, this.resolveMediaUrl(ref.url));
-      } catch (error) {
-        if (!ref.filename) throw error;
+    const attempts: Array<() => Promise<{ body: Uint8Array; contentType: string | null }>> = [];
+    const mediaUrl = ref.url;
+    if (mediaUrl) {
+      attempts.push(() => wahaFetchMedia(this.request, this.resolveMediaUrl(mediaUrl)));
+      if (WahaChannelProvider.isAnonymousFetchable(mediaUrl)) {
+        attempts.push(() => this.fetchAnonymousMedia(mediaUrl));
       }
     }
-    if (ref.filename) {
-      const path = `/api/files/${encodeURIComponent(ref.filename)}`;
-      return wahaFetchMedia(this.request, this.resolveMediaUrl(path));
+    for (const path of this.mediaFilePaths(ref.filename, messageId)) {
+      attempts.push(() => wahaFetchMedia(this.request, this.resolveMediaUrl(path)));
     }
+    let lastError: unknown;
+    for (const attempt of attempts) {
+      try {
+        return await attempt();
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    const detail = lastError instanceof Error ? ` — last: ${lastError.message}` : "";
     throw new Error(
-      `WAHA fetchMessageMedia: no downloadable media${ref.error ? ` (${ref.error})` : ""}`,
+      `WAHA fetchMessageMedia: no downloadable media${ref.error ? ` (${ref.error})` : ""}${detail}`,
     );
+  }
+
+  /**
+   * https urls on non-WhatsApp hosts may be pre-signed media (S3/MinIO)
+   * — safe to fetch anonymously: the url is stamped by WAHA's own media
+   * layer, and the api key must never ride along. *.whatsapp.net hosts are
+   * the encrypted CDN — skipped, the blob is undecryptable here anyway.
+   */
+  private static isAnonymousFetchable(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:") return false;
+      const host = parsed.hostname;
+      return host !== "whatsapp.net" && !host.endsWith(".whatsapp.net");
+    } catch {
+      return false;
+    }
+  }
+
+  private async fetchAnonymousMedia(
+    url: string,
+  ): Promise<{ body: Uint8Array; contentType: string | null }> {
+    const res = await this.fetchImpl(url);
+    if (!res.ok) throw new Error(`WAHA fetchMedia failed: HTTP ${res.status}`);
+    return {
+      body: new Uint8Array(await res.arrayBuffer()),
+      contentType: res.headers.get("content-type"),
+    };
+  }
+
+  /**
+   * Candidate /api/files paths for a downloaded message. WAHA's local
+   * storage layout is {session}/{messageId}.{ext} — media.filename is the
+   * original WhatsApp filename and may differ, so both the filename and
+   * the bare message id (last segment of the serialized externalId) are
+   * tried under the session directory, then the flat path.
+   */
+  private mediaFilePaths(filename: string | null, messageId: string): string[] {
+    const paths: string[] = [];
+    const session = this.config.session;
+    const bareId = messageId.split("_").pop();
+    const ext = filename?.match(/\.[a-z0-9]+$/i)?.[0];
+    if (filename) {
+      paths.push(`/api/files/${session}/${encodeURIComponent(filename)}`);
+    }
+    if (bareId && ext) {
+      paths.push(`/api/files/${session}/${encodeURIComponent(`${bareId}${ext}`)}`);
+    }
+    if (filename) {
+      paths.push(`/api/files/${encodeURIComponent(filename)}`);
+    }
+    return [...new Set(paths)];
   }
 
   /**
