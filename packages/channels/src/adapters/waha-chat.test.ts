@@ -252,10 +252,11 @@ describe("WahaChannelProvider — chat actions", () => {
     expect(calls).toHaveLength(1);
   });
 
-  it("fetchMessageMedia falls back to /api/files/{session}/{filename} when url is the CDN .enc", async () => {
-    // GOWS stickers: media.url is the WhatsApp CDN .enc (unusable), but
-    // media.filename names the file WAHA saved — MediaLocalStorage keeps
-    // it under {session}/, not the flat /api/files root.
+  it("fetchMessageMedia falls back to the serialized message-id file when url is the CDN .enc", async () => {
+    // GOWS stickers: media.url is the WhatsApp CDN .enc (unusable) and
+    // media.filename is the bare stanza — but WAHA stores the object as
+    // {session}/{serializedId}.{ext} (S3 key convention) and the proxied
+    // url is flat /api/files/{serializedId}.{ext}.
     const { fetch: fetchImpl, calls } = mockFetch((url) =>
       url.includes("downloadMedia=true")
         ? {
@@ -267,32 +268,52 @@ describe("WahaChannelProvider — chat actions", () => {
               },
             },
           }
-        : { json: {} },
+        : url.includes("false_7911%40c.us_M1.webp")
+          ? { json: {} }
+          : { status: 404 },
     );
     const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
     expect(media).not.toBeNull();
     // The mmg url is refused pre-flight (no request leaves for whatsapp.net),
-    // so the second call is already the session-prefixed file fetch.
+    // so the second call is already the serialized-id file fetch.
     expect(calls).toHaveLength(2);
-    expect(calls[1]?.url).toBe("https://waha.example.com/api/files/default/3EB0ABC.webp");
+    expect(calls[1]?.url).toBe("https://waha.example.com/api/files/false_7911%40c.us_M1.webp");
     expect(calls[1]?.init?.headers?.["X-Api-Key"]).toBe("key-1");
+  });
+
+  it("fetchMessageMedia derives the extension from the mimetype when filename is null", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch((url) =>
+      url.includes("downloadMedia=true")
+        ? { json: { media: { url: null, filename: null, mimetype: "image/webp" } } }
+        : url.includes("M1.webp")
+          ? { json: {} }
+          : { status: 404 },
+    );
+    const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
+    expect(media).not.toBeNull();
+    expect(calls[1]?.url).toBe("https://waha.example.com/api/files/false_7911%40c.us_M1.webp");
   });
 
   it("fetchMessageMedia falls back to filename when media.url is null", async () => {
     const { fetch: fetchImpl, calls } = mockFetch((url) =>
       url.includes("downloadMedia=true")
         ? { json: { media: { url: null, filename: "sticker.webp", mimetype: "image/webp" } } }
-        : { json: {} },
+        : url.includes("sticker.webp")
+          ? { json: {} }
+          : { status: 404 },
     );
     const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
     expect(media).not.toBeNull();
-    expect(calls[1]?.url).toBe("https://waha.example.com/api/files/default/sticker.webp");
+    // Serialized-id candidates 404 first (mock), then the filename path.
+    expect(calls.map((c) => c.url)).toEqual([
+      expect.stringContaining("downloadMedia=true"),
+      "https://waha.example.com/api/files/false_7911%40c.us_M1.webp",
+      "https://waha.example.com/api/files/default/false_7911%40c.us_M1.webp",
+      "https://waha.example.com/api/files/default/sticker.webp",
+    ]);
   });
 
-  it("fetchMessageMedia tries {session}/{messageId}.{ext} when the stored name isn't the filename", async () => {
-    // MediaLocalStorage names files {messageId}.{ext} — when filename is an
-    // original WhatsApp name the session-prefixed filename 404s and the
-    // bare message id + extension is the next candidate.
+  it("fetchMessageMedia tries the bare stanza when the serialized name isn't stored", async () => {
     const { fetch: fetchImpl, calls } = mockFetch((url) => {
       if (url.includes("downloadMedia=true")) {
         return { json: { media: { url: null, filename: "doc.pdf", mimetype: "application/pdf" } } };
@@ -303,7 +324,10 @@ describe("WahaChannelProvider — chat actions", () => {
     expect(media).not.toBeNull();
     expect(calls.map((c) => c.url)).toEqual([
       expect.stringContaining("downloadMedia=true"),
+      "https://waha.example.com/api/files/false_7911%40c.us_M1.pdf",
+      "https://waha.example.com/api/files/default/false_7911%40c.us_M1.pdf",
       "https://waha.example.com/api/files/default/doc.pdf",
+      "https://waha.example.com/api/files/doc.pdf",
       "https://waha.example.com/api/files/default/M1.pdf",
     ]);
   });
@@ -369,13 +393,13 @@ describe("WahaChannelProvider — chat actions", () => {
               },
             },
           }
-        : { json: {} },
+        : { status: 404 },
     );
     await expect(
       provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1"),
     ).rejects.toThrowError(/no downloadable media/);
-    // Only the downloadMedia GET left the host — nothing went to mmg.
-    expect(calls).toHaveLength(1);
+    // Every call left for the WAHA host — nothing went to mmg.
+    expect(calls.every((c) => !c.url.includes("whatsapp.net"))).toBe(true);
   });
 
   it("fetchMessageMedia surfaces WAHA's download error when nothing is fetchable", async () => {

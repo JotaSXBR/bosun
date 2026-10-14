@@ -80,9 +80,11 @@ parser (`dc43179`):
   por estágio (`media url fetch failed` / `media by-id download failed`
   / `media unresolved`, component `messaging.media`) — sem logs a falha
   era um 404 invisível (smoke 2026-10-14).
-- **Cadeia de fetch do `fetchMessageMedia`** (smoke 3, 2026-10-14 —
-  evidência nos logs: `GET /api/files/3EB0....webp` 404ava porque o path
-  vinha sem o diretório da sessão):
+- **Cadeia de fetch do `fetchMessageMedia`** (smoke 3–5, 2026-10-14 —
+  evidência no access log do WAHA: `GET /api/files/{session}/3EB0....webp`
+  e `GET /api/files/3EB0....webp` 404avam porque o objeto é nomeado pelo
+  **externalId serializado completo** `false_<chat>_<stanza>`, não pelo
+  bare stanza que `media.filename` traz):
   1. `media.url` pelo guard de origem (mesma origem ou path
      `/api/files/*` re-enraizado no `baseUrl`);
   2. `media.url` anônimo — com `WAHA_MEDIA_STORAGE=S3` e
@@ -90,12 +92,21 @@ parser (`dc43179`):
      http(s)** do storage (endpoints internos RustFS/MinIO saem `http://`),
      buscável **sem** `X-Api-Key` (o `request` do adapter sempre anexa a
      key — a chamada anônima usa `fetch` cru; hosts `*.whatsapp.net` nunca
-     são buscados, o blob `.enc` é criptografado e inútil mesmo);
-  3. `/api/files/{session}/{filename}` — `MediaLocalStorage` grava em
-     `{session}/{messageId}.{ext}`; `media.filename` é o filename
-     original do WhatsApp e nem sempre coincide, então também tenta
-     `{session}/{bareMessageId}.{ext}` (bareId = último segmento do
-     externalId serializado) e o path flat por compat.
+     são buscados, o blob `.enc` é criptografado e inútil mesmo; hosts
+     `localhost`/`127.0.0.1`/`::1` também não — uma URL `localhost:3000`
+     do WAHA é a visão _dele_ de si mesmo e bateria no nosso próprio
+     container);
+  3. `/api/files/*` candidatos, nesta ordem:
+     a. `/{serializedExternalId}.{ext}` — flat (a forma que a doc do WAHA
+     mostra em `media.url` sob proxy S3);
+     b. `/{session}/{serializedExternalId}.{ext}` — a chave real do objeto
+     no S3 (`{session}/false_...@lid_3EB0....webp`);
+     c. `/{session}/{filename}` + `/{filename}` — `MediaLocalStorage` com
+     o filename que `media.filename` reporta;
+     d. `/{session}/{bareId}.{ext}` + `/{bareId}.{ext}` — bareId = último
+     segmento do externalId (compat).
+     A extensão vem do filename ou do `media.mimetype` (`image/webp` →
+     `.webp` etc.) — sticker sem filename ainda resolve o candidato.
      Se nada resolver, o erro carrega `media.error` + a última falha —
      e a recusa de origem loga só o `origin` da URL (protocolo+host,
      nunca path/query assinado — smoke 4, 2026-10-14).

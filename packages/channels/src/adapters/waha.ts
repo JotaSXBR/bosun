@@ -410,7 +410,7 @@ export class WahaChannelProvider implements ChannelProvider {
         attempts.push(() => this.fetchAnonymousMedia(mediaUrl));
       }
     }
-    for (const path of this.mediaFilePaths(ref.filename, messageId)) {
+    for (const path of this.mediaFilePaths(ref.filename, messageId, ref.mimetype)) {
       attempts.push(() => wahaFetchMedia(this.request, this.resolveMediaUrl(path)));
     }
     let lastError: unknown;
@@ -440,6 +440,9 @@ export class WahaChannelProvider implements ChannelProvider {
       const parsed = new URL(url);
       if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
       const host = parsed.hostname;
+      // localhost urls are WAHA's own view of itself — fetched from our
+      // container they'd hit *this* app, not WAHA.
+      if (host === "localhost" || host === "127.0.0.1" || host === "::1") return false;
       return host !== "whatsapp.net" && !host.endsWith(".whatsapp.net");
     } catch {
       return false;
@@ -458,27 +461,64 @@ export class WahaChannelProvider implements ChannelProvider {
   }
 
   /**
-   * Candidate /api/files paths for a downloaded message. WAHA's local
-   * storage layout is {session}/{messageId}.{ext} — media.filename is the
-   * original WhatsApp filename and may differ, so both the filename and
-   * the bare message id (last segment of the serialized externalId) are
-   * tried under the session directory, then the flat path.
+   * Candidate /api/files paths for a downloaded message. WAHA names the
+   * stored object with the FULL serialized message id
+   * (false_<chat>_<stanza>) — S3 keys are {session}/{serializedId}.{ext}
+   * and the proxied url drops the session dir. media.filename is the
+   * bare stanza/original name and may differ, and the bare messageId
+   * segment is the last resort. Extension comes from the filename, else
+   * the mimetype.
    */
-  private mediaFilePaths(filename: string | null, messageId: string): string[] {
+  private mediaFilePaths(
+    filename: string | null,
+    messageId: string,
+    mimetype: string | null,
+  ): string[] {
     const paths: string[] = [];
     const session = this.config.session;
     const bareId = messageId.split("_").pop();
-    const ext = filename?.match(/\.[a-z0-9]+$/i)?.[0];
+    const ext = filename?.match(/\.[a-z0-9]+$/i)?.[0] ?? WahaChannelProvider.mimeExt(mimetype);
+    if (ext) {
+      const serialized = encodeURIComponent(`${messageId}${ext}`);
+      paths.push(`/api/files/${serialized}`, `/api/files/${session}/${serialized}`);
+    }
     if (filename) {
-      paths.push(`/api/files/${session}/${encodeURIComponent(filename)}`);
+      const name = encodeURIComponent(filename);
+      paths.push(`/api/files/${session}/${name}`, `/api/files/${name}`);
     }
     if (bareId && ext) {
-      paths.push(`/api/files/${session}/${encodeURIComponent(`${bareId}${ext}`)}`);
-    }
-    if (filename) {
-      paths.push(`/api/files/${encodeURIComponent(filename)}`);
+      const bare = encodeURIComponent(`${bareId}${ext}`);
+      paths.push(`/api/files/${session}/${bare}`, `/api/files/${bare}`);
     }
     return [...new Set(paths)];
+  }
+
+  /** Extension for the common media mimetypes WAHA reports. */
+  private static mimeExt(mimetype: string | null): string | undefined {
+    switch (mimetype?.split(";")[0]?.trim().toLowerCase()) {
+      case "image/webp":
+        return ".webp";
+      case "image/jpeg":
+        return ".jpg";
+      case "image/png":
+        return ".png";
+      case "image/gif":
+        return ".gif";
+      case "video/mp4":
+        return ".mp4";
+      case "audio/ogg":
+        return ".ogg";
+      case "audio/mpeg":
+        return ".mp3";
+      case "audio/mp4":
+        return ".m4a";
+      case "audio/webm":
+        return ".webm";
+      case "application/pdf":
+        return ".pdf";
+      default:
+        return undefined;
+    }
   }
 
   /**
