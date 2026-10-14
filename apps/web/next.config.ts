@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
     "@crm/design-system",
     "@crm/permissions",
   ],
+  // Must cover MAX_UPLOAD_BYTES (64 MB, src/lib/media-upload.ts) + multipart
+  // overhead; defaults are 1 MB (actions) and 10 MB (proxy.ts buffer).
+  experimental: {
+    serverActions: { bodySizeLimit: "65mb" },
+    proxyClientMaxBodySize: "65mb",
+  },
   headers() {
     return Promise.resolve([
       {
@@ -31,7 +37,7 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
         ],
       },
     ]);

@@ -217,8 +217,14 @@ export function VoiceRecorder({
         type: media.current.mime,
       }),
     );
-    const result = await sendMediaMessageAction(form);
+    // A transport rejection (body over the Next limit) never reaches the
+    // action — catch it or `sending` would stay true forever.
+    const result = await sendMediaMessageAction(form).catch(() => null);
     setState((s) => ({ ...s, sending: false }));
+    if (!result) {
+      toast.error(t("uploadFailed"));
+      return;
+    }
     if (!result.ok) {
       toast.error(result.error);
       return;

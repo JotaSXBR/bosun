@@ -13,6 +13,7 @@ import { useRef, useState, useTransition } from "react";
 import { VoiceRecorder } from "@/components/voice-recorder";
 import { useChatPresence } from "@/lib/chat-presence";
 import { useDraftFill } from "@/lib/draft-bridge";
+import { MAX_UPLOAD_BYTES } from "@/lib/media-upload";
 import { setReplyTarget, useReplyTarget } from "@/lib/reply-bridge";
 import { sendChannelMessageAction, sendMediaMessageAction } from "@/server/actions/chat";
 import { requestDraftAction } from "@/server/actions/drafts";
@@ -430,6 +431,12 @@ export function Composer({
     });
 
   const sendFile = (file: File) => {
+    // The action body is capped at 65 MB — reject oversized files here so
+    // the composer never sits on "Enviando arquivo…" for a doomed upload.
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error(t("uploadTooLarge"));
+      return;
+    }
     const caption = text.trim();
     setSendingMedia(true);
     const form = new FormData();
@@ -437,16 +444,23 @@ export function Composer({
     form.set("file", file);
     if (caption) form.set("caption", caption);
     if (replyTo) form.set("replyToId", replyTo.externalId);
-    void sendMediaMessageAction(form).then((result) => {
-      setSendingMedia(false);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      setText("");
-      setReplyTarget(null);
-      router.refresh();
-    });
+    void sendMediaMessageAction(form)
+      .then((result) => {
+        setSendingMedia(false);
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        setText("");
+        setReplyTarget(null);
+        router.refresh();
+      })
+      .catch(() => {
+        // Transport-level rejection (e.g. body over the Next limit) never
+        // reaches the action — reset and toast or the composer stays stuck.
+        setSendingMedia(false);
+        toast.error(t("uploadFailed"));
+      });
   };
 
   return (

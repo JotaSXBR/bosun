@@ -162,6 +162,20 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   direito (`MessageContextMenu`, display:contents event boundary, fecha
   Esc/click-outside/scroll) — verify:full ✅ (295 int/17 e2e/build) —
   `/review` ✅; plano arquivado em `tasks/plan-inbox-backend.done.md`;
+  **mergeado 2026-10-14** — PR #39 squash `2bac58a` na main (checks
+  quality/scan/integration verdes);
+  **smoke staging 2026-10-14** (device pareado): 3 bugs corrigidos —
+  (a) toda mídia inbound quebrava: WAHA monta `media.url` com o
+  `WAHA_BASE_URL` _dele_ (`localhost:3000`) ≠ host interno → `fetchMedia`
+  recusava; fix re-enraíza `/api/files/*` no baseUrl confiável;
+  (b) microfone bloqueado por `Permissions-Policy: microphone=()` →
+  `microphone=(self)`;
+  (c) upload >10 MB travava "Enviando arquivo…": corpo batia nos
+  defaults do Next (proxy buffer 10 MB + Server Actions 1 MB —
+  `media-upload.ts` anunciava 64 MB) → ambos em `65mb` + composer/
+  gravador com catch (toast + reset) e checagem de tamanho no client.
+  Resta re-smoke após deploy + `sendVoice` mimetype ogg/opus +
+  `WAHA_S3_*` + avatarUrl;
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);

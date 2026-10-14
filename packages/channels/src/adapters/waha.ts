@@ -353,16 +353,21 @@ export class WahaChannelProvider implements ChannelProvider {
     // Origin check (not prefix): "http://waha@evil" or "http://waha.evil"
     // would pass a startsWith test and leak X-Api-Key.
     const absolute = url.startsWith("/") ? `${this.baseUrl}${url}` : url;
-    let sameOrigin: boolean;
+    let target: string;
     try {
-      sameOrigin = new URL(absolute).origin === new URL(this.baseUrl).origin;
+      const parsed = new URL(absolute);
+      const sameOrigin = parsed.origin === new URL(this.baseUrl).origin;
+      // WAHA stamps its own WAHA_BASE_URL (default http://localhost:3000)
+      // into media.url — a foreign /api/files/* path is the same file on
+      // the trusted host; re-root pathname+search, refuse anything else.
+      if (!sameOrigin && !parsed.pathname.startsWith("/api/files/")) {
+        throw new Error("WAHA fetchMedia refused: url outside the WAHA host");
+      }
+      target = sameOrigin ? absolute : `${this.baseUrl}${parsed.pathname}${parsed.search}`;
     } catch {
-      sameOrigin = false;
-    }
-    if (!sameOrigin) {
       throw new Error("WAHA fetchMedia refused: url outside the WAHA host");
     }
-    return wahaFetchMedia(this.request, absolute);
+    return wahaFetchMedia(this.request, target);
   }
 
   /**
