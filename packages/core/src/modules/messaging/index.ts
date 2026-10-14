@@ -33,10 +33,16 @@ export {
   nextOpeningAt,
   renderOffHoursMessage,
 } from "./offhours";
-export { addInternalNote, sendChannelMessage, sendOutboundMessage } from "./outbound";
+export {
+  addInternalNote,
+  resendFailedMessage,
+  sendChannelMessage,
+  sendOutboundMessage,
+} from "./outbound";
 export type { StartOutboundResult } from "./outbound-first";
 export { startOutboundConversation } from "./outbound-first";
 export type {
+  ContactTicketRow,
   ConversationDetailRow,
   ConversationListRow,
   MessageReactionView,
@@ -55,6 +61,7 @@ export { listTransfersTo } from "./reads-transfers";
 export type { ContactRow, ConversationRow, MessageRow } from "./repository";
 export { getConversation as getConversationRow } from "./repository";
 export type { MessageEditRow } from "./repository-messages";
+export { getMessage, mergeMessageMetadata } from "./repository-messages";
 export type {
   ConversationIdInput,
   ConversationView,
@@ -93,10 +100,12 @@ export {
   getConversationDetail,
   ingestChannelEvent,
   ingestChannelWebhook,
+  listContactTickets,
   listConversationCounts,
   listConversationMessages,
   listMyTransfers,
   listTenantConversations,
+  markConversationRead,
 } from "./service";
 export type {
   WidgetConfig,

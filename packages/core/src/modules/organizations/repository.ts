@@ -208,6 +208,7 @@ export async function upsertSettings(
     observerIntervalMinutes?: number;
     observerIdleMinutes?: number;
     observerAutoDraft?: boolean;
+    aiTranscribeAudio?: boolean;
   },
 ): Promise<OrganizationSettingsRow> {
   const [row] = await executor

@@ -560,6 +560,9 @@ importers:
       '@crm/observability':
         specifier: workspace:*
         version: link:../observability
+      '@crm/storage':
+        specifier: workspace:*
+        version: link:../storage
       pg-boss:
         specifier: 12.35.0
         version: 12.35.0

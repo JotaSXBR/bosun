@@ -6,11 +6,13 @@ import { PgBoss } from "pg-boss";
 import { brainStaleSweepHandler } from "./tasks/brain-stale-sweep";
 import { channelReconcileHandler } from "./tasks/channel-messages-reconcile";
 import { closeResolvedTicketsHandler } from "./tasks/close-resolved-tickets";
+import { contactAvatarHandler } from "./tasks/contact-avatar";
 import { generateDraftHandler } from "./tasks/generate-draft";
 import { observerAnalyzeHandler } from "./tasks/observer-analyze";
 import { observerScanHandler } from "./tasks/observer-scan";
 import { organizationOnboardingHandler } from "./tasks/organization-onboarding";
 import { processChannelEventHandler } from "./tasks/process-channel-event";
+import { transcribeAudioHandler } from "./tasks/transcribe-audio";
 
 const logger = createLogger({ bindings: { component: "jobs" } });
 
@@ -23,6 +25,8 @@ export const QUEUES = {
   brainStaleSweep: "brain-stale-sweep",
   generateDraft: "generate-draft",
   observerScan: "observer-scan",
+  contactAvatar: "contact-avatar",
+  transcribeAudio: "transcribe-audio",
 } as const;
 
 let boss: PgBoss | undefined;
@@ -108,6 +112,12 @@ async function start(env: ServerEnv): Promise<PgBoss> {
   });
   await instance.work(QUEUES.observerScan, async (jobs) => {
     for (const job of jobs) await observerScanHandler(job.data);
+  });
+  await instance.work(QUEUES.contactAvatar, async (jobs) => {
+    for (const job of jobs) await contactAvatarHandler(job.data);
+  });
+  await instance.work(QUEUES.transcribeAudio, async (jobs) => {
+    for (const job of jobs) await transcribeAudioHandler(job.data);
   });
   // Interval-mode observer sweep — the per-org cadence lives in
   // organization_settings.observer_interval_minutes; the cron tick is just

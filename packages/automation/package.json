@@ -19,6 +19,7 @@
     "@crm/core": "workspace:*",
     "@crm/db": "workspace:*",
     "@crm/observability": "workspace:*",
+    "@crm/storage": "workspace:*",
     "pg-boss": "12.35.0",
     "zod": "4.6.5"
   },

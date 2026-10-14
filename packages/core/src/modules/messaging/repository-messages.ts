@@ -53,6 +53,40 @@ export async function insertMessage(
   return row;
 }
 
+/** Shallow-merges keys into the message metadata jsonb (new keys win). */
+export async function mergeMessageMetadata(
+  executor: DbExecutor,
+  messageId: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  await executor
+    .update(messages)
+    .set({
+      metadata: sql`${messages.metadata} || ${JSON.stringify(patch)}::jsonb`,
+      updatedAt: new Date(),
+    })
+    .where(eq(messages.id, messageId));
+}
+
+/** Marks a previously-failed outbound message as sent after a resend. */
+export async function markMessageSent(
+  executor: DbExecutor,
+  messageId: string,
+  values: { externalId: string; status: string; sentAt: Date },
+): Promise<MessageRow | undefined> {
+  const [row] = await executor
+    .update(messages)
+    .set({
+      externalId: values.externalId,
+      status: values.status,
+      sentAt: values.sentAt,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(messages.id, messageId), eq(messages.status, "failed")))
+    .returning();
+  return row;
+}
+
 /** Applies a provider status (sent/delivered/read/failed) to a stored message. */
 export async function updateMessageStatus(
   executor: DbExecutor,

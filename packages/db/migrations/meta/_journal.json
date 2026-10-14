@@ -211,6 +211,13 @@
       "when": 1791911697225,
       "tag": "0029_tenant_tables_force_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791927420367,
+      "tag": "0030_bitter_mercury",
+      "breakpoints": true
     }
   ]
 }

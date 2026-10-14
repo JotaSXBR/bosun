@@ -18,7 +18,7 @@ import {
 import { toast } from "@crm/design-system/components/toast";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import {
   pickupConversationAction,
@@ -33,6 +33,46 @@ import {
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 type T = ReturnType<typeof useTranslations>;
+
+/** Which shortcut keys currently do something — mirrors the visible buttons. */
+function actionAvailability(args: {
+  conversation: ConversationDetailRow;
+  ownsTicket: boolean;
+  canWork: boolean;
+  isResolved: boolean;
+  isClosed: boolean;
+}) {
+  const { conversation, ownsTicket, canWork, isResolved, isClosed } = args;
+  const workable = canWork && ownsTicket && !isResolved && !isClosed;
+  const pickup = workable && conversation.status === "open" && conversation.assigneeId === null;
+  return { pickup, resolve: workable && !pickup, snooze: workable };
+}
+
+/** A assumir · R resolver · S adiar até amanhã — same guards as the list nav. */
+function useTicketShortcuts(args: {
+  conversationId: string;
+  pickup: boolean;
+  resolve: boolean;
+  snooze: boolean;
+  run: (action: Promise<ActionResult>) => void;
+}) {
+  const { conversationId, pickup, resolve, snooze, run } = args;
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key === "a" && pickup) run(pickupConversationAction({ conversationId }));
+      else if (key === "r" && resolve) run(resolveConversationAction({ conversationId }));
+      else if (key === "s" && snooze) {
+        run(snoozeConversationAction({ conversationId, until: snoozeTarget("tomorrow") }));
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+}
 
 export function TicketActions({
   conversation,
@@ -57,8 +97,6 @@ export function TicketActions({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  if (isViewer) return null;
-
   // Work actions belong to the assignee; another agent's path is Transfer.
   const ownsTicket = conversation.assigneeId === null || conversation.assigneeId === userId;
   // Viewers can never work a ticket — no point offering them as targets.
@@ -75,48 +113,81 @@ export function TicketActions({
     });
 
   const conversationId = conversation.id;
+  const {
+    pickup: canPickup,
+    resolve: canResolve,
+    snooze: canSnooze,
+  } = actionAvailability({
+    conversation,
+    ownsTicket,
+    canWork,
+    isResolved,
+    isClosed,
+  });
+  useTicketShortcuts({
+    conversationId,
+    pickup: canPickup,
+    resolve: canResolve,
+    snooze: canSnooze,
+    run,
+  });
+
+  if (isViewer) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t pt-4" data-testid="ticket-actions">
-      {isResolved && (
-        <Button
-          variant="primary"
-          disabled={pending}
-          onClick={() => run(reopenTicketAction({ conversationId }))}
-        >
-          {t("reopen")}
-        </Button>
-      )}
+    <div className="border-t pt-4" data-testid="ticket-actions">
+      <div className="flex flex-wrap items-center gap-2">
+        {isResolved && (
+          <Button
+            variant="primary"
+            disabled={pending}
+            onClick={() => run(reopenTicketAction({ conversationId }))}
+          >
+            {t("reopen")}
+          </Button>
+        )}
 
-      {isClosed && (
-        <Button
-          variant="primary"
-          disabled={pending}
-          onClick={() => run(resumeTicketAction({ conversationId }))}
-        >
-          {t("newService")}
-        </Button>
-      )}
+        {isClosed && (
+          <Button
+            variant="primary"
+            disabled={pending}
+            onClick={() => run(resumeTicketAction({ conversationId }))}
+          >
+            {t("newService")}
+          </Button>
+        )}
 
-      {canWork && !ownsTicket && (
-        <span className="text-ink-muted text-sm">
-          {t("inServiceBy", { name: conversation.assigneeName ?? "?" })}
-        </span>
-      )}
+        {canWork && !ownsTicket && (
+          <span className="text-ink-muted text-sm">
+            {t("inServiceBy", { name: conversation.assigneeName ?? "?" })}
+          </span>
+        )}
 
-      {canWork && ownsTicket && !isResolved && !isClosed && (
-        <WorkActions conversation={conversation} pending={pending} run={run} t={t} />
-      )}
+        {canWork && ownsTicket && !isResolved && !isClosed && (
+          <WorkActions conversation={conversation} pending={pending} run={run} t={t} />
+        )}
 
-      {canWork && (
-        <MoreActions
-          conversation={conversation}
-          agents={agents}
-          sectors={sectors}
-          pending={pending}
-          run={run}
-          t={t}
-        />
+        {canWork && (
+          <MoreActions
+            conversation={conversation}
+            agents={agents}
+            sectors={sectors}
+            pending={pending}
+            run={run}
+            t={t}
+          />
+        )}
+      </div>
+      {(canPickup || canResolve || canSnooze) && (
+        <p className="text-ink-subtle mt-2 text-xs" data-testid="action-shortcuts">
+          {[
+            canPickup && t("shortcutPickup"),
+            canResolve && t("shortcutResolve"),
+            canSnooze && t("shortcutSnooze"),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
       )}
     </div>
   );

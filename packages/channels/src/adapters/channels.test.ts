@@ -38,6 +38,18 @@ describe("WahaChannelProvider", () => {
     });
   });
 
+  it("sends to @lid chatIds verbatim — GOWS resolves the LID", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch(() => ({ json: { id: "msg-lid" } }));
+    const provider = new WahaChannelProvider(wahaConfig, { fetch: fetchImpl });
+    await provider.sendMessage({
+      to: "16449842241553@lid",
+      content: { type: "text", text: "oi" },
+    });
+    expect(JSON.parse(calls[0]?.init?.body ?? "{}")).toMatchObject({
+      chatId: "16449842241553@lid",
+    });
+  });
+
   it("sends media by URL to the kind-specific endpoint", async () => {
     const { fetch: fetchImpl, calls } = mockFetch(() => ({ json: { id: "m2" } }));
     const provider = new WahaChannelProvider(wahaConfig, { fetch: fetchImpl });

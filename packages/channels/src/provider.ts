@@ -71,4 +71,12 @@ export interface ChannelProvider {
    * inbound payloads points to the provider host (not browser-reachable).
    */
   fetchMedia?(url: string): Promise<{ body: Uint8Array; contentType: string | null }>;
+  /**
+   * Contact profile picture — null when the contact has none or the
+   * provider doesn't expose photos (site_chat). Bytes, not URLs: remote
+   * CDNs expire.
+   */
+  fetchContactAvatar?(
+    channelUserId: string,
+  ): Promise<{ body: Uint8Array; contentType: string | null } | null>;
 }

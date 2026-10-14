@@ -55,6 +55,31 @@ export async function findContactById(
 }
 
 /**
+ * Records the avatar fetch result: proxy URL + storage key on success,
+ * `avatarFetchedAt` either way — the stamp is what throttles heal
+ * attempts on later inbound messages.
+ */
+export async function updateContactAvatar(
+  executor: DbExecutor,
+  contactId: string,
+  values: { avatarUrl?: string; avatarKey?: string },
+): Promise<void> {
+  const fetchedAt = new Date().toISOString();
+  const patch =
+    values.avatarUrl && values.avatarKey
+      ? { avatarKey: values.avatarKey, avatarFetchedAt: fetchedAt }
+      : { avatarFetchedAt: fetchedAt };
+  await executor
+    .update(contacts)
+    .set({
+      ...(values.avatarUrl ? { avatarUrl: values.avatarUrl } : {}),
+      metadata: sql`${contacts.metadata} || ${JSON.stringify(patch)}::jsonb`,
+      updatedAt: new Date(),
+    })
+    .where(eq(contacts.id, contactId));
+}
+
+/**
  * Contacts page rows — one row per contact with the count of tickets it
  * ever had, name/id search, alphabetical order. The count comes from a
  * grouped LEFT JOIN (single scan), not a per-row correlated subquery —

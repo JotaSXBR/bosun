@@ -17,6 +17,7 @@ import {
   getMessageContent,
   getMessageEdits,
   reactToMessage,
+  resendFailedMessage,
   sendChannelMessage,
   sendChatPresence,
   subscribeChatPresence,
@@ -100,6 +101,29 @@ export async function sendMediaMessageAction(formData: FormData): Promise<ChatAc
     return { ok: true, id: message.id };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível enviar o arquivo.") };
+  }
+}
+
+/**
+ * Retries a failed outbound message in place. Media re-signs the stored
+ * upload key — the original signed URL is long expired by the time an
+ * agent hits "reenviar".
+ */
+export async function resendMessageAction(input: MessageActionInput): Promise<ChatActionResult> {
+  const ctx = await requireTenantContext();
+  try {
+    const storage = getStorage();
+    const message = await resendFailedMessage(getDb(), ctx, input, {
+      signUrl: (storageKey) =>
+        storage.getSignedUrl(storageKey, {
+          method: "get",
+          expiresInSeconds: SIGNED_URL_TTL_SECONDS,
+        }),
+    });
+    revalidatePath("/app/inbox");
+    return { ok: true, id: message.id };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível reenviar a mensagem.") };
   }
 }
 

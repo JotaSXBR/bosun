@@ -15,6 +15,7 @@ import {
   getMessageOriginalAction,
   listMessageEditsAction,
   reactToMessageAction,
+  resendMessageAction,
 } from "@/server/actions/chat";
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const;
@@ -302,6 +303,23 @@ export function EditedIndicator({
         </span>
       )}
     </>
+  );
+}
+
+/** Failed outbound bubble — retries the send in place (no duplicate row). */
+export function ResendButton({ conversationId, messageId }: TargetProps) {
+  const t = useTranslations("message");
+  const { pending, run } = useAction();
+  return (
+    <button
+      type="button"
+      className="underline underline-offset-2 disabled:opacity-60"
+      disabled={pending}
+      data-testid="resend-message"
+      onClick={() => run(() => resendMessageAction({ conversationId, messageId }))}
+    >
+      {pending ? t("resending") : t("resend")}
+    </button>
   );
 }
 

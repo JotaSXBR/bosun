@@ -40,5 +40,7 @@ export const updateObserverSettingsInput = z.object({
   observerIntervalMinutes: z.number().int().min(5).max(120),
   observerIdleMinutes: z.number().int().min(5).max(120),
   observerAutoDraft: z.boolean(),
+  // Inbound WhatsApp audio → transcript on the message (job transcribe-audio).
+  aiTranscribeAudio: z.boolean().optional(),
 });
 export type UpdateObserverSettingsInput = z.input<typeof updateObserverSettingsInput>;

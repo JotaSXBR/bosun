@@ -5,10 +5,12 @@ import { fromDrizzle } from "pg-boss";
 
 import { getBoss, QUEUES, startJobs } from "./boss";
 import type { ChannelReconcilePayload } from "./tasks/channel-messages-reconcile";
+import type { ContactAvatarPayload } from "./tasks/contact-avatar";
 import type { GenerateDraftPayload } from "./tasks/generate-draft";
 import type { ObserverAnalyzePayload } from "./tasks/observer-analyze";
 import type { OrganizationOnboardingPayload } from "./tasks/organization-onboarding";
 import type { ProcessChannelEventPayload } from "./tasks/process-channel-event";
+import type { TranscribeAudioPayload } from "./tasks/transcribe-audio";
 
 const logger = createLogger({ bindings: { component: "jobs" } });
 
@@ -87,4 +89,27 @@ export async function enqueueGenerateDraft(
   tx?: DbExecutor,
 ): Promise<{ skipped: boolean }> {
   return send(QUEUES.generateDraft, payload, tx);
+}
+
+/**
+ * Enqueues a contact-avatar fetch — called from ingest with the tx so the
+ * job commits atomically with the message write.
+ */
+export async function enqueueContactAvatar(
+  payload: ContactAvatarPayload,
+  tx?: DbExecutor,
+): Promise<{ skipped: boolean }> {
+  return send(QUEUES.contactAvatar, payload, tx);
+}
+
+/**
+ * Enqueues an audio transcription — called from ingest with the tx so the
+ * job commits atomically with the message write. The handler is a no-op
+ * without an audio-capable BYOK credential.
+ */
+export async function enqueueTranscribeAudio(
+  payload: TranscribeAudioPayload,
+  tx?: DbExecutor,
+): Promise<{ skipped: boolean }> {
+  return send(QUEUES.transcribeAudio, payload, tx);
 }

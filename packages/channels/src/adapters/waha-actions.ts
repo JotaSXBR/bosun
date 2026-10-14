@@ -35,26 +35,30 @@ export async function wahaSendMessage(
     if (content.source.type !== "url") {
       throw new Error("WAHA adapter only supports media by URL");
     }
-    path =
-      content.mediaKind === "audio" && content.voiceNote
-        ? "/api/sendVoice"
-        : content.mediaKind === "image"
-          ? "/api/sendImage"
-          : content.mediaKind === "video"
-            ? "/api/sendVideo"
-            : "/api/sendFile"; // plain audio + documents go through sendFile
+    const isVoice = content.mediaKind === "audio" && content.voiceNote;
+    path = isVoice
+      ? "/api/sendVoice"
+      : content.mediaKind === "image"
+        ? "/api/sendImage"
+        : content.mediaKind === "video"
+          ? "/api/sendVideo"
+          : "/api/sendFile"; // plain audio + documents go through sendFile
     body = {
       session,
       chatId: message.to,
       file: {
-        mimetype: content.mimeType,
-        filename: content.filename,
+        // Voice notes: mimetype/filename describe the target (ogg/opus
+        // PTT) — convert:true transcodes the browser's webm source.
+        mimetype: isVoice ? "audio/ogg; codecs=opus" : content.mimeType,
+        filename: isVoice
+          ? `${(content.filename ?? "voice").replace(/\.[^.]+$/, "")}.ogg`
+          : content.filename,
         url: content.source.url,
       },
       caption: content.caption,
     };
     // Browser recordings (webm/opus) need transcoding to ogg/opus PTT.
-    if (path === "/api/sendVoice") body.convert = true;
+    if (isVoice) body.convert = true;
   }
   if (message.replyToId) body.reply_to = message.replyToId;
   const res = await request(path, {

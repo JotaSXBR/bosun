@@ -5,6 +5,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 const {
   channelConnections,
   contacts,
+  conversationReads,
   conversations,
   messages,
   organizationMembers,
@@ -29,6 +30,7 @@ export {
   listMessageEdits,
   listReactionsForMessages,
   markMessageRevoked,
+  mergeMessageMetadata,
   updateMessageStatus,
   upsertMessageReaction,
 } from "./repository-messages";
@@ -67,6 +69,23 @@ export async function upsertContact(
     .returning();
   if (!row) throw new Error("contacts upsert returned no row");
   return row;
+}
+
+/**
+ * Bumps the user's read cursor on a conversation to now(). Upsert keyed on
+ * (conversation_id, user_id) — one row per reader per ticket.
+ */
+export async function upsertConversationRead(
+  executor: DbExecutor,
+  values: { organizationId: string; conversationId: string; userId: string },
+): Promise<void> {
+  await executor
+    .insert(conversationReads)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [conversationReads.conversationId, conversationReads.userId],
+      set: { lastReadAt: new Date() },
+    });
 }
 
 /** The single active (non-terminal) ticket for a chat, if one exists. */

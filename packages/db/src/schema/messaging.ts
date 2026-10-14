@@ -347,6 +347,41 @@ export const ticketCounters = pgTable(
 ).enableRLS();
 
 /**
+ * Per-user read cursor on a conversation — `last_read_at` is bumped when
+ * the user opens the thread or sends a message. The inbox list derives
+ * `unread_count` from inbound messages newer than the cursor (null
+ * cursor = everything unread). Spec: docs/product/channel-whatsapp.md §7.
+ */
+export const conversationReads = pgTable(
+  "conversation_reads",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    conversationId: uuid()
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lastReadAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("conversation_reads_conv_user_idx").on(t.conversationId, t.userId),
+    index("conversation_reads_org_idx").on(t.organizationId),
+    pgPolicy("conversation_reads_tenant_isolation", {
+      for: "all",
+      to: crmAppRole,
+      using: tenantPredicate,
+      withCheck: tenantPredicate,
+    }),
+  ],
+).enableRLS();
+
+/**
  * A visitor session on a `site_chat` widget. The unguessable `token` is
  * what the public widget endpoints authorize against — it identifies the
  * contact the visitor claimed in the pre-form (no proof of email

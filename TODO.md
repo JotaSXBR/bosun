@@ -57,7 +57,11 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
     Refs: DeskcommCRM (fila), MariaOS (painel/chat), Synthor (produto).
     Próximas etapas: E2 ficha+cadastro de contato, E3 chat power-ups
     (botão direito, macros `/`, busca no thread, toggle sendSeen),
-    E4 lista "não virou negócio".
+    E4 lista "não virou negócio". **Estudo omnichannel entregue**
+    (2026-10-13): `docs/product/omnichannel-research.md` — padrões de
+    mercado (HelenaCRM, Sellio, Synthor, fazer.ai), falhas de produto do
+    canal WAHA e diagnóstico dos bugs de mídia. Informa o escopo de
+    E2/E3 e da revisão WAHA.
 - **P1 — WAHA chat features (brief 2)**: implementado — ticks cinza/azul
   (`message.ack`), reações (`message_reactions` + chips/picker), edição
   com histórico (`message_edits`, janela 15min), apagado híbrido por papel
@@ -86,6 +90,60 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   vivo, backfill das msgs perdidas via reconcile 30min (automático),
   `channel_event` audit só se RLS, `ENV NEXT_RUNTIME=nodejs` no
   Dockerfile se quisermos instrumentation no boot standalone.
+  **Revisão 2026-10-13** (`docs/product/omnichannel-research.md` §2–3):
+  envio de arquivo/áudio falha em staging no `PutObject` S3 (log
+  action:"chat") — bucket `bosun` existe (confirmado 2026-10-13); causa
+  real ainda a observar no smoke (credenciais já conferem com RustFS);
+  mídia inbound
+  local no WAHA expira em 7d (S3 decidido, não aplicado — sem
+  `WAHA_MEDIA_STORAGE`/`WAHA_S3_*`); trap `WAHA_S3_PROXY_FILES=False` ×
+  guard SSRF do `fetchMedia`; `WAHA_APPS_ENABLED`/`WAHA_API_KEY_PLAIN`
+  ausentes (app 9º dígito inativo?); `contacts.avatarUrl` nunca
+  populado; sem STT de áudio inbound; envelope anti-ban incompleto;
+  `sendVoice` forçar mimetype `audio/ogg; codecs=opus`.
+  **Escopo aprovado 2026-10-13 — dois planos**: (1) WAHA "tudo" —
+  destravar mídia staging (ops: bucket + envs), app 9º dígito
+  (ops-only: `WAHA_APPS_ON` já habilita global; sem `config.apps` por
+  sessão — só `WAHA_APPS_ENABLED`/`WAHA_API_KEY_PLAIN` nas envs), STT de
+  áudio inbound (BYOK, `ai_transcribe_audio` default true), avatar do
+  contato (RustFS + `avatarUrl`), não-lido por usuário (nova tabela
+  `conversation_reads` — reverte non-goal do inbox.md), @lid outbound,
+  envelope anti-ban — spec em `docs/product/channel-whatsapp.md`;
+  **plano 1 implementado 2026-10-13** (migration 0030, cursor por
+  usuário + mark-on-send, job `contact-avatar` + rota proxy
+  `/api/contacts/[id]/avatar`, job `transcribe-audio` BYOK + toggle em
+  settings/ai, envelope anti-ban em sends automatizados + sendSeen no
+  send humano, @lid outbound verificado verbatim) — `/review` aprovado
+  (2 fixes: `aiTranscribeAudio` na assinatura de `upsertSettings`,
+  `conversationId` no evento `message.updated` do STT); **falta só a
+  parte ops** ✅ (envs WAHA aplicadas via REST Coolify + restart
+  healthy; bucket `bosun` confirmado existente) — resta só o smoke com
+  device pareado; mark-on-open/badge ficam pro plano 2;
+  (2) UI de atendimento — proposta **aprovada em entrevista**
+  (2026-10-13) em `docs/product/inbox-ui-review.md`: todos os itens
+  aceitos; B3 refinado (macros por org, agente propõe → aprovação de
+  manager/admin/owner via staging `agent_suggestions`); B9 virou corte
+  total (TeachAiDialog sai do thread — aprendizado é do observer);
+  SLA/CSAT/broadcast/round-robin/prioridade = pós-v1. Ordem proposta:
+  plano 1 WAHA → plano 2 superfície UI que pendura no WAHA (A1–A4,
+  B4–B6, B9, C2, C3/C4, D3) → plano 3 E2/E3 revisado (C1, B1, B2, B3,
+  B7, B8). `inbox.md` ainda não revisado — acontece na spec dos planos.
+  **plano 2 implementado 2026-10-13** (badge não-lido + mark-on-open
+  client, avatar/aguardando/ícone mídia na row, resendFailedMessage com
+  claim atômico + media re-assinada, player 1/1.5/2× + transcript,
+  sendSeen respeitando users.sendSeen + status, atalhos a/r/s, aside
+  xl+/drawer + histórico contato + valor deal inline, TeachAiDialog
+  removido) — verify:full ✅ (278 int/17 e2e) — `/review` aprovado
+  (1 required: parseValueCents 100x com ponto-decimal → grupos de
+  milhar sem regex); **refine pós-review (2026-10-13)**: sendSeen virou
+  sinal de leitura puro — sai do send/resend humano e passa a disparar em
+  `markConversationRead` (assignee ou conversa sem dono, última msg
+  inbound, pref on; marker re-dispara quando inbound chega com a thread
+  aberta); sticker (image/webp) renderiza sem chrome + pseudo-kind
+  "sticker" na row; media inbound sem source recebe flag
+  `metadata.unsupportedMedia` → nota interna no bubble — **pendente**:
+  config por-org p/ IA responder "não entendi o arquivo" ou ignorar
+  mídia não suportada (não existe auto-responder ainda);
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);
@@ -140,7 +198,10 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   — mesmo endpoint do cd.yml. Requer `COOLIFY_API_URL`/`APP_UUID`/
   `DEPLOY_TOKEN` (escopo deploy-only) injetados; rollback via
   healthcheck já é automático. Duas classes de instalação: mantenedor
-  usa tag→webhook (hoje); self-hosted usa o botão.
+  usa tag→webhook (hoje); self-hosted usa o botão. **Meta de
+  lançamento (2026-10-13)**: no lançamento o sistema se auto-configura
+  por completo na instalação; o que não der para auto-configurar termina
+  no onboarding/wizard — nada de config manual espalhada.
   **Follow-up pendente** (fora do escopo do slice): form de nova conexão
   Meta em `/app/integrations` ainda exige `appSecret`/`verifyToken` no
   client — relaxar p/ "opcional — usa plataforma" quando o grupo `meta`
@@ -192,7 +253,11 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `observe-org` manual), `/app/settings/ai` completo (credenciais, agents,
   knowledge, inbox de sugestões, analisar agora) + toast SSE em
   `agent_suggestion.created`. Pendências: second brain (item próprio
-  abaixo), triage/TTS = roadmap do spec. ✅ AI drafts entregue — módulo
+  abaixo), triage/TTS = roadmap do spec. **Pendência nova (2026-10-13):
+  seleção de modelo por credencial** — ao colar a API key, listar
+  modelos do provider e deixar escolher chat/embedding/voice +
+  effort/temperatura (spec em ai-agents.md → BYOK; STT hoje hardcoded
+  `whisper-1`/`gemini-2.0-flash-001` vira default). ✅ AI drafts entregue — módulo
   `@crm/core/drafts` (draft = `agent_suggestions` `target_type='draft'`,
   `messaging:write`, approve = `sendOutboundMessage` fora do tx, supersede
   on regenerate, stale = inbound mais novo aprovável), `agents.kind`

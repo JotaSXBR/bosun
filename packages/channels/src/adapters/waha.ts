@@ -365,6 +365,32 @@ export class WahaChannelProvider implements ChannelProvider {
     return wahaFetchMedia(this.request, absolute);
   }
 
+  /**
+   * Two hops: WAHA resolves the WhatsApp CDN URL, then a plain anonymous
+   * fetch downloads it. `request` would attach X-Api-Key — the key must
+   * never leave the WAHA host, so the second hop uses raw fetch.
+   */
+  async fetchContactAvatar(
+    channelUserId: string,
+  ): Promise<{ body: Uint8Array; contentType: string | null } | null> {
+    const res = await this.request(
+      `/api/contacts/profile-picture?session=${encodeURIComponent(this.config.session)}&contactId=${encodeURIComponent(channelUserId)}`,
+    );
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`WAHA profile-picture failed: HTTP ${res.status}`);
+    const parsed = z
+      .looseObject({ profilePictureURL: z.string().nullish() })
+      .parse(await res.json());
+    const url = parsed.profilePictureURL;
+    if (!url?.startsWith("https://")) return null;
+    const img = await this.fetchImpl(url);
+    if (!img.ok) return null;
+    return {
+      body: new Uint8Array(await img.arrayBuffer()),
+      contentType: img.headers.get("content-type"),
+    };
+  }
+
   verifyWebhook(request: RawWebhookRequest): boolean {
     // HMAC is mandatory for us — never trust an unsigned webhook.
     const key = this.config.webhookHmacKey;

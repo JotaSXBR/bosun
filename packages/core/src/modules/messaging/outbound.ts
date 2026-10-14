@@ -1,18 +1,57 @@
 // Outbound actions — agent replies through the channel provider and private
 // internal notes. Ticket guards live in ./actions (module-internal exports).
-import type { ChannelProvider } from "@crm/channels";
+import type { ChannelProvider, OutboundMessage, SendMessageResult } from "@crm/channels";
 import { providerForConnection } from "@crm/core/integrations";
 import type { Database } from "@crm/db";
 import { emitDomainEvent, withTenant } from "@crm/db";
+import { captureException } from "@crm/observability";
 
-import { DomainError } from "../../errors";
+import { DomainError, NotFoundError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import { assertTicketOwner, loadActiveTicket, patchTicket } from "./actions";
 import type { MessageRow } from "./repository";
-import { insertMessage, messagePreviewText, updateConversationLastMessage } from "./repository";
-import type { InternalNoteInput, SendChannelInput, SendOutboundInput } from "./schemas";
-import { internalNoteInput, sendChannelInput, sendOutboundInput } from "./schemas";
+import {
+  insertMessage,
+  messagePreviewText,
+  updateConversationLastMessage,
+  upsertConversationRead,
+} from "./repository";
+import { getMessage, markMessageSent } from "./repository-messages";
+import type {
+  InternalNoteInput,
+  MessageActionInput,
+  SendChannelInput,
+  SendOutboundInput,
+} from "./schemas";
+import {
+  internalNoteInput,
+  messageActionInput,
+  sendChannelInput,
+  sendOutboundInput,
+} from "./schemas";
+
+/**
+ * Anti-ban envelope for AUTOMATED sends (off-hours reply, draft approval —
+ * spec channel-whatsapp.md §9): mark the chat seen, simulate typing
+ * proportional to the text, pause, then send. Presence/seen failures are
+ * best-effort — they must never block or fail the send itself.
+ */
+export async function sendWithEnvelope(
+  provider: ChannelProvider,
+  chatId: string,
+  text: string,
+): Promise<SendMessageResult> {
+  const swallow = (error: unknown) => captureException(error, { op: "sendWithEnvelope", chatId });
+  await provider.sendSeen?.(chatId).catch(swallow);
+  if (provider.sendPresence) {
+    await provider.sendPresence(chatId, "typing").catch(swallow);
+    const delayMs = Math.min(Math.max(text.length * 120, 1000), 4000);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    await provider.sendPresence(chatId, "paused").catch(swallow);
+  }
+  return provider.sendMessage({ to: chatId, content: { type: "text", text } });
+}
 
 /**
  * Requires messaging:write. Sends an agent reply through the channel provider.
@@ -32,7 +71,7 @@ export async function sendOutboundMessage(
   db: Database,
   ctx: TenantContext,
   input: SendOutboundInput,
-  deps?: { provider?: ChannelProvider },
+  deps?: { provider?: ChannelProvider; automated?: boolean },
 ): Promise<MessageRow> {
   const parsed = sendOutboundInput.parse(input);
   return sendChannelMessage(
@@ -53,7 +92,7 @@ export async function sendChannelMessage(
   db: Database,
   ctx: TenantContext,
   input: SendChannelInput,
-  deps?: { provider?: ChannelProvider },
+  deps?: { provider?: ChannelProvider; automated?: boolean },
 ): Promise<MessageRow> {
   assertPermission(ctx, { messaging: ["write"] });
   const parsed = sendChannelInput.parse(input);
@@ -81,11 +120,18 @@ export async function sendChannelMessage(
   let externalId: string;
   let status: string;
   try {
-    const sent = await provider.sendMessage({
-      to: conversation.externalId,
-      content,
-      ...(parsed.replyToId ? { replyToId: parsed.replyToId } : {}),
-    });
+    // Automated sends (off-hours, draft approval) get the anti-ban envelope:
+    // seen → typing ∝ length → paused → send. Human sends stay bare — the
+    // human's blue tick is the read signal fired by markConversationRead,
+    // never a side effect of replying (spec: seen = read, not reply).
+    const sent =
+      deps?.automated && content.type === "text"
+        ? await sendWithEnvelope(provider, conversation.externalId, content.text)
+        : await provider.sendMessage({
+            to: conversation.externalId,
+            content,
+            ...(parsed.replyToId ? { replyToId: parsed.replyToId } : {}),
+          });
     externalId = sent.externalId;
     status = sent.status;
   } catch (cause) {
@@ -136,6 +182,12 @@ export async function sendChannelMessage(
       assigneeId: current.assigneeId ?? ctx.userId,
       firstResponseAt: current.firstResponseAt ?? now,
     });
+    // Sending implies the author saw the thread — bump their read cursor.
+    await upsertConversationRead(tx, {
+      organizationId: ctx.organizationId,
+      conversationId: conversation.id,
+      userId: ctx.userId,
+    });
     await emitDomainEvent(tx, {
       type: "message.sent",
       organizationId: ctx.organizationId,
@@ -145,6 +197,97 @@ export async function sendChannelMessage(
       sentAt: now.toISOString(),
     });
     return message;
+  });
+}
+
+/**
+ * Requires messaging:write. Resends a `failed` outbound message through the
+ * same row — the bubble flips to sent, no duplicate appears. Media resends
+ * need `deps.signUrl`: the persisted storage key yields a fresh signed GET
+ * (the original `source.url` expires after the send TTL).
+ */
+export async function resendFailedMessage(
+  db: Database,
+  ctx: TenantContext,
+  input: MessageActionInput,
+  deps?: { provider?: ChannelProvider; signUrl?: (storageKey: string) => Promise<string> },
+): Promise<MessageRow> {
+  assertPermission(ctx, { messaging: ["write"] });
+  const parsed = messageActionInput.parse(input);
+  const { conversation, message } = await withTenant(db, ctx.organizationId, async (tx) => {
+    const conv = await loadActiveTicket(tx, parsed.conversationId);
+    assertTicketOwner(conv, ctx);
+    const msg = await getMessage(tx, parsed.messageId);
+    if (msg?.conversationId !== conv.id) {
+      throw new NotFoundError("Message", parsed.messageId);
+    }
+    if (msg.direction !== "outbound" || msg.status !== "failed" || msg.private) {
+      throw new DomainError(
+        "MESSAGE_NOT_RESENDABLE",
+        "Only failed outbound messages can be resent.",
+      );
+    }
+    return { conversation: conv, message: msg };
+  });
+  const provider =
+    deps?.provider ??
+    (await providerForConnection(db, ctx.organizationId, conversation.channelConnectionId));
+
+  const stored = message.content as OutboundMessage["content"];
+  let content: OutboundMessage["content"] = stored;
+  if (stored.type === "media") {
+    if (!stored.storageKey || !deps?.signUrl) {
+      throw new DomainError(
+        "MESSAGE_NOT_RESENDABLE",
+        "Media resend requires the stored upload (storageKey).",
+      );
+    }
+    content = {
+      ...stored,
+      source: { type: "url", url: await deps.signUrl(stored.storageKey) },
+    };
+  }
+
+  let sent: SendMessageResult;
+  try {
+    sent = await provider.sendMessage({ to: conversation.externalId, content });
+  } catch (cause) {
+    throw new DomainError(
+      "SEND_FAILED",
+      `Provider failed to resend the message: ${(cause as Error).message}`,
+    );
+  }
+
+  const now = new Date();
+  return withTenant(db, ctx.organizationId, async (tx) => {
+    const current = await loadActiveTicket(tx, conversation.id);
+    const updated = await markMessageSent(tx, message.id, {
+      externalId: sent.externalId,
+      status: sent.status,
+      sentAt: now,
+    });
+    if (!updated) throw new Error("resend status raced — message no longer failed");
+    await updateConversationLastMessage(tx, conversation.id, now, {
+      direction: "outbound",
+      preview: messagePreviewText(content),
+    });
+    await patchTicket(tx, ctx.organizationId, conversation.id, {
+      status: "waiting_customer",
+      assigneeId: current.assigneeId ?? ctx.userId,
+      firstResponseAt: current.firstResponseAt ?? now,
+    });
+    await upsertConversationRead(tx, {
+      organizationId: ctx.organizationId,
+      conversationId: conversation.id,
+      userId: ctx.userId,
+    });
+    await emitDomainEvent(tx, {
+      type: "message.updated",
+      organizationId: ctx.organizationId,
+      conversationId: conversation.id,
+      messageId: updated.id,
+    });
+    return updated;
   });
 }
 

@@ -1,6 +1,8 @@
 "use client";
 
+import { Avatar } from "@crm/design-system/components/avatar";
 import { Badge } from "@crm/design-system/components/badge";
+import { Icon, type IconName } from "@crm/design-system/components/icon";
 import { cn } from "@crm/design-system/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,6 +15,13 @@ export interface QueueRowView {
   title: string;
   ticketNumber: number;
   preview: string | null;
+  avatarUrl: string | null;
+  /** Last channel message kind — icon + label replace the `[media]` bracket. */
+  mediaKind: string | null;
+  /** Localized media label ("Áudio") used when the raw preview is `[media]`. */
+  mediaLabel: string | null;
+  /** "Aguardando há X" — only when the last message is inbound. */
+  waitingLabel: string | null;
   timeLabel: string;
   statusLabel: string | null;
   statusTone: "warning" | "success" | "neutral";
@@ -23,6 +32,74 @@ export interface QueueRowView {
   channelName: string | null;
   awaitingReply: boolean;
   snoozedLabel: string | null;
+  /** Inbound messages newer than the viewer's read cursor. */
+  unreadCount: number;
+}
+
+const MEDIA_ICONS: Record<string, IconName> = {
+  audio: "mic",
+  image: "image",
+  video: "video",
+  document: "file",
+  sticker: "sticker",
+};
+
+/** Second line — media icon + preview (localized kind label over `[media]`). */
+function RowPreviewLine({ row }: { row: QueueRowView }) {
+  if (!row.preview && !row.mediaKind) return null;
+  return (
+    <p
+      className={cn(
+        "flex items-center gap-1 truncate text-sm",
+        row.unreadCount > 0 ? "text-ink font-medium" : "text-ink-muted",
+      )}
+    >
+      {row.mediaKind && (
+        <Icon name={MEDIA_ICONS[row.mediaKind] ?? "file"} className="size-3.5 shrink-0" />
+      )}
+      <span className="truncate">
+        {row.mediaKind && row.preview === "[media]" ? row.mediaLabel : row.preview}
+      </span>
+    </p>
+  );
+}
+
+/** Third line — waiting timer, status badge, sector/channel/assignee chips. */
+function RowMetaLine({
+  row,
+  showAssignee,
+  showChannel,
+}: {
+  row: QueueRowView;
+  showAssignee: boolean;
+  showChannel: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {row.waitingLabel && (
+        <span className="text-warning flex items-center gap-1 text-xs">
+          <Icon name="timer" className="size-3" />
+          {row.waitingLabel}
+        </span>
+      )}
+      {row.statusLabel && <Badge tone={row.statusTone}>{row.statusLabel}</Badge>}
+      {[
+        row.sectorName,
+        showChannel ? row.channelName : null,
+        showAssignee ? row.assigneeName : null,
+      ]
+        .filter((v): v is string => v !== null)
+        .map((label) => (
+          <span
+            key={label}
+            className="border-line text-ink-muted rounded-md border px-1.5 py-0.5 text-xs"
+          >
+            {label}
+          </span>
+        ))}
+      {row.snoozedLabel && <span className="text-ink-muted text-xs">{row.snoozedLabel}</span>}
+    </div>
+  );
 }
 
 function QueueRowItem({
@@ -53,34 +130,27 @@ function QueueRowItem({
       )}
     >
       <div className="flex items-center justify-between gap-3">
+        <Avatar src={row.avatarUrl ?? undefined} name={row.title} size="sm" />
         <span className="flex min-w-0 items-center gap-2">
           {row.awaitingReply && (
             <span className="bg-signal h-2 w-2 shrink-0 rounded-full" title={awaitingLabel} />
           )}
-          <span className="truncate font-medium">{row.title}</span>
+          <span className={cn("truncate", row.unreadCount > 0 ? "font-semibold" : "font-medium")}>
+            {row.title}
+          </span>
           <span className="text-ink-muted shrink-0 text-xs">#{row.ticketNumber}</span>
         </span>
-        <span className="text-ink-muted shrink-0 text-xs">{row.timeLabel}</span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {row.unreadCount > 0 && (
+            <Badge variant="solid" tone="accent" size="sm" data-testid="unread-count">
+              {row.unreadCount > 99 ? "99+" : row.unreadCount}
+            </Badge>
+          )}
+          <span className="text-ink-muted text-xs">{row.timeLabel}</span>
+        </span>
       </div>
-      {row.preview && <p className="text-ink-muted truncate text-sm">{row.preview}</p>}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {row.statusLabel && <Badge tone={row.statusTone}>{row.statusLabel}</Badge>}
-        {[
-          row.sectorName,
-          showChannel ? row.channelName : null,
-          showAssignee ? row.assigneeName : null,
-        ]
-          .filter((v): v is string => v !== null)
-          .map((label) => (
-            <span
-              key={label}
-              className="border-line text-ink-muted rounded-md border px-1.5 py-0.5 text-xs"
-            >
-              {label}
-            </span>
-          ))}
-        {row.snoozedLabel && <span className="text-ink-muted text-xs">{row.snoozedLabel}</span>}
-      </div>
+      <RowPreviewLine row={row} />
+      <RowMetaLine row={row} showAssignee={showAssignee} showChannel={showChannel} />
     </Link>
   );
 }

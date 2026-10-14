@@ -5,6 +5,7 @@ import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 
+import { AsideShell } from "@/components/aside-shell";
 import { ConversationAside } from "@/components/conversation-aside";
 import { ConversationPane } from "@/components/conversation-pane";
 import { InboxFilters } from "@/components/inbox-filters";
@@ -55,6 +56,17 @@ function toQueueRow(row: ConversationListRow, deps: MapDeps): QueueRowView {
     title: row.contactDisplayName ?? row.contactChannelUserId,
     ticketNumber: row.ticketNumber,
     preview: row.lastMessagePreview,
+    avatarUrl: row.contactAvatarUrl,
+    mediaKind: row.lastMessageMediaKind,
+    mediaLabel: row.lastMessageMediaKind
+      ? deps.t.has(`mediaKinds.${row.lastMessageMediaKind}`)
+        ? deps.t(`mediaKinds.${row.lastMessageMediaKind}`)
+        : row.lastMessageMediaKind
+      : null,
+    waitingLabel:
+      row.awaitingReply && row.lastMessageAt
+        ? deps.t("awaitingFor", { time: deps.format.relativeTime(row.lastMessageAt) })
+        : null,
     timeLabel: deps.format.relativeTime(row.lastMessageAt ?? row.createdAt),
     statusLabel: UNIFORM_STATUS_VIEWS.has(deps.view)
       ? null
@@ -67,6 +79,7 @@ function toQueueRow(row: ConversationListRow, deps: MapDeps): QueueRowView {
     assigneeName: row.assigneeName,
     channelName: deps.showChannel ? deps.channelName(row.channelConnectionId) : null,
     awaitingReply: row.awaitingReply,
+    unreadCount: row.unreadCount,
     snoozedLabel: snoozed
       ? deps.t("snoozedUntil", {
           date: deps.format.dateTime(snoozed, { dateStyle: "short", timeStyle: "short" }),
@@ -233,9 +246,9 @@ export default async function InboxPage({
       </section>
 
       {selectedId && (
-        <aside className="border-line w-inbox-aside-sm wide:w-inbox-aside hidden shrink-0 overflow-y-auto border-l p-4 xl:block">
+        <AsideShell openLabel={t("openAside")} closeLabel={t("closeAside")}>
           <ConversationAside conversationId={selectedId} />
-        </aside>
+        </AsideShell>
       )}
     </main>
   );

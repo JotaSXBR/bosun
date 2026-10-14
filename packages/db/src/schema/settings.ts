@@ -46,6 +46,9 @@ export const organizationSettings = pgTable(
     observerIdleMinutes: integer().notNull().default(15),
     // Interval mode upgrade: scan enqueues a draft instead of a nudge.
     observerAutoDraft: boolean().notNull().default(false),
+    // Inbound audio messages get a STT pass (job `transcribe-audio`)
+    // when the org has a BYOK credential — spec channel-whatsapp.md §5.
+    aiTranscribeAudio: boolean().notNull().default(true),
     // Last time the observer-scan sweep ran for this org (per-org cadence).
     observerLastScanAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
