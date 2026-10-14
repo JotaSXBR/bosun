@@ -3,7 +3,8 @@
 // media lookup feeds the authenticated /api/media proxy route.
 import type { MessageContent } from "@crm/channels";
 import type { Database } from "@crm/db";
-import { withTenant } from "@crm/db";
+import { schema, withTenant } from "@crm/db";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { AuthorizationError, DomainError, NotFoundError } from "../../errors";
@@ -15,6 +16,8 @@ import { getMessage, listMessageEdits as repoListMessageEdits } from "./reposito
 import type { ConversationIdInput, MessageActionInput } from "./schemas";
 import { conversationIdInput, messageActionInput } from "./schemas";
 import { canInspectMessageHistory } from "./service";
+
+const { conversations } = schema;
 
 const messageIdInput = z.object({ messageId: z.uuid() });
 
@@ -83,18 +86,35 @@ export async function getMessageEdits(
 
 /**
  * Requires messaging:read. Resolves a stored media message for the proxy
- * route: the content (url/storageKey/mime) plus the connection needed to
- * build the provider client for provider-hosted media.
+ * route: the content (url/storageKey/mime), the connection needed to
+ * build the provider client, and the external ids (message + conversation
+ * chatId) that the provider's by-id media download fallback needs.
  */
 export async function getMessageMedia(
   db: Database,
   ctx: TenantContext,
   input: { messageId: string },
-): Promise<{ content: MessageContent; channelConnectionId: string }> {
+): Promise<{
+  content: MessageContent;
+  channelConnectionId: string;
+  externalId: string | null;
+  conversationExternalId: string | null;
+}> {
   assertPermission(ctx, { messaging: ["read"] });
   const parsed = messageIdInput.parse(input);
-  const message = await withTenant(db, ctx.organizationId, (tx) =>
-    getMessage(tx, parsed.messageId),
+  const { message, conversationExternalId } = await withTenant(
+    db,
+    ctx.organizationId,
+    async (tx) => {
+      const row = await getMessage(tx, parsed.messageId);
+      if (!row) return { message: row, conversationExternalId: null };
+      const [conv] = await tx
+        .select({ externalId: conversations.externalId })
+        .from(conversations)
+        .where(eq(conversations.id, row.conversationId))
+        .limit(1);
+      return { message: row, conversationExternalId: conv?.externalId ?? null };
+    },
   );
   if (!message) throw new NotFoundError("Message", parsed.messageId);
   // Revoked media follows the same role gate as the text "ver original".
@@ -105,7 +125,12 @@ export async function getMessageMedia(
   if (content.type !== "media") {
     throw new DomainError("MESSAGE_NOT_MEDIA", "Message has no media content");
   }
-  return { content, channelConnectionId: message.channelConnectionId };
+  return {
+    content,
+    channelConnectionId: message.channelConnectionId,
+    externalId: message.externalId,
+    conversationExternalId,
+  };
 }
 
 export type ResolvedMediaBody = {
@@ -121,6 +146,11 @@ export type MediaResolverDeps = {
     channelConnectionId: string,
     url: string,
   ) => Promise<ResolvedMediaBody | null>;
+  fetchMessageMedia?: (
+    channelConnectionId: string,
+    chatId: string,
+    messageExternalId: string,
+  ) => Promise<ResolvedMediaBody | null>;
 };
 
 /**
@@ -134,7 +164,8 @@ export async function resolveMessageMedia(
   input: { messageId: string },
   deps: MediaResolverDeps,
 ): Promise<ResolvedMediaBody | null> {
-  const { content, channelConnectionId } = await getMessageMedia(db, ctx, input);
+  const { content, channelConnectionId, externalId, conversationExternalId } =
+    await getMessageMedia(db, ctx, input);
   if (content.type !== "media") return null;
   if (content.storageKey) {
     // Only tenant-owned keys are servable — the field is client-writable
@@ -149,10 +180,28 @@ export async function resolveMessageMedia(
       filename: content.filename,
     };
   }
-  if (content.source.type !== "url" || !content.source.url || !deps.fetchProviderMedia) {
+  if (content.source.type !== "url" || !content.source.url) {
     return null;
   }
-  const media = await deps.fetchProviderMedia(channelConnectionId, content.source.url);
+  // Stored url first (provider-hosted /api/files/* paths). When that fetch
+  // is refused or dead, fall back to the provider's by-id download —
+  // sticker payloads carry WhatsApp CDN .enc urls that aren't fetchable.
+  // Provider failures resolve to null so the proxy answers 404, not 500.
+  let media: ResolvedMediaBody | null = null;
+  if (deps.fetchProviderMedia) {
+    try {
+      media = await deps.fetchProviderMedia(channelConnectionId, content.source.url);
+    } catch {
+      media = null;
+    }
+  }
+  if (!media && deps.fetchMessageMedia && externalId && conversationExternalId) {
+    try {
+      media = await deps.fetchMessageMedia(channelConnectionId, conversationExternalId, externalId);
+    } catch {
+      media = null;
+    }
+  }
   if (!media) return null;
   return {
     body: media.body,

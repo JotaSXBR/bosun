@@ -174,8 +174,17 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   defaults do Next (proxy buffer 10 MB + Server Actions 1 MB —
   `media-upload.ts` anunciava 64 MB) → ambos em `65mb` + composer/
   gravador com catch (toast + reset) e checagem de tamanho no client.
-  Resta re-smoke após deploy + `sendVoice` mimetype ogg/opus +
-  `WAHA_S3_*` + avatarUrl;
+  Resta `sendVoice` mimetype ogg/opus + avatarUrl;
+  **re-smoke 2026-10-14** (PR #40 deployado): arquivo >10 MB envia ✅,
+  mic pede permissão ✅, **mas** (a) figurinha seguia quebrada — GOWS
+  emite `media.url` = `mmg.whatsapp.net/….enc` (CDN criptografado, não
+  `/api/files/`); fix = fallback `fetchMessageMedia` →
+  `downloadMedia=true` no WAHA devolve `/api/files/*` local; fetch por
+  URL falho agora cai no por-id e vira 404 (não 500); (b) áudio gravado
+  mostrava 0:00 — blob MediaRecorder sem metadado de duração; fix =
+  self-heal no `AudioPlayer` (probe currentTime) + `durationHint` com o
+  elapsed medido; preview usa o mesmo `AudioPlayer` do bubble.
+  Aguarda deploy + re-smoke da figurinha/áudio;
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);

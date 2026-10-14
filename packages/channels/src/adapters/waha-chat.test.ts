@@ -214,6 +214,32 @@ describe("WahaChannelProvider — chat actions", () => {
     );
     expect(calls).toHaveLength(0);
   });
+
+  it("fetchMessageMedia downloads the media url the message GET returns", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch((url) =>
+      url.includes("downloadMedia=true")
+        ? { json: { media: { url: "http://localhost:3000/api/files/x.webp" } } }
+        : { json: {} },
+    );
+    const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
+    expect(media).not.toBeNull();
+    expect(calls).toHaveLength(2);
+    // Hop 1: ask WAHA to download the message's media on demand.
+    expect(calls[0]?.url).toBe(
+      "https://waha.example.com/api/default/chats/7911%40c.us/messages/false_7911%40c.us_M1?downloadMedia=true",
+    );
+    expect(calls[0]?.init?.headers?.["X-Api-Key"]).toBe("key-1");
+    // Hop 2: the WAHA-stamped localhost url is re-rooted onto baseUrl.
+    expect(calls[1]?.url).toBe("https://waha.example.com/api/files/x.webp");
+    expect(calls[1]?.init?.headers?.["X-Api-Key"]).toBe("key-1");
+  });
+
+  it("fetchMessageMedia returns null when the message carries no media url", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch(() => ({ json: { id: "m1" } }));
+    const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
+    expect(media).toBeNull();
+    expect(calls).toHaveLength(1);
+  });
 });
 
 describe("WahaChannelProvider — reply and voice notes", () => {

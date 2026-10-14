@@ -67,6 +67,12 @@ parser (`dc43179`):
   `baseUrl` confiável. Outra origem/path é recusada (não vazar o
   `X-Api-Key`). Sem isso toda mídia inbound quebra (bug do smoke
   2026-10-14).
+- **Sticker/mídia sem arquivo local**: GOWS pode emitir `media.url` =
+  `https://mmg.whatsapp.net/….enc` (CDN criptografado do WhatsApp — não
+  serve pra renderizar). Quando o fetch por URL falha, o resolver cai em
+  `fetchMessageMedia(chatId, externalId)` → `GET /api/{session}/chats/
+{chatId}/messages/{id}?downloadMedia=true` que força o WAHA a baixar e
+  devolve `media.url` local `/api/files/*` (smoke 2026-10-14).
 
 ## Envs do container WAHA (produção)
 

@@ -30,6 +30,12 @@ async function resolveMedia(
       if (!media) return null;
       return { body: media.body, contentType: media.contentType ?? undefined };
     },
+    fetchMessageMedia: async (connectionId, chatId, externalId) => {
+      const provider = await providerForConnection(db, tenant.organizationId, connectionId);
+      const media = await provider.fetchMessageMedia?.(chatId, externalId);
+      if (!media) return null;
+      return { body: media.body, contentType: media.contentType ?? undefined };
+    },
   };
   return resolveMessageMedia(db, tenant, { messageId }, deps);
 }
