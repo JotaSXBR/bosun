@@ -1,6 +1,6 @@
 import { NotFoundError } from "@crm/core";
 import { draftPayloadSchema } from "@crm/core/drafts";
-import type { ConversationDetailRow } from "@crm/core/messaging";
+import type { ConversationDetailRow, MessageWithAuthorRow } from "@crm/core/messaging";
 import { canInspectMessageHistory } from "@crm/core/messaging";
 import type { AgentSuggestionRow } from "@crm/core/suggestions";
 import { Badge } from "@crm/design-system/components/badge";
@@ -17,14 +17,17 @@ import { DraftCard } from "@/components/draft-card";
 import { MessageItem } from "@/components/message-item";
 import { NudgeCard } from "@/components/nudge-card";
 import { PresenceIndicator } from "@/components/presence-indicator";
+import { JumpAnchor, ThreadSearch } from "@/components/thread-search";
 import { TicketActions } from "@/components/ticket-actions";
 import { TICKET_STATUS } from "@/lib/ticket-status";
 import {
   getConversation,
   getLastInboundAt,
   hasLlmCredential,
+  listMacros,
   listMembers,
   listMessages,
+  listMessagesAround,
   listSectors,
   listThreadCardsForConversation,
 } from "@/server/services";
@@ -50,9 +53,12 @@ function TicketHeader({
           {conversation.contactDisplayName ?? conversation.contactChannelUserId}{" "}
           <PresenceIndicator conversationId={conversation.id} />
         </div>
-        <Badge tone={status?.tone ?? "neutral"}>
-          {ts.has(conversation.status) ? ts(conversation.status) : conversation.status}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <ThreadSearch conversationId={conversation.id} />
+          <Badge tone={status?.tone ?? "neutral"}>
+            {ts.has(conversation.status) ? ts(conversation.status) : conversation.status}
+          </Badge>
+        </div>
       </div>
       <p className="text-ink-muted text-sm">
         {t("ticketSeq", {
@@ -74,7 +80,17 @@ function TicketHeader({
  * ticket actions, AI cards and composer. Self-contained: fetches its own
  * data so the inbox page can mount it for the selected `?c=` id.
  */
-export async function ConversationPane({ conversationId }: { conversationId: string }) {
+export async function ConversationPane({
+  conversationId,
+  around,
+  backHref,
+}: {
+  conversationId: string;
+  /** Search-jump target (B1): renders a ±radius window instead of the tail. */
+  around?: string | undefined;
+  /** `/app/inbox?...` with `around` stripped — the "back to end" link. */
+  backHref: string;
+}) {
   const t = await getTranslations("inbox");
   const ts = await getTranslations("ticketStatus");
   const format = await getFormatter();
@@ -92,10 +108,23 @@ export async function ConversationPane({ conversationId }: { conversationId: str
     }
     throw error;
   }
-  const [messages, members, sectors] = await Promise.all([
-    listMessages(ctx, conversationId),
+  // Jump mode: ?around=<id> swaps the tail for a centered window. A stale or
+  // foreign id falls back to the tail instead of erroring the pane.
+  const messagesPromise: Promise<{ rows: MessageWithAuthorRow[]; windowed: boolean }> = around
+    ? listMessagesAround(ctx, conversationId, around)
+        .then((rows) => ({ rows, windowed: true }))
+        .catch((error: unknown) => {
+          if (error instanceof NotFoundError) {
+            return listMessages(ctx, conversationId).then((rows) => ({ rows, windowed: false }));
+          }
+          throw error;
+        })
+    : listMessages(ctx, conversationId).then((rows) => ({ rows, windowed: false }));
+  const [{ rows: messages, windowed }, members, sectors, macros] = await Promise.all([
+    messagesPromise,
     listMembers(ctx),
     listSectors(ctx),
+    listMacros(ctx),
   ]);
 
   const isViewer = ctx.role === "viewer";
@@ -136,6 +165,19 @@ export async function ConversationPane({ conversationId }: { conversationId: str
               : "",
           })}
         </Link>
+      )}
+
+      {windowed && (
+        <div
+          className="border-line bg-raised flex items-center justify-between rounded-md border px-3 py-1.5 text-xs"
+          data-testid="search-window"
+        >
+          <span className="text-ink-muted">{t("searchWindowNotice")}</span>
+          <Link href={backHref} className="text-ink underline underline-offset-2">
+            {t("backToEnd")}
+          </Link>
+          <JumpAnchor messageId={around ?? ""} />
+        </div>
       )}
 
       <ul className="space-y-2" data-testid="message-thread">
@@ -183,6 +225,14 @@ export async function ConversationPane({ conversationId }: { conversationId: str
           conversationId={conversation.id}
           disabled={!canWork}
           draftsEnabled={hasCredential}
+          macros={macros}
+          canProposeMacro={
+            hasPermission(ctx.role, { messaging: ["write"] }) &&
+            ctx.role !== "manager" &&
+            ctx.role !== "admin" &&
+            ctx.role !== "owner" &&
+            !ctx.isPlatformAdmin
+          }
         />
       )}
     </Card>

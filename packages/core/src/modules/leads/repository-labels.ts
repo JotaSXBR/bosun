@@ -2,7 +2,7 @@ import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
 import { and, asc, eq, inArray } from "drizzle-orm";
 
-const { conversationLabels, dealLabels, labels } = schema;
+const { contactLabels, conversationLabels, dealLabels, labels } = schema;
 
 export type LabelRow = typeof labels.$inferSelect;
 
@@ -73,6 +73,35 @@ export async function listConversationLabels(executor: DbExecutor, conversationI
     .where(eq(conversationLabels.conversationId, conversationId))
     .orderBy(asc(labels.name));
   return rows.map((r) => r.label);
+}
+
+/** Contact ↔ label joins — the tags shown on the contact ficha. */
+export async function listContactLabels(executor: DbExecutor, contactId: string) {
+  const rows = await executor
+    .select({ label: labels })
+    .from(contactLabels)
+    .innerJoin(labels, eq(contactLabels.labelId, labels.id))
+    .where(eq(contactLabels.contactId, contactId))
+    .orderBy(asc(labels.name));
+  return rows.map((r) => r.label);
+}
+
+export async function replaceContactLabels(
+  executor: DbExecutor,
+  values: { organizationId: string; contactId: string; labelIds: string[] },
+) {
+  await executor.delete(contactLabels).where(eq(contactLabels.contactId, values.contactId));
+  if (values.labelIds.length === 0) return;
+  await executor
+    .insert(contactLabels)
+    .values(
+      values.labelIds.map((labelId) => ({
+        organizationId: values.organizationId,
+        contactId: values.contactId,
+        labelId,
+      })),
+    )
+    .onConflictDoNothing({ target: [contactLabels.contactId, contactLabels.labelId] });
 }
 
 export async function replaceDealLabels(

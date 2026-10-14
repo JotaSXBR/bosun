@@ -8,7 +8,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { AuthorizationError, NotFoundError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
-import { createContact, getContact, listOrgContacts } from "./service";
+import { createLabel, listContactLabels, setContactLabels } from "../leads";
+import { createContact, getContact, listOrgContacts, updateContactProfile } from "./service";
 
 const { contacts, organizationMembers, organizations, users } = schema;
 
@@ -174,5 +175,89 @@ describe("contacts service", () => {
     await expect(getContact(db, ctx(orgB, memberB, "agent"), contact.id)).rejects.toThrowError(
       NotFoundError,
     );
+  });
+
+  it("updateContactProfile edits name + metadata fields; empty clears", async () => {
+    const contact = await createContact(db, ctx(orgA, memberA, "agent"), {
+      displayName: "Ficha Inicial",
+      phone: "+5511977776666",
+    });
+    const updated = await updateContactProfile(db, ctx(orgA, memberA, "agent"), {
+      contactId: contact.id,
+      displayName: "Ficha Editada",
+      email: "ficha@crm.local",
+      phone: "+5511900001111",
+      notes: "VIP — responde rápido",
+    });
+    expect(updated.displayName).toBe("Ficha Editada");
+    const meta = updated.metadata;
+    expect(meta.email).toBe("ficha@crm.local");
+    expect(meta.phone).toBe("+5511900001111");
+    expect(meta.notes).toBe("VIP — responde rápido");
+
+    const cleared = await updateContactProfile(db, ctx(orgA, memberA, "agent"), {
+      contactId: contact.id,
+      email: "",
+    });
+    const meta2 = cleared.metadata;
+    expect(meta2.email).toBeUndefined();
+    expect(meta2.phone).toBe("+5511900001111");
+  });
+
+  it("updateContactProfile rejects viewer and cross-tenant write", async () => {
+    const contact = await createContact(db, ctx(orgA, memberA, "agent"), {
+      displayName: "Protegido",
+      phone: "+5511955554444",
+    });
+    await expect(
+      updateContactProfile(db, ctx(orgA, memberA, "viewer"), {
+        contactId: contact.id,
+        displayName: "X",
+      }),
+    ).rejects.toThrowError(AuthorizationError);
+    await expect(
+      updateContactProfile(db, ctx(orgB, memberB, "admin"), {
+        contactId: contact.id,
+        displayName: "X",
+      }),
+    ).rejects.toThrowError(NotFoundError);
+  });
+
+  it("contact labels: set → list → replace semantics, tenant-isolated", async () => {
+    const labelA = await createLabel(db, ctx(orgA, memberA, "admin"), {
+      name: `vip-${crypto.randomUUID().slice(0, 6)}`,
+      color: "green",
+    });
+    const labelB = await createLabel(db, ctx(orgA, memberA, "admin"), {
+      name: `churn-${crypto.randomUUID().slice(0, 6)}`,
+      color: "red",
+    });
+    const contact = await createContact(db, ctx(orgA, memberA, "agent"), {
+      displayName: "Tagged",
+      phone: "+5511944443333",
+    });
+
+    await setContactLabels(db, ctx(orgA, memberA, "agent"), {
+      contactId: contact.id,
+      labelIds: [labelA.id, labelB.id],
+    });
+    let tags = await listContactLabels(db, ctx(orgA, memberA, "viewer"), contact.id);
+    expect(tags.map((l) => l.id).sort()).toEqual([labelA.id, labelB.id].sort());
+
+    // Replace semantics — omitted label drops off.
+    await setContactLabels(db, ctx(orgA, memberA, "agent"), {
+      contactId: contact.id,
+      labelIds: [labelB.id],
+    });
+    tags = await listContactLabels(db, ctx(orgA, memberA, "viewer"), contact.id);
+    expect(tags.map((l) => l.id)).toEqual([labelB.id]);
+
+    // Cross-tenant: org B cannot tag org A's contact.
+    await expect(
+      setContactLabels(db, ctx(orgB, memberB, "admin"), {
+        contactId: contact.id,
+        labelIds: [],
+      }),
+    ).rejects.toThrowError(NotFoundError);
   });
 });

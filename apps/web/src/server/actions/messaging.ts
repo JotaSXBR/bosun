@@ -5,6 +5,7 @@ import { DomainError } from "@crm/core";
 import type {
   ConversationIdInput,
   InternalNoteInput,
+  MessageSearchHit,
   SendOutboundInput,
   SnoozeConversationInput,
   TransferConversationInput,
@@ -16,6 +17,7 @@ import {
   reopenTicket,
   resolveConversation,
   resumeTicket,
+  searchConversationMessages,
   sendOutboundMessage,
   setConversationInProgress,
   setConversationSnooze,
@@ -192,5 +194,22 @@ export async function resumeTicketAction(
     return { ok: true, id: ticket.id };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível criar o follow-up.") };
+  }
+}
+
+export type SearchMessagesResult =
+  { ok: true; hits: MessageSearchHit[] } | { ok: false; error: string };
+
+/** B1 header search — hit list for the dropdown; the jump re-renders via ?around. */
+export async function searchMessagesAction(input: {
+  conversationId: string;
+  query: string;
+}): Promise<SearchMessagesResult> {
+  const ctx = await requireTenantContext();
+  try {
+    const hits = await searchConversationMessages(getDb(), ctx, input);
+    return { ok: true, hits };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível buscar na conversa.") };
   }
 }

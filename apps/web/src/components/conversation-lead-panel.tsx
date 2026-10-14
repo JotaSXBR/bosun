@@ -1,7 +1,5 @@
 "use client";
 
-import type { LabelRow } from "@crm/core/leads";
-import { Badge } from "@crm/design-system/components/badge";
 import { Button } from "@crm/design-system/components/button";
 import { Card } from "@crm/design-system/components/card";
 import { Dialog } from "@crm/design-system/components/dialog";
@@ -9,18 +7,15 @@ import { Input } from "@crm/design-system/components/input";
 import { Label } from "@crm/design-system/components/label";
 import { Select } from "@crm/design-system/components/select";
 import { toast } from "@crm/design-system/components/toast";
-import { cn } from "@crm/design-system/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
-import { LabelPicker } from "@/components/label-picker";
-import { formatValueCents, paletteStyle } from "@/components/palette";
+import { formatValueCents } from "@/components/palette";
 import {
   createDealFromConversationAction,
   moveDealAction,
-  setConversationLabelsAction,
   updateDealAction,
 } from "@/server/actions/leads";
 import type { ConversationDeal, FunnelWithStages } from "@/server/services";
@@ -211,19 +206,13 @@ export function ConversationLeadPanel({
   contactName,
   deal,
   funnels,
-  allLabels,
-  conversationLabels,
   canWrite,
-  canManage,
 }: {
   conversationId: string;
   contactName: string;
   deal: ConversationDeal;
   funnels: FunnelWithStages[];
-  allLabels: LabelRow[];
-  conversationLabels: LabelRow[];
   canWrite: boolean;
-  canManage: boolean;
 }) {
   const t = useTranslations("leads");
   const router = useRouter();
@@ -301,37 +290,6 @@ export function ConversationLeadPanel({
           <p className="text-ink-muted text-xs">
             {readyFunnels.length === 0 ? t("panel.noFunnelHint") : t("panel.noDeal")}
           </p>
-        )}
-      </Card>
-
-      <Card bodyClassName="space-y-2" title={t("labels")}>
-        <div className="flex flex-wrap gap-1">
-          {conversationLabels.map((label) => (
-            <Badge
-              key={label.id}
-              tone="neutral"
-              className={cn("text-xs", paletteStyle(label.color).chip)}
-            >
-              {label.name}
-            </Badge>
-          ))}
-          {conversationLabels.length === 0 && (
-            <span className="text-ink-muted text-xs">{t("panel.noLabelsShort")}</span>
-          )}
-        </div>
-        {canWrite && (
-          <LabelPicker
-            allLabels={allLabels}
-            selectedIds={conversationLabels.map((l) => l.id)}
-            canCreate={canManage}
-            onSave={async (labelIds) => {
-              const result = await setConversationLabelsAction({ conversationId, labelIds });
-              if (result.ok) router.refresh();
-              return result.ok
-                ? { ok: true }
-                : { ok: false, error: "error" in result ? result.error : undefined };
-            }}
-          />
         )}
       </Card>
 

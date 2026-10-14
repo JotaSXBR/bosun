@@ -20,18 +20,22 @@ import type { BoardData, DealRow, FunnelRow, LabelRow, StageRow } from "@crm/cor
 import {
   getBoard,
   getDealForConversation,
+  listContactLabels as listContactLabelsCore,
   listConversationLabels,
   listFunnels,
   listLabels,
   listStagesForFunnels,
   searchContacts,
 } from "@crm/core/leads";
+import type { MacroRow } from "@crm/core/macros";
+import { listOrgMacros } from "@crm/core/macros";
 import type {
   ContactTicketRow,
   ConversationDetailRow,
   ConversationListRow,
   ConversationView,
   ListConversationsInput,
+  MessageSearchHit,
   MessageWithAuthorRow,
   TransferToMeRow,
 } from "@crm/core/messaging";
@@ -41,8 +45,10 @@ import {
   listContactTickets as svcListContactTickets,
   listConversationCounts as svcListConversationCounts,
   listConversationMessages,
+  listConversationMessagesAround,
   listMyTransfers as svcListMyTransfers,
   listTenantConversations,
+  searchConversationMessages as svcSearchMessages,
 } from "@crm/core/messaging";
 import type { OnboardingChecklistRow } from "@crm/core/onboarding";
 import { getChecklist } from "@crm/core/onboarding";
@@ -61,7 +67,7 @@ import {
 import type { PlatformSettingSummary } from "@crm/core/platform";
 import { isProductConfigured, listPlatformSettingSummaries } from "@crm/core/platform";
 import type { AgentSuggestionRow } from "@crm/core/suggestions";
-import { listAgentSuggestions } from "@crm/core/suggestions";
+import { listAgentSuggestions, listPendingMacroSuggestions } from "@crm/core/suggestions";
 import type { TeamWithMembers } from "@crm/core/teams";
 import { listTeams } from "@crm/core/teams";
 import { getDb, withTenant } from "@crm/db";
@@ -139,6 +145,24 @@ export async function listMessages(
   conversationId: string,
 ): Promise<MessageWithAuthorRow[]> {
   return listConversationMessages(getDb(), ctx, { conversationId });
+}
+
+/** B1 — window around a search hit (jump). NotFoundError on bad id. */
+export async function listMessagesAround(
+  ctx: TenantContext,
+  conversationId: string,
+  messageId: string,
+): Promise<MessageWithAuthorRow[]> {
+  return listConversationMessagesAround(getDb(), ctx, { conversationId, messageId });
+}
+
+/** B1 — in-thread text search hits for the header dropdown. */
+export async function searchMessages(
+  ctx: TenantContext,
+  conversationId: string,
+  query: string,
+): Promise<MessageSearchHit[]> {
+  return svcSearchMessages(getDb(), ctx, { conversationId, query });
 }
 
 export async function listMembers(ctx: TenantContext): Promise<OrgMember[]> {
@@ -219,6 +243,10 @@ export async function getConversationDeal(
   return getDealForConversation(getDb(), ctx, conversationId);
 }
 
+export async function listContactLabels(ctx: TenantContext, contactId: string) {
+  return listContactLabelsCore(getDb(), ctx, contactId);
+}
+
 export async function getConversationLabels(
   ctx: TenantContext,
   conversationId: string,
@@ -289,6 +317,14 @@ export async function listOrgKnowledge(ctx: TenantContext): Promise<KnowledgeEnt
 
 export async function listOrgSuggestions(ctx: TenantContext): Promise<AgentSuggestionRow[]> {
   return listAgentSuggestions(getDb(), ctx, { limit: 100 });
+}
+
+export async function listMacros(ctx: TenantContext): Promise<MacroRow[]> {
+  return listOrgMacros(getDb(), ctx);
+}
+
+export async function listPendingMacros(ctx: TenantContext): Promise<AgentSuggestionRow[]> {
+  return listPendingMacroSuggestions(getDb(), ctx);
 }
 
 export async function listOrgBrainEntries(ctx: TenantContext): Promise<MemoryEntryRow[]> {

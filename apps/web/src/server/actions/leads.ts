@@ -9,6 +9,7 @@ import type {
   CreateStageInput,
   MoveDealInput,
   MoveStageInput,
+  SetContactLabelsInput,
   SetConversationLabelsInput,
   SetDealLabelsInput,
   UpdateDealInput,
@@ -29,6 +30,7 @@ import {
   moveDeal,
   moveStage,
   searchContacts,
+  setContactLabels,
   setConversationLabels,
   setDealLabels,
   updateDeal,
@@ -280,6 +282,22 @@ export async function setConversationLabelsAction(input: SetConversationLabelsIn
     return {
       ok: false as const,
       error: errorMessage(error, "Não foi possível atualizar as etiquetas"),
+    };
+  }
+}
+
+/** Tags do contato (E2) — replace semantics, same leads:write gate. */
+export async function setContactLabelsAction(input: SetContactLabelsInput) {
+  const ctx = await requireTenantContext();
+  try {
+    await setContactLabels(getDb(), ctx, input);
+    revalidatePath("/app/inbox");
+    revalidatePath("/app/contacts");
+    return { ok: true as const };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: errorMessage(error, "Não foi possível atualizar as tags"),
     };
   }
 }

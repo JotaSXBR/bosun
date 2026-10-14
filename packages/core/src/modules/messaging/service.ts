@@ -18,6 +18,7 @@ import type {
   ContactTicketRow,
   ConversationDetailRow,
   ConversationListRow,
+  MessageSearchHit,
   MessageWithAuthorRow,
 } from "./reads";
 import {
@@ -26,6 +27,8 @@ import {
   listConversations,
   listConversationViewCounts,
   listMessages,
+  listMessagesAround,
+  searchConversationMessages as searchMessages,
 } from "./reads";
 import type { TransferToMeRow } from "./reads-transfers";
 import { listTransfersTo } from "./reads-transfers";
@@ -50,12 +53,16 @@ import type {
   ConversationView,
   ListConversationsInput,
   ListMessagesInput,
+  MessagesAroundInput,
+  SearchMessagesInput,
 } from "./schemas";
 import {
   contactTicketsInput,
   conversationIdInput,
   listConversationsInput,
   listMessagesInput,
+  messagesAroundInput,
+  searchMessagesInput,
 } from "./schemas";
 
 const { conversations } = schema;
@@ -152,7 +159,7 @@ async function ingestMessageReceived(
   });
   // Avatar heal: enqueue when the contact has no photo and the last
   // attempt is stale — covers both first-touch and lazy re-pull.
-  const avatarFetchedAt = (contact.metadata as Record<string, unknown>).avatarFetchedAt;
+  const avatarFetchedAt = contact.metadata.avatarFetchedAt;
   const avatarStale =
     typeof avatarFetchedAt !== "string" ||
     Date.now() - Date.parse(avatarFetchedAt) > AVATAR_HEAL_AFTER_MS;
@@ -528,11 +535,52 @@ export async function listConversationMessages(
   const rows = await listMessages(db, ctx.organizationId, parsed.conversationId, parsed.limit);
   if (canInspectMessageHistory(ctx)) return rows;
   // Revoked content is kept for audit but redacted for non-privileged roles.
-  return rows.map((row) => ({
+  return rows.map(redactRevoked);
+}
+
+function redactRevoked(row: MessageWithAuthorRow): MessageWithAuthorRow {
+  return {
     ...row,
     content: row.revokedAt ? { type: "text" as const, text: "" } : row.content,
     quoted: row.quoted?.revoked ? { ...row.quoted, preview: null } : row.quoted,
-  }));
+  };
+}
+
+/**
+ * Requires messaging:read (every org member). B1 thread search — matches
+ * text/caption case-insensitively, returns hit metadata for the dropdown.
+ */
+export async function searchConversationMessages(
+  db: Database,
+  ctx: TenantContext,
+  input: SearchMessagesInput,
+): Promise<MessageSearchHit[]> {
+  assertPermission(ctx, { messaging: ["read"] });
+  const parsed = searchMessagesInput.parse(input);
+  return searchMessages(db, ctx.organizationId, parsed.conversationId, parsed.query);
+}
+
+/**
+ * Requires messaging:read. B1 jump — the window around a search hit,
+ * chronological, same revoked-redaction as the tail window.
+ */
+export async function listConversationMessagesAround(
+  db: Database,
+  ctx: TenantContext,
+  input: MessagesAroundInput,
+): Promise<MessageWithAuthorRow[]> {
+  assertPermission(ctx, { messaging: ["read"] });
+  const parsed = messagesAroundInput.parse(input);
+  const rows = await listMessagesAround(
+    db,
+    ctx.organizationId,
+    parsed.conversationId,
+    parsed.messageId,
+    parsed.radius,
+  );
+  if (!rows) throw new NotFoundError("Message", parsed.messageId);
+  if (canInspectMessageHistory(ctx)) return rows;
+  return rows.map(redactRevoked);
 }
 
 /**

@@ -10,8 +10,10 @@ export {
 export {
   createLabel,
   deleteLabel,
+  listContactLabels,
   listConversationLabels,
   listLabels,
+  setContactLabels,
   setConversationLabels,
   setDealLabels,
   updateLabel,
@@ -26,6 +28,7 @@ export type {
   CustomAttributes,
   MoveDealInput,
   MoveStageInput,
+  SetContactLabelsInput,
   SetConversationLabelsInput,
   SetDealLabelsInput,
   UpdateDealInput,

@@ -13,8 +13,10 @@ export {
   createSystemSuggestion,
   createSystemSuggestions,
   listAgentSuggestions,
+  listPendingMacroSuggestions,
   listPendingMemoryContents,
   proposeKnowledgeEntry,
+  proposeMacroEntry,
   proposeMemoryEntry,
   rejectSuggestion,
 } from "./service";

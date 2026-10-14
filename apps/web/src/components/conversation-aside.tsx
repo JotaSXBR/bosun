@@ -5,12 +5,14 @@ import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 
+import { ContactFicha } from "@/components/contact-ficha";
 import { ConversationLeadPanel } from "@/components/conversation-lead-panel";
 import { TICKET_STATUS } from "@/lib/ticket-status";
 import {
   getConversation,
   getConversationDeal,
   getConversationLabels,
+  listContactLabels,
   listContactTickets,
   listFunnelsWithStages,
   listOrgLabels,
@@ -36,24 +38,35 @@ export async function ConversationAside({ conversationId }: { conversationId: st
     }
     throw error;
   }
-  const [deal, funnels, labels, conversationLabels, history] = await Promise.all([
+  const [deal, funnels, labels, conversationLabels, contactLabels, history] = await Promise.all([
     getConversationDeal(ctx, conversationId),
     listFunnelsWithStages(ctx),
     listOrgLabels(ctx),
     getConversationLabels(ctx, conversationId),
+    listContactLabels(ctx, conversation.contactId),
     listContactTickets(ctx, conversation.contactId, conversationId),
   ]);
   return (
     <>
+      <ContactFicha
+        contactId={conversation.contactId}
+        conversationId={conversation.id}
+        displayName={conversation.contactDisplayName ?? ""}
+        channelUserId={conversation.contactChannelUserId}
+        avatarUrl={conversation.contactAvatarUrl}
+        metadata={conversation.contactMetadata}
+        contactLabels={contactLabels}
+        conversationLabels={conversationLabels}
+        allLabels={labels}
+        canWrite={hasPermission(ctx.role, { messaging: ["write"] })}
+        canManageLabels={hasPermission(ctx.role, { leads: ["manage"] })}
+      />
       <ConversationLeadPanel
         conversationId={conversation.id}
         contactName={conversation.contactDisplayName ?? conversation.contactChannelUserId}
         deal={deal}
         funnels={funnels}
-        allLabels={labels}
-        conversationLabels={conversationLabels}
         canWrite={ctx.role !== "viewer"}
-        canManage={hasPermission(ctx.role, { leads: ["manage"] })}
       />
       <Card bodyClassName="space-y-2 text-sm" title={t("contactHistory")} className="mt-4">
         {history.length === 0 ? (

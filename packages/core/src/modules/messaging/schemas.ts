@@ -125,3 +125,18 @@ export const presenceInput = z.object({
   presence: z.enum(["typing", "recording", "paused"]),
 });
 export type PresenceInput = z.input<typeof presenceInput>;
+
+/** B1 — in-thread text search (ILIKE on text/caption, newest first). */
+export const searchMessagesInput = z.object({
+  conversationId: z.uuid(),
+  query: z.string().trim().min(1).max(200),
+});
+export type SearchMessagesInput = z.input<typeof searchMessagesInput>;
+
+/** B1 — jump window: `radius` messages on each side of `messageId`. */
+export const messagesAroundInput = z.object({
+  conversationId: z.uuid(),
+  messageId: z.uuid(),
+  radius: z.number().int().min(1).max(50).default(20),
+});
+export type MessagesAroundInput = z.input<typeof messagesAroundInput>;

@@ -5,7 +5,7 @@
 // "ver original" expanders. Mutations are server actions → router.refresh().
 import { cn } from "@crm/design-system/lib/utils";
 import { useFormatter, useTranslations } from "next-intl";
-import { useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { setReplyTarget } from "@/lib/reply-bridge";
 import { useAction } from "@/lib/use-action";
@@ -163,21 +163,10 @@ function MessageEditForm({
   );
 }
 
-function MessageMenuPanel({
-  t,
-  tc,
-  canReact,
-  canEdit,
-  canDelete,
-  confirming,
-  pending,
-  onReact,
-  onReply,
-  onEdit,
-  onDeleteStart,
-  onDeleteCancel,
-  onDeleteConfirm,
-}: {
+const MENU_PANEL_CLASS =
+  "bg-raised text-ink shadow-raised flex min-w-36 flex-col gap-0.5 rounded-md border p-1 text-xs";
+
+type MenuItemsProps = {
   t: ReturnType<typeof useTranslations>;
   tc: ReturnType<typeof useTranslations>;
   canReact: boolean;
@@ -191,13 +180,26 @@ function MessageMenuPanel({
   onDeleteStart: () => void;
   onDeleteCancel: () => void;
   onDeleteConfirm: () => void;
-}) {
+};
+
+function MessageMenuItems({
+  t,
+  tc,
+  canReact,
+  canEdit,
+  canDelete,
+  confirming,
+  pending,
+  onReact,
+  onReply,
+  onEdit,
+  onDeleteStart,
+  onDeleteCancel,
+  onDeleteConfirm,
+}: MenuItemsProps) {
   const item = "hover:bg-raised rounded-xs px-2 py-1 text-left";
   return (
-    <span
-      className="bg-raised text-ink shadow-raised absolute top-full right-0 z-10 flex min-w-36 flex-col gap-0.5 rounded-md border p-1 text-xs"
-      data-testid="message-menu"
-    >
+    <>
       {canReact && (
         <span className="flex gap-0.5 px-1 py-0.5">
           {QUICK_REACTIONS.map((emoji) => (
@@ -243,7 +245,168 @@ function MessageMenuPanel({
             {t("delete")}
           </button>
         ))}
+    </>
+  );
+}
+
+function MessageMenuPanel(props: MenuItemsProps) {
+  return (
+    <span
+      className={cn(MENU_PANEL_CLASS, "absolute top-full right-0 z-10")}
+      data-testid="message-menu"
+    >
+      <MessageMenuItems {...props} />
     </span>
+  );
+}
+
+/** Only one floating context menu at a time — opening closes the previous. */
+let closeCurrentContextMenu: (() => void) | null = null;
+
+/**
+ * Right-click (contextmenu) trigger: wraps a message bubble and opens the
+ * same actions as the "⋯" menu, but as a floating panel at the cursor.
+ * `display: contents` keeps the layout identical — the wrapper is an event
+ * boundary only. Nothing to show → the native menu stays.
+ */
+export function MessageContextMenu({
+  children,
+  conversationId,
+  messageId,
+  currentText,
+  canReact,
+  canEdit,
+  canDelete,
+  replyTarget,
+}: TargetProps & {
+  children: React.ReactNode;
+  currentText: string;
+  canReact: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  replyTarget?: { externalId: string; preview: string } | undefined;
+}) {
+  const t = useTranslations("message");
+  const tc = useTranslations("common");
+  const { pending, run } = useAction();
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [draft, setDraft] = useState(currentText);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const enabled = canReact || canEdit || canDelete || !!replyTarget;
+
+  const close = () => {
+    setPos(null);
+    setEditing(false);
+    setConfirming(false);
+    if (closeCurrentContextMenu) closeCurrentContextMenu = null;
+  };
+
+  // Click-away outside the panel, Escape and scroll dismiss it. Clicks
+  // inside (Editar → form, Excluir → confirm) must not close the menu.
+  useEffect(() => {
+    if (!pos) return;
+    const onClick = (e: MouseEvent) => {
+      if (!panelRef.current?.contains(e.target as Node)) close();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("click", onClick);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [pos]);
+
+  const open = (e: React.MouseEvent) => {
+    if (!enabled) return;
+    e.preventDefault();
+    closeCurrentContextMenu?.();
+    setEditing(false);
+    setConfirming(false);
+    setDraft(currentText);
+    setPos({
+      x: Math.min(e.clientX, window.innerWidth - 200),
+      y: Math.min(e.clientY, window.innerHeight - 220),
+    });
+    closeCurrentContextMenu = close;
+  };
+
+  return (
+    <>
+      <div className="contents" onContextMenu={open}>
+        {children}
+      </div>
+      {pos && (
+        <div
+          ref={panelRef}
+          className="fixed top-(--ctx-menu-y) left-(--ctx-menu-x) z-50"
+          style={{ "--ctx-menu-x": `${pos.x}px`, "--ctx-menu-y": `${pos.y}px` } as CSSProperties}
+          data-testid="message-context-menu"
+        >
+          <span className={cn(MENU_PANEL_CLASS, "block", editing && "min-w-64")}>
+            {editing ? (
+              <MessageEditForm
+                tc={tc}
+                draft={draft}
+                pending={pending}
+                onDraftChange={setDraft}
+                onCancel={() => setEditing(false)}
+                onSave={() =>
+                  run(async () => {
+                    const r = await editMessageAction({
+                      conversationId,
+                      messageId,
+                      text: draft.trim(),
+                    });
+                    if (r.ok) close();
+                    return r;
+                  })
+                }
+              />
+            ) : (
+              <MessageMenuItems
+                t={t}
+                tc={tc}
+                canReact={canReact}
+                canEdit={canEdit}
+                canDelete={canDelete}
+                confirming={confirming}
+                pending={pending}
+                onReact={(emoji) => {
+                  close();
+                  run(() => reactToMessageAction({ conversationId, messageId, emoji }));
+                }}
+                onReply={
+                  replyTarget
+                    ? () => {
+                        close();
+                        setReplyTarget(replyTarget);
+                      }
+                    : undefined
+                }
+                onEdit={() => setEditing(true)}
+                onDeleteStart={() => setConfirming(true)}
+                onDeleteCancel={() => setConfirming(false)}
+                onDeleteConfirm={() =>
+                  run(async () => {
+                    const r = await deleteMessageAction({ conversationId, messageId });
+                    if (r.ok) close();
+                    return r;
+                  })
+                }
+              />
+            )}
+          </span>
+        </div>
+      )}
+    </>
   );
 }
 

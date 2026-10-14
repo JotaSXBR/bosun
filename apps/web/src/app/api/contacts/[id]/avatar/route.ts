@@ -29,7 +29,7 @@ export async function GET(
 
   try {
     const contact = await getContact(getDb(), tenant, id);
-    const avatarKey = (contact.metadata as Record<string, unknown>).avatarKey;
+    const avatarKey = contact.metadata.avatarKey;
     if (typeof avatarKey !== "string" || avatarKey.length === 0) {
       return Response.json({ ok: false }, { status: 404 });
     }
