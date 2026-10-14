@@ -232,6 +232,16 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   bloqueado pelo `connect-src 'self'`). Ops pendente: aplicar
   `WAHA_S3_PROXY_FILES=True` no WAHA staging (env confirmadas pelo
   usuário: `WHATSAPP_FILES_LIFETIME=604800` ✅ correto, `WAHA_MEDIA_STORAGE=S3`);
+  **re-smoke 5 2026-10-14** (PR #44 deployado): waveform ✅, áudio ok —
+  figurinha ainda quebrada. Access log do WAHA provou que os dois
+  candidatos (`{session}/{bareId}.webp` + `/{bareId}.webp`) 404am mesmo
+  com `WAHA_S3_PROXY_FILES=True` **ativo** (env confirmada via Coolify
+  API): o objeto S3 é nomeado pelo **externalId serializado completo**
+  (`{session}/false_<chat>_<stanza>.{ext}`) e `media.filename` traz só
+  o bare stanza. Fix: candidatos serialized primeiro (flat + com
+  diretório de sessão), extensão derivada do `media.mimetype` quando
+  filename é null, `localhost` excluído do fetch anônimo (bateria no
+  nosso próprio container);
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);

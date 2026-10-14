@@ -170,6 +170,7 @@ export async function wahaDeleteMessage(
 export type WahaMessageMediaRef = {
   url: string | null;
   filename: string | null;
+  mimetype: string | null;
   error: string | null;
 };
 
@@ -192,6 +193,7 @@ export async function wahaFetchMessageMediaRef(
         .looseObject({
           url: z.string().nullish(),
           filename: z.string().nullish(),
+          mimetype: z.string().nullish(),
           error: z
             .looseObject({ code: z.number().nullish(), details: z.string().nullish() })
             .nullish(),
@@ -205,6 +207,7 @@ export async function wahaFetchMessageMediaRef(
   return {
     url: parsed.media?.url ?? parsed.mediaUrl ?? null,
     filename: parsed.media?.filename ?? null,
+    mimetype: parsed.media?.mimetype ?? null,
     error: mediaError ? `code ${mediaError.code ?? "?"}: ${mediaError.details ?? ""}` : null,
   };
 }
