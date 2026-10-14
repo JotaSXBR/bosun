@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
+import { LocalDateTime } from "@/components/local-date-time";
+
 /** Serialized row — preformatted server-side, no Dates cross the boundary. */
 export interface QueueRowView {
   id: string;
@@ -31,7 +33,8 @@ export interface QueueRowView {
   assigneeName: string | null;
   channelName: string | null;
   awaitingReply: boolean;
-  snoozedLabel: string | null;
+  /** ISO instant the snooze ends — formatted client-side (browser TZ). */
+  snoozedUntil: string | null;
   /** Inbound messages newer than the viewer's read cursor. */
   unreadCount: number;
 }
@@ -74,6 +77,7 @@ function RowMetaLine({
   showAssignee: boolean;
   showChannel: boolean;
 }) {
+  const t = useTranslations("inbox");
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {row.waitingLabel && (
@@ -97,7 +101,13 @@ function RowMetaLine({
             {label}
           </span>
         ))}
-      {row.snoozedLabel && <span className="text-ink-muted text-xs">{row.snoozedLabel}</span>}
+      {row.snoozedUntil && (
+        <span className="text-ink-muted text-xs">
+          {t.rich("snoozedUntil", {
+            date: () => <LocalDateTime date={row.snoozedUntil!} timeStyle="short" />,
+          })}
+        </span>
+      )}
     </div>
   );
 }

@@ -80,11 +80,7 @@ function toQueueRow(row: ConversationListRow, deps: MapDeps): QueueRowView {
     channelName: deps.showChannel ? deps.channelName(row.channelConnectionId) : null,
     awaitingReply: row.awaitingReply,
     unreadCount: row.unreadCount,
-    snoozedLabel: snoozed
-      ? deps.t("snoozedUntil", {
-          date: deps.format.dateTime(snoozed, { dateStyle: "short", timeStyle: "short" }),
-        })
-      : null,
+    snoozedUntil: snoozed?.toISOString() ?? null,
   };
 }
 

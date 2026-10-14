@@ -3,10 +3,11 @@ import { Badge } from "@crm/design-system/components/badge";
 import { Card } from "@crm/design-system/components/card";
 import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 
 import { ContactFicha } from "@/components/contact-ficha";
 import { ConversationLeadPanel } from "@/components/conversation-lead-panel";
+import { LocalDateTime } from "@/components/local-date-time";
 import { TICKET_STATUS } from "@/lib/ticket-status";
 import {
   getConversation,
@@ -27,7 +28,6 @@ import { requireTenantContext } from "@/server/tenant";
 export async function ConversationAside({ conversationId }: { conversationId: string }) {
   const t = await getTranslations("inbox");
   const ts = await getTranslations("ticketStatus");
-  const format = await getFormatter();
   const ctx = await requireTenantContext();
   let conversation;
   try {
@@ -81,8 +81,7 @@ export async function ConversationAside({ conversationId }: { conversationId: st
                 >
                   <span className="min-w-0">
                     <span className="text-ink block truncate text-xs font-medium">
-                      #{ticket.ticketNumber} ·{" "}
-                      {format.dateTime(ticket.createdAt, { dateStyle: "short" })}
+                      #{ticket.ticketNumber} · <LocalDateTime date={ticket.createdAt} />
                     </span>
                     {ticket.lastMessagePreview && (
                       <span className="text-ink-muted block truncate text-xs">

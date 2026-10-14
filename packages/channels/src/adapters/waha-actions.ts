@@ -160,26 +160,52 @@ export async function wahaDeleteMessage(
 }
 
 /**
+ * What the by-id download endpoint says about the message's media. `url`
+ * is the preferred fetch target but is unreliable on GOWS (may be null or
+ * the raw WhatsApp CDN .enc); `filename` is the name of the file WAHA
+ * saved — servable at /api/files/{filename}; `error` carries WAHA's own
+ * download failure detail for diagnostics.
+ */
+export type WahaMessageMediaRef = {
+  url: string | null;
+  filename: string | null;
+  error: string | null;
+};
+
+/**
  * On-demand media download: WAHA re-downloads the message's media from
- * WhatsApp and answers with the message payload carrying a local
- * /api/files/* url (`media.url`, sometimes `mediaUrl`). Returns null when
- * the message has no media — the caller fetches the url through the
+ * WhatsApp and answers with the message payload. Returns null when the
+ * message has no media — the caller fetches the url/filename through the
  * same-origin guard afterwards.
  */
-export async function wahaFetchMessageMediaUrl(
+export async function wahaFetchMessageMediaRef(
   request: WahaRequest,
   session: string,
   target: WahaMessageTarget,
-): Promise<string | null> {
+): Promise<WahaMessageMediaRef | null> {
   const res = await request(`${chatMessagePath(session, target)}?downloadMedia=true`);
   ensureOk(res, "fetchMessageMedia");
   const parsed = z
     .looseObject({
-      media: z.looseObject({ url: z.string().nullish() }).nullish(),
+      media: z
+        .looseObject({
+          url: z.string().nullish(),
+          filename: z.string().nullish(),
+          error: z
+            .looseObject({ code: z.number().nullish(), details: z.string().nullish() })
+            .nullish(),
+        })
+        .nullish(),
       mediaUrl: z.string().nullish(),
     })
     .parse(await res.json());
-  return parsed.media?.url ?? parsed.mediaUrl ?? null;
+  if (!parsed.media && !parsed.mediaUrl) return null;
+  const mediaError = parsed.media?.error;
+  return {
+    url: parsed.media?.url ?? parsed.mediaUrl ?? null,
+    filename: parsed.media?.filename ?? null,
+    error: mediaError ? `code ${mediaError.code ?? "?"}: ${mediaError.details ?? ""}` : null,
+  };
 }
 
 /** Inbound media lives on the WAHA host — fetch with the api key and stream. */

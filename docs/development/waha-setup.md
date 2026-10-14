@@ -73,6 +73,15 @@ parser (`dc43179`):
   `fetchMessageMedia(chatId, externalId)` → `GET /api/{session}/chats/
 {chatId}/messages/{id}?downloadMedia=true` que força o WAHA a baixar e
   devolve `media.url` local `/api/files/*` (smoke 2026-10-14).
+- **`downloadMedia` pode responder 200 sem `media.url` utilizável** — no
+  GOWS a resposta às vezes traz `media.url: null` (ou o `.enc` de novo)
+  com `media.filename` = nome do arquivo que o WAHA salvou e `media.error`
+  = `{code, details}` quando o download falhou. O adapter tenta `url`
+  primeiro e cai para `/api/files/{filename}`; sem nenhum dos dois, o erro
+  carrega o `media.error` do WAHA. O resolver loga `warn` por estágio
+  (`media url fetch failed` / `media by-id download failed` / `media
+unresolved`, component `messaging.media`) — sem logs a falha era um 404
+  invisível (smoke 2026-10-14).
 
 ## Envs do container WAHA (produção)
 

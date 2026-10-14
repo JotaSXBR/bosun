@@ -240,6 +240,56 @@ describe("WahaChannelProvider — chat actions", () => {
     expect(media).toBeNull();
     expect(calls).toHaveLength(1);
   });
+
+  it("fetchMessageMedia falls back to /api/files/{filename} when url is the CDN .enc", async () => {
+    // GOWS stickers: media.url is the WhatsApp CDN .enc (unusable), but
+    // media.filename names the file WAHA saved — servable on /api/files/*.
+    const { fetch: fetchImpl, calls } = mockFetch((url) =>
+      url.includes("downloadMedia=true")
+        ? {
+            json: {
+              media: {
+                url: "https://mmg.whatsapp.net/v/t62.x/abc.enc?sig=1",
+                filename: "false_7911@c.us_M1.webp",
+                mimetype: "image/webp",
+              },
+            },
+          }
+        : { json: {} },
+    );
+    const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
+    expect(media).not.toBeNull();
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.url).toBe("https://waha.example.com/api/files/false_7911%40c.us_M1.webp");
+    expect(calls[1]?.init?.headers?.["X-Api-Key"]).toBe("key-1");
+  });
+
+  it("fetchMessageMedia falls back to filename when media.url is null", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch((url) =>
+      url.includes("downloadMedia=true")
+        ? { json: { media: { url: null, filename: "sticker.webp", mimetype: "image/webp" } } }
+        : { json: {} },
+    );
+    const media = await provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1");
+    expect(media).not.toBeNull();
+    expect(calls[1]?.url).toBe("https://waha.example.com/api/files/sticker.webp");
+  });
+
+  it("fetchMessageMedia surfaces WAHA's download error when nothing is fetchable", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch(() => ({
+      json: {
+        media: {
+          url: null,
+          filename: null,
+          error: { code: 13, details: "download failed with status code 403" },
+        },
+      },
+    }));
+    await expect(
+      provider(fetchImpl).fetchMessageMedia("7911@c.us", "false_7911@c.us_M1"),
+    ).rejects.toThrowError(/no downloadable media.*code 13.*403/);
+    expect(calls).toHaveLength(1);
+  });
 });
 
 describe("WahaChannelProvider — reply and voice notes", () => {

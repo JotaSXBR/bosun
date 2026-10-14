@@ -22,7 +22,7 @@ import {
   wahaDeleteMessage,
   wahaEditMessage,
   wahaFetchMedia,
-  wahaFetchMessageMediaUrl,
+  wahaFetchMessageMediaRef,
   wahaSendMessage,
   wahaSendPresence,
   wahaSendReaction,
@@ -380,19 +380,34 @@ export class WahaChannelProvider implements ChannelProvider {
   /**
    * Fallback for inbound media whose stored url isn't fetchable — sticker
    * payloads carry the WhatsApp CDN .enc blob, not a local path. Asks WAHA
-   * to download the message's media on demand, then fetches the local
-   * /api/files/* url the response carries.
+   * to download the message's media on demand, then fetches what the
+   * response offers: media.url through the origin guard, else
+   * /api/files/{media.filename} (GOWS returns url:null with the saved
+   * filename when it stamped the CDN url into url instead).
    */
   async fetchMessageMedia(
     chatId: string,
     messageId: string,
   ): Promise<{ body: Uint8Array; contentType: string | null } | null> {
-    const url = await wahaFetchMessageMediaUrl(this.request, this.config.session, {
+    const ref = await wahaFetchMessageMediaRef(this.request, this.config.session, {
       chatId,
       messageExternalId: messageId,
     });
-    if (!url) return null;
-    return wahaFetchMedia(this.request, this.resolveMediaUrl(url));
+    if (!ref) return null;
+    if (ref.url) {
+      try {
+        return await wahaFetchMedia(this.request, this.resolveMediaUrl(ref.url));
+      } catch (error) {
+        if (!ref.filename) throw error;
+      }
+    }
+    if (ref.filename) {
+      const path = `/api/files/${encodeURIComponent(ref.filename)}`;
+      return wahaFetchMedia(this.request, this.resolveMediaUrl(path));
+    }
+    throw new Error(
+      `WAHA fetchMessageMedia: no downloadable media${ref.error ? ` (${ref.error})` : ""}`,
+    );
   }
 
   /**

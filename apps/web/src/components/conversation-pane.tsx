@@ -9,11 +9,12 @@ import { EmptyState } from "@crm/design-system/templates/empty-state";
 import { captureException } from "@crm/observability";
 import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 
 import { Composer } from "@/components/composer";
 import { ConversationReadMarker } from "@/components/conversation-read-marker";
 import { DraftCard } from "@/components/draft-card";
+import { LocalDateTime } from "@/components/local-date-time";
 import { MessageItem } from "@/components/message-item";
 import { NudgeCard } from "@/components/nudge-card";
 import { PresenceIndicator } from "@/components/presence-indicator";
@@ -37,12 +38,10 @@ function TicketHeader({
   conversation,
   t,
   ts,
-  format,
 }: {
   conversation: ConversationDetailRow;
   t: Awaited<ReturnType<typeof getTranslations>>;
   ts: Awaited<ReturnType<typeof getTranslations>>;
-  format: Awaited<ReturnType<typeof getFormatter>>;
 }) {
   const status = TICKET_STATUS[conversation.status];
   return (
@@ -61,12 +60,9 @@ function TicketHeader({
         </div>
       </div>
       <p className="text-ink-muted text-sm">
-        {t("ticketSeq", {
+        {t.rich("ticketSeq", {
           seq: conversation.ticketSeq,
-          date: format.dateTime(conversation.createdAt, {
-            dateStyle: "short",
-            timeStyle: "medium",
-          }),
+          date: () => <LocalDateTime date={conversation.createdAt} timeStyle="medium" />,
         })}
         {conversation.assigneeName && <> · {conversation.assigneeName}</>}
         {conversation.sectorName && <> · {conversation.sectorName}</>}
@@ -93,7 +89,6 @@ export async function ConversationPane({
 }) {
   const t = await getTranslations("inbox");
   const ts = await getTranslations("ticketStatus");
-  const format = await getFormatter();
   const ctx = await requireTenantContext();
   let conversation;
   try {
@@ -151,7 +146,7 @@ export async function ConversationPane({
   return (
     <Card bodyClassName="space-y-4" className="min-w-0 flex-1">
       <ConversationReadMarker conversationId={conversationId} lastInboundKey={lastInboundKey} />
-      <TicketHeader conversation={conversation} t={t} ts={ts} format={format} />
+      <TicketHeader conversation={conversation} t={t} ts={ts} />
 
       {conversation.precededById && (
         <Link

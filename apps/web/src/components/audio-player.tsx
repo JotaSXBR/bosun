@@ -5,7 +5,7 @@
 // no speed affordance, so the chrome is custom.
 import { Icon } from "@crm/design-system/components/icon";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const SPEEDS = [1, 1.5, 2] as const;
 
@@ -19,13 +19,37 @@ function formatTime(seconds: number): string {
 export function AudioPlayer({ src, durationHint }: { src: string; durationHint?: number }) {
   const t = useTranslations("message");
   const audioRef = useRef<HTMLAudioElement>(null);
-  // MediaRecorder blobs (webm) carry no duration metadata — probingRef
-  // marks the self-heal seek in flight so its timeupdate isn't playback.
-  const probingRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState<number>(1);
+
+  // MediaRecorder webm blobs carry no duration metadata (el.duration is
+  // Infinity). Discovering it by seeking works — but the seek must run on
+  // a detached probe element: doing it on the visible <audio> can wedge
+  // it in a seeking+muted state where play() never resolves.
+  useEffect(() => {
+    if (durationHint != null && Number.isFinite(durationHint) && durationHint > 0) return;
+    const probe = document.createElement("audio");
+    probe.preload = "metadata";
+    probe.muted = true;
+    let settled = false;
+    const settle = () => {
+      if (settled || !Number.isFinite(probe.duration)) return;
+      settled = true;
+      setDuration(probe.duration);
+    };
+    probe.addEventListener("loadedmetadata", () => {
+      if (Number.isFinite(probe.duration)) settle();
+      else probe.currentTime = 1e7;
+    });
+    probe.addEventListener("timeupdate", settle);
+    probe.src = src;
+    return () => {
+      probe.removeAttribute("src");
+      probe.load();
+    };
+  }, [src, durationHint]);
 
   const cycleSpeed = () => {
     const next = SPEEDS[(SPEEDS.indexOf(speed as (typeof SPEEDS)[number]) + 1) % SPEEDS.length]!;
@@ -46,36 +70,16 @@ export function AudioPlayer({ src, durationHint }: { src: string; durationHint?:
         ref={audioRef}
         src={src}
         preload="metadata"
-        onPlay={(e) => {
-          // Never stay muted from a duration probe still in flight.
-          e.currentTarget.muted = false;
-          setPlaying(true);
-        }}
+        onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onTimeUpdate={(e) => {
-          const el = e.currentTarget;
-          if (probingRef.current) {
-            probingRef.current = false;
-            if (Number.isFinite(el.duration)) setDuration(el.duration);
-            el.currentTime = 0;
-            el.muted = false;
-            setElapsed(0);
-            return;
-          }
-          setElapsed(el.currentTime);
-        }}
+        onTimeUpdate={(e) => setElapsed(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => {
-          const el = e.currentTarget;
-          if (Number.isFinite(el.duration)) {
-            setDuration(el.duration);
-            return;
-          }
-          // No duration metadata (MediaRecorder blob): seek past the end
-          // — the next timeupdate reveals the real duration.
-          if (probingRef.current) return;
-          probingRef.current = true;
-          el.muted = true;
-          el.currentTime = 1e7;
+          const d = e.currentTarget.duration;
+          if (Number.isFinite(d)) setDuration(d);
+        }}
+        onDurationChange={(e) => {
+          const d = e.currentTarget.duration;
+          if (Number.isFinite(d)) setDuration(d);
         }}
         onEnded={() => setElapsed(0)}
       />

@@ -6,9 +6,10 @@ import type { TeamWithMembers } from "@crm/core/teams";
 import { Icon } from "@crm/design-system/components/icon";
 import { cn } from "@crm/design-system/lib/utils";
 import Image from "next/image";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 
 import { AudioPlayer } from "@/components/audio-player";
+import { LocalDateTime } from "@/components/local-date-time";
 import {
   EditedIndicator,
   MessageContextMenu,
@@ -19,7 +20,6 @@ import {
 import { ReactionChips } from "@/components/reaction-chips";
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
-type Fmt = Awaited<ReturnType<typeof getFormatter>>;
 
 function messageText(content: unknown, t: T): string {
   const c = content as { type?: string; text?: string; caption?: string };
@@ -173,13 +173,11 @@ function SystemLine({
   members,
   sectors,
   t,
-  format,
 }: {
   msg: MessageWithAuthorRow;
   members: OrgMember[];
   sectors: TeamWithMembers[];
   t: T;
-  format: Fmt;
 }) {
   const meta = msg.metadata as Record<string, unknown>;
   let text = t("systemEvent");
@@ -192,21 +190,21 @@ function SystemLine({
   }
   return (
     <li className="text-ink-muted py-1 text-center text-xs italic" data-testid="system-event">
-      — {text} · {format.dateTime(msg.createdAt, { dateStyle: "short", timeStyle: "medium" })} —
+      — {text} · <LocalDateTime date={msg.createdAt} timeStyle="medium" /> —
     </li>
   );
 }
 
-function PrivateNote({ msg, t, format }: { msg: MessageWithAuthorRow; t: T; format: Fmt }) {
+function PrivateNote({ msg, t }: { msg: MessageWithAuthorRow; t: T }) {
   return (
     <li
       className="border-warning/40 bg-warning/10 rounded-md border px-3 py-2"
       data-testid="internal-note"
     >
       <p className="text-warning text-xs font-medium">
-        {t("internalNote", {
+        {t.rich("internalNote", {
           author: msg.authorName ?? "—",
-          date: format.dateTime(msg.createdAt, { dateStyle: "short", timeStyle: "medium" }),
+          date: () => <LocalDateTime date={msg.createdAt} timeStyle="medium" />,
         })}
       </p>
       <p className="mt-1 text-sm whitespace-pre-wrap">{messageText(msg.content, t)}</p>
@@ -245,7 +243,6 @@ function BubbleMeta({
   canInspect,
   menu,
   t,
-  format,
 }: {
   msg: MessageWithAuthorRow;
   outbound: boolean;
@@ -253,7 +250,6 @@ function BubbleMeta({
   canInspect: boolean;
   menu: React.ReactNode;
   t: T;
-  format: Fmt;
 }) {
   return (
     <p
@@ -263,7 +259,7 @@ function BubbleMeta({
       )}
     >
       {outbound && msg.authorName ? `${msg.authorName} · ` : ""}
-      {format.dateTime(msg.sentAt ?? msg.createdAt, { dateStyle: "short", timeStyle: "medium" })}
+      <LocalDateTime date={msg.sentAt ?? msg.createdAt} timeStyle="medium" />
       {msg.editedAt && (
         <>
           {" · "}
@@ -327,11 +323,9 @@ export async function MessageItem({
 }) {
   const t = await getTranslations("message");
   const tc = await getTranslations("common");
-  const format = await getFormatter();
   const meta = msg.metadata as Record<string, unknown>;
-  if (meta.system)
-    return <SystemLine msg={msg} members={members} sectors={sectors} t={t} format={format} />;
-  if (msg.private) return <PrivateNote msg={msg} t={t} format={format} />;
+  if (meta.system) return <SystemLine msg={msg} members={members} sectors={sectors} t={t} />;
+  if (msg.private) return <PrivateNote msg={msg} t={t} />;
 
   const outbound = msg.direction === "outbound";
   const content = msg.content as MessageContent;
@@ -370,7 +364,6 @@ export async function MessageItem({
               isChannelMessage={isChannelMessage}
               canInspect={canInspect}
               t={t}
-              format={format}
               menu={
                 <MessageMenu
                   conversationId={msg.conversationId}
