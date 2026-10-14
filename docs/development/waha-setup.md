@@ -59,8 +59,14 @@ parser (`dc43179`):
   (`3EB0...`); o id serializado é `"{fromMe}_{chat}_{stanza}"`
   (grupos ganham `_{participant}`). `message.revoked` manda
   `before:null` + `revokedMessageId` — o alvo se compõe via `after`.
-- **Media**: `media.url` pode ser path relativo — resolver contra
-  `WAHA_BASE_URL` antes do fetch.
+- **Media**: `media.url` vem com o host que o **WAHA** montou (o
+  `WAHA_BASE_URL` dele, default `http://localhost:3000`) — nunca bate com
+  o host interno que o app usa (`http://bosun-<env>-waha:3000`). O
+  `fetchMedia` aceita: relativo, mesma origem, ou origem diferente com
+  path `/api/files/*` — nesse caso re-enraíza `pathname+search` no
+  `baseUrl` confiável. Outra origem/path é recusada (não vazar o
+  `X-Api-Key`). Sem isso toda mídia inbound quebra (bug do smoke
+  2026-10-14).
 
 ## Envs do container WAHA (produção)
 

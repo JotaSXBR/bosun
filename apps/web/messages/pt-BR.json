@@ -142,6 +142,8 @@
     "placeholderReply": "Responder ao cliente…",
     "placeholderNote": "Nota interna (nunca enviada ao cliente)…",
     "hintSendingMedia": "Enviando arquivo…",
+    "uploadTooLarge": "Arquivo excede o limite de 64 MB.",
+    "uploadFailed": "Não foi possível enviar o arquivo. Tente novamente.",
     "hintSend": "Ctrl+Enter envia",
     "send": "Enviar",
     "sending": "Enviando…",

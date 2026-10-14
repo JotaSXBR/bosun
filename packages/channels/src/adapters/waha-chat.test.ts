@@ -188,6 +188,32 @@ describe("WahaChannelProvider — chat actions", () => {
     ).rejects.toThrowError(/outside the WAHA host/);
     expect(calls).toHaveLength(0);
   });
+
+  it("fetchMedia re-roots WAHA-stamped file urls onto the configured host", async () => {
+    // WAHA builds media.url from its own WAHA_BASE_URL (default
+    // localhost:3000) — the /api/files/* path is the same file on the host
+    // we configured, so re-root it and keep the api key on baseUrl.
+    const { fetch: fetchImpl, calls } = mockFetch(() => ({ json: {} }));
+    await provider(fetchImpl).fetchMedia("http://localhost:3000/api/files/true_1@c.us_X.webp");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe("https://waha.example.com/api/files/true_1@c.us_X.webp");
+    expect(calls[0]?.init?.headers?.["X-Api-Key"]).toBe("key-1");
+  });
+
+  it("fetchMedia keeps the query string when re-rooting", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch(() => ({ json: {} }));
+    await provider(fetchImpl).fetchMedia("http://localhost:3000/api/files/default/x.oga?foo=1");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe("https://waha.example.com/api/files/default/x.oga?foo=1");
+  });
+
+  it("fetchMedia refuses foreign urls outside /api/files/", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch(() => ({ json: {} }));
+    await expect(provider(fetchImpl).fetchMedia("http://evil.com/api/other")).rejects.toThrowError(
+      /outside the WAHA host/,
+    );
+    expect(calls).toHaveLength(0);
+  });
 });
 
 describe("WahaChannelProvider — reply and voice notes", () => {
