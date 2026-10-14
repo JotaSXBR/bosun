@@ -9,10 +9,11 @@ import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { TenantContext } from "../../tenant/context";
-import { resolveConversation } from "./actions";
-import { addInternalNote, sendOutboundMessage } from "./outbound";
+import { setUserPreferences } from "../users";
+import { pickupConversation, resolveConversation } from "./actions";
+import { addInternalNote, resendFailedMessage, sendOutboundMessage } from "./outbound";
 import type { ConnectionRef } from "./service";
-import { ingestChannelEvent, listConversationMessages } from "./service";
+import { ingestChannelEvent, listConversationMessages, markConversationRead } from "./service";
 
 const { channelConnections, conversations, organizationMembers, organizations, users } = schema;
 
@@ -213,6 +214,189 @@ describe("sendOutboundMessage", () => {
       ),
     ).rejects.toThrowError(/immutable|TICKET_RESOLVED/i);
     expect(provider.sentMessages).toHaveLength(0);
+  });
+
+  it("read marks seen — sending alone never does", async () => {
+    // Customer's inbound is the latest message → the agent's read fires
+    // the blue tick; the reply itself is bare (seen = read, not reply).
+    const waiting = await newTicket("env-1@c.us", "false_env1@c.us_1", new Date("2024-04-06"));
+    const provider = new FakeChannelProvider();
+    await markConversationRead(
+      db,
+      ctx(orgA, "agent"),
+      { conversationId: waiting.id },
+      { provider },
+    );
+    expect(provider.seenChats).toEqual(["env-1@c.us"]);
+    await sendOutboundMessage(
+      db,
+      ctx(orgA, "agent"),
+      { conversationId: waiting.id, text: "on it" },
+      { provider },
+    );
+    expect(provider.seenChats).toHaveLength(1);
+    expect(provider.presences).toHaveLength(0); // humans type via composer events, not here
+
+    // Our outbound is now the latest → re-reading does NOT re-seen.
+    await markConversationRead(
+      db,
+      ctx(orgA, "agent"),
+      { conversationId: waiting.id },
+      { provider },
+    );
+    expect(provider.seenChats).toHaveLength(1);
+  });
+
+  it("read does not mark seen for another agent's ticket", async () => {
+    const ticket = await newTicket("own-1@c.us", "false_own1@c.us_1", new Date("2024-04-11"));
+    const provider = new FakeChannelProvider();
+    await pickupConversation(db, ctx(orgA, "agent"), { conversationId: ticket.id }, { provider });
+    provider.seenChats.length = 0; // clear the pickup tick — testing the read path
+    // Ingest a new inbound on the assumed ticket.
+    await withTenant(db, orgA, (tx) =>
+      ingestChannelEvent(tx, connA, {
+        type: "message.received",
+        externalMessageId: "false_own1@c.us_2",
+        from: { channelUserId: "own-1@c.us", displayName: "Act" },
+        content: { type: "text", text: "still here?" },
+        timestamp: new Date("2024-04-11T00:10:00Z"),
+      }),
+    );
+    // The assignee returning to pending inbound → seen.
+    await markConversationRead(db, ctx(orgA, "agent"), { conversationId: ticket.id }, { provider });
+    expect(provider.seenChats).toEqual(["own-1@c.us"]);
+    // A different agent (agent2) opening the same ticket → NOT their read signal.
+    await markConversationRead(
+      db,
+      { ...ctx(orgA, "agent"), userId: agent2 },
+      { conversationId: ticket.id },
+      { provider },
+    );
+    expect(provider.seenChats).toHaveLength(1);
+  });
+
+  it("sendSeen preference off → no blue tick on pickup or read", async () => {
+    const ticket = await newTicket("pref-1@c.us", "false_pref1@c.us_1", new Date("2024-04-10"));
+    const provider = new FakeChannelProvider();
+    await setUserPreferences(db, userId, { sendSeen: false });
+    try {
+      await pickupConversation(db, ctx(orgA, "agent"), { conversationId: ticket.id }, { provider });
+      await markConversationRead(
+        db,
+        ctx(orgA, "agent"),
+        { conversationId: ticket.id },
+        { provider },
+      );
+      await sendOutboundMessage(
+        db,
+        ctx(orgA, "agent"),
+        { conversationId: ticket.id, text: "sem tick azul" },
+        { provider },
+      );
+      expect(provider.seenChats).toHaveLength(0);
+      expect(provider.sentMessages).toHaveLength(1);
+    } finally {
+      await setUserPreferences(db, userId, { sendSeen: true });
+    }
+  });
+
+  it("automated send runs the anti-ban envelope (seen → typing → paused)", async () => {
+    const ticket = await newTicket("env-2@c.us", "false_env2@c.us_1", new Date("2024-04-07"));
+    const provider = new FakeChannelProvider();
+    await sendOutboundMessage(
+      db,
+      ctx(orgA, "agent"),
+      { conversationId: ticket.id, text: "resposta automática" },
+      { provider, automated: true },
+    );
+    expect(provider.seenChats).toEqual(["env-2@c.us"]);
+    expect(provider.presences).toEqual([
+      { chatId: "env-2@c.us", presence: "typing" },
+      { chatId: "env-2@c.us", presence: "paused" },
+    ]);
+    expect(provider.sentMessages).toHaveLength(1);
+  }, 15_000);
+});
+
+describe("resendFailedMessage", () => {
+  it("resends a failed text message in place and claims the ticket", async () => {
+    const ticket = await newTicket("res-1@c.us", "false_res1@c.us_1", new Date("2024-04-08"));
+    const failing = new FakeChannelProvider();
+    failing.sendMessageError = new Error("session offline");
+    await expect(
+      sendOutboundMessage(
+        db,
+        ctx(orgA, "agent"),
+        { conversationId: ticket.id, text: "tenta de novo" },
+        { provider: failing },
+      ),
+    ).rejects.toThrowError(/failed to send/i);
+    const rows = await listConversationMessages(db, ctx(orgA, "agent"), {
+      conversationId: ticket.id,
+    });
+    const failed = rows.find((m) => m.status === "failed")!;
+
+    const provider = new FakeChannelProvider();
+    const resent = await resendFailedMessage(
+      db,
+      ctx(orgA, "agent"),
+      { conversationId: ticket.id, messageId: failed.id },
+      { provider },
+    );
+
+    expect(resent.id).toBe(failed.id); // same bubble — no duplicate
+    expect(resent.status).toBe("sent");
+    expect(resent.externalId).toMatch(/^fake-msg-\d+$/);
+    expect(provider.sentMessages).toHaveLength(1);
+    expect(provider.sentMessages[0]!.content).toMatchObject({
+      type: "text",
+      text: "tenta de novo",
+    });
+    // Resend is a reply, not a read — the read path owns the blue tick.
+    expect(provider.seenChats).toHaveLength(0);
+    const listed = await listConversationMessages(db, ctx(orgA, "agent"), {
+      conversationId: ticket.id,
+    });
+    expect(listed.filter((m) => m.status === "failed")).toHaveLength(0);
+    await withTenant(db, orgA, async (tx) => {
+      const [conv] = await tx.select().from(conversations).where(eq(conversations.id, ticket.id));
+      expect(conv!.status).toBe("waiting_customer");
+      expect(conv!.assigneeId).toBe(userId);
+    });
+  });
+
+  it("rejects messages that are not failed outbound", async () => {
+    const ticket = await newTicket("res-2@c.us", "false_res2@c.us_1", new Date("2024-04-09"));
+    const provider = new FakeChannelProvider();
+    const sent = await sendOutboundMessage(
+      db,
+      ctx(orgA, "agent"),
+      { conversationId: ticket.id, text: "ok" },
+      { provider },
+    );
+
+    await expect(
+      resendFailedMessage(
+        db,
+        ctx(orgA, "agent"),
+        { conversationId: ticket.id, messageId: sent.id },
+        { provider },
+      ),
+    ).rejects.toThrowError(/failed outbound/i);
+    // Inbound message id → same rejection (and not a resend of the customer's text).
+    const rows = await listConversationMessages(db, ctx(orgA, "agent"), {
+      conversationId: ticket.id,
+    });
+    const inbound = rows.find((m) => m.direction === "inbound")!;
+    await expect(
+      resendFailedMessage(
+        db,
+        ctx(orgA, "agent"),
+        { conversationId: ticket.id, messageId: inbound.id },
+        { provider },
+      ),
+    ).rejects.toThrowError(/failed outbound/i);
+    expect(provider.sentMessages).toHaveLength(1);
   });
 });
 

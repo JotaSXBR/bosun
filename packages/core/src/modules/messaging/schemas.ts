@@ -32,6 +32,13 @@ export const conversationIdInput = z.object({
 });
 export type ConversationIdInput = z.input<typeof conversationIdInput>;
 
+/** Contact ticket history for the aside — the open thread is excluded. */
+export const contactTicketsInput = z.object({
+  contactId: z.uuid(),
+  excludeConversationId: z.uuid(),
+});
+export type ContactTicketsInput = z.input<typeof contactTicketsInput>;
+
 /** Defer a ticket — `until` in the future; `null` resumes it immediately. */
 export const snoozeConversationInput = z.object({
   conversationId: z.uuid(),

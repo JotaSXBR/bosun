@@ -49,6 +49,18 @@
     "selectConversation": "Selecione uma conversa para atender.",
     "entryQueue": "Fila de entrada",
     "awaitingReply": "Aguardando resposta",
+    "awaitingFor": "Aguardando {time}",
+    "contactHistory": "Atendimentos anteriores",
+    "contactHistoryEmpty": "Primeiro atendimento deste contato.",
+    "openAside": "Abrir detalhes",
+    "closeAside": "Fechar detalhes",
+    "mediaKinds": {
+      "audio": "Áudio",
+      "image": "Imagem",
+      "video": "Vídeo",
+      "document": "Documento",
+      "sticker": "Figurinha"
+    },
     "snoozedUntil": "Adiado até {date}",
     "filters": {
       "search": "Buscar por nome, número ou ticket…",
@@ -65,19 +77,6 @@
       "online": "online",
       "typing": "digitando…",
       "recording": "gravando áudio…"
-    },
-    "teachAi": {
-      "open": "Ensinar a IA",
-      "title": "Ensinar a IA",
-      "kind": "Tipo",
-      "kindKnowledge": "Conhecimento",
-      "kindMemory": "Memória",
-      "entryTitle": "Título",
-      "memoryType": "Tipo de memória",
-      "content": "Conteúdo (trecho da conversa)",
-      "rationale": "Por que a IA deve saber disso?",
-      "submit": "Propor para revisão",
-      "proposed": "Proposta enviada para Revisões."
     }
   },
   "message": {
@@ -96,6 +95,13 @@
     "transfer": "Transferido de {from} para {to}",
     "internalNote": "Nota interna · {author} · {date}",
     "failed": "falhou",
+    "resend": "Reenviar",
+    "resending": "Reenviando…",
+    "audioPlay": "Reproduzir áudio",
+    "audioPause": "Pausar áudio",
+    "audioSpeed": "Velocidade de reprodução",
+    "stickerAlt": "Figurinha",
+    "unsupportedMedia": "O contato enviou um arquivo que não conseguimos exibir.",
     "menuAria": "Ações da mensagem",
     "reply": "Responder",
     "edit": "Editar",
@@ -155,7 +161,10 @@
     "snoozeWeek": "1 semana",
     "snoozedUntil": "Adiado até {date}",
     "resume": "Retomar",
-    "moreActions": "Mais ações"
+    "moreActions": "Mais ações",
+    "shortcutPickup": "A — assumir",
+    "shortcutResolve": "R — resolver",
+    "shortcutSnooze": "S — adiar até amanhã"
   },
   "contacts": {
     "title": "Contatos",
@@ -296,7 +305,9 @@
       "converted": "Conversa virou lead",
       "noFunnelHint": "Crie um funil em Funil para converter.",
       "noDeal": "Sem deal vinculado.",
-      "noLabelsShort": "Nenhuma."
+      "noLabelsShort": "Nenhuma.",
+      "editValue": "Editar valor",
+      "setValue": "Definir valor"
     }
   },
   "onboarding": {
@@ -629,6 +640,8 @@
         "idleHint": "Tempo sem resposta humana antes do alerta.",
         "autoDraft": "Gerar rascunho direto (em vez de só alertar)",
         "autoDraftHint": "O rascunho consome tokens da sua credencial a cada varredura.",
+        "transcribeAudio": "Transcrever áudios recebidos",
+        "transcribeAudioHint": "Áudios do WhatsApp viram texto na mensagem (usa sua credencial OpenAI ou OpenRouter).",
         "noCredential": "Sem credencial de IA configurada — o observador fica desligado até você adicionar uma.",
         "save": "Salvar",
         "saved": "Observador salvo."

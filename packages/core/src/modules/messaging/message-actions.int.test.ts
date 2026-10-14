@@ -120,7 +120,7 @@ describe("pickupConversation — sendSeen", () => {
   it("marks the chat read only after the agent takes the ticket", async () => {
     const ticket = await newTicket("seen-1@c.us", "false_seen1@c.us_1");
     const provider = new FakeChannelProvider();
-    expect(provider.seenChats).toHaveLength(0); // viewing never sends seen
+    expect(provider.seenChats).toHaveLength(0); // no read/pickup call yet → no seen
     await pickupConversation(db, ctx(orgA, "agent"), { conversationId: ticket.id }, { provider });
     expect(provider.seenChats).toEqual(["seen-1@c.us"]);
   });

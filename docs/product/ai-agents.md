@@ -207,6 +207,24 @@ reserva is a first-class concept. Every call records `ai_usage_events`
 (tokens in/out) so spend caps and Langfuse-style reporting can land
 later without re-instrumenting.
 
+**Credential model selection (requested 2026-10-13, before any key is
+tested):** the credential form must not store just a key — on entering a
+valid API key it fetches the provider's model list (e.g. `GET /v1/models`)
+and lets the user pick, per credential:
+
+- **chat model** — the default for observer/drafter calls;
+- **embedding model** — required for knowledge/RAG later (OpenAI:
+  `text-embedding-3-small|large` etc.; must be selectable even before
+  the feature lands, since the credential drives it);
+- **voice/STT model** — newer tiers over `whisper-1` (OpenAI
+  `gpt-4o-mini-transcribe`/`gpt-4o-transcribe`, "small"/"large" grades);
+- **effort + temperature** — default sampling params for that
+  credential's calls (reasoning effort where the model supports it).
+
+Today `packages/ai/src/transcribe.ts` hardcodes `whisper-1` /
+`google/gemini-2.0-flash-001` — those become the _defaults_ of the
+voice-model field, not constants.
+
 ## Tool catalog (reference — implement per need, not upfront)
 
 From the questionnaire; they become `defineAgentTool` entries as

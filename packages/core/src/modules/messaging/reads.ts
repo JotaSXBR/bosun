@@ -1,22 +1,28 @@
 import type { Database, DbExecutor } from "@crm/db";
 import { schema, withTenant } from "@crm/db";
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { ConversationRow, MessageRow } from "./repository";
 import type { ConversationView } from "./schemas";
 
-const { contacts, conversations, messageReactions, messages, teams, users } = schema;
+const { contacts, conversationReads, conversations, messageReactions, messages, teams, users } =
+  schema;
 
 /** A conversation row plus the contact identity and a one-line preview. */
 export type ConversationListRow = ConversationRow & {
   contactDisplayName: string | null;
   contactChannelUserId: string;
+  contactAvatarUrl: string | null;
   assigneeName: string | null;
   sectorName: string | null;
   lastMessagePreview: string | null;
   /** Last message inbound — the "needs reply" dot on the row. */
   awaitingReply: boolean;
+  /** Inbound messages newer than the caller's read cursor. */
+  unreadCount: number;
+  /** Media kind of the last channel message — icon on the row preview. */
+  lastMessageMediaKind: string | null;
 };
 
 /** One stored reaction — reactorKey is the channel id or the user uuid. */
@@ -122,13 +128,38 @@ export async function listConversations(
         conversation: conversations,
         contactDisplayName: contacts.displayName,
         contactChannelUserId: contacts.channelUserId,
+        contactAvatarUrl: contacts.avatarUrl,
         assigneeName: users.name,
         sectorName: teams.name,
+        // Correlated count is index-served by
+        // messages_conversation_inbound_created_idx (~list-limit rows).
+        unreadCount: sql<number>`(select count(*)::int from messages m
+          where m.conversation_id = ${conversations.id}
+            and m.direction = 'inbound'
+            and m.created_at > coalesce(${conversationReads.lastReadAt}, '-infinity'::timestamptz))`,
+        // Same tail probe the denormalized preview mirrors — kept as a
+        // subquery because media kind is read-often, write-never. Stickers
+        // arrive as image/webp — surfaced as the pseudo-kind "sticker".
+        lastMessageMediaKind: sql<string | null>`(select
+          case when m.content ->> 'mediaKind' = 'image'
+                and m.content ->> 'mimeType' = 'image/webp' then 'sticker'
+               else m.content ->> 'mediaKind' end
+          from messages m
+          where m.conversation_id = ${conversations.id}
+            and m."private" is not true
+          order by m.sent_at desc nulls last, m.created_at desc limit 1)`,
       })
       .from(conversations)
       .innerJoin(contacts, eq(contacts.id, conversations.contactId))
       .leftJoin(users, eq(users.id, conversations.assigneeId))
       .leftJoin(teams, eq(teams.id, conversations.sectorId))
+      .leftJoin(
+        conversationReads,
+        and(
+          eq(conversationReads.conversationId, conversations.id),
+          eq(conversationReads.userId, opts.userId),
+        ),
+      )
       .where(filters)
       .orderBy(order)
       .limit(opts.limit),
@@ -138,6 +169,45 @@ export async function listConversations(
     ...rest,
     awaitingReply: conversation.lastMessageDirection === "inbound",
   }));
+}
+
+/** Prior ticket of a contact — the aside's conversation history list. */
+export type ContactTicketRow = {
+  id: string;
+  ticketNumber: number;
+  ticketSeq: number;
+  status: string;
+  createdAt: Date;
+  resolvedAt: Date | null;
+  lastMessagePreview: string | null;
+};
+
+/** Tickets of a contact, newest first — excludes the open conversation. */
+export async function listContactTickets(
+  db: Database,
+  organizationId: string,
+  contactId: string,
+  excludeConversationId: string,
+  limit = 10,
+): Promise<ContactTicketRow[]> {
+  return withTenant(db, organizationId, (tx) =>
+    tx
+      .select({
+        id: conversations.id,
+        ticketNumber: conversations.ticketNumber,
+        ticketSeq: conversations.ticketSeq,
+        status: conversations.status,
+        createdAt: conversations.createdAt,
+        resolvedAt: conversations.resolvedAt,
+        lastMessagePreview: conversations.lastMessagePreview,
+      })
+      .from(conversations)
+      .where(
+        and(eq(conversations.contactId, contactId), ne(conversations.id, excludeConversationId)),
+      )
+      .orderBy(desc(conversations.createdAt))
+      .limit(limit),
+  );
 }
 
 /** Per-tab counters — one grouped scan, no N queries. */
@@ -243,7 +313,7 @@ export async function listMessages(
       quotedRows
         .filter((r) => r.externalId !== null)
         .map((r) => [
-          r.externalId as string,
+          r.externalId!,
           {
             preview: r.preview,
             direction: r.direction,

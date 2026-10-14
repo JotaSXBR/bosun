@@ -17,3 +17,5 @@ export type { RunAgentInput, RunAgentResult } from "./run-agent";
 export { runAgent } from "./run-agent";
 export type { AgentToolDefinition, AgentToolRegistry } from "./tools";
 export { buildToolSet, defineAgentTool } from "./tools";
+export type { SttCredential, TranscribeInput } from "./transcribe";
+export { transcribeAudio, TranscriptionError } from "./transcribe";

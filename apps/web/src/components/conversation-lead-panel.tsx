@@ -21,6 +21,7 @@ import {
   createDealFromConversationAction,
   moveDealAction,
   setConversationLabelsAction,
+  updateDealAction,
 } from "@/server/actions/leads";
 import type { ConversationDeal, FunnelWithStages } from "@/server/services";
 
@@ -122,6 +123,89 @@ function ConvertToDealDialog({
   );
 }
 
+/** "1.234,56" → 123456 — pt-BR thousand groups or dot-decimal input. */
+function parseValueCents(text: string): number | null {
+  const parts = text.trim().split(",");
+  if (parts.length > 2) return null;
+  const [head = "", frac] = parts;
+  // "1.234,56" or bare "1.234" — dots in \d{1,3}+\d{3}… shape are thousand
+  // separators. "1234.56" (lone dot, no group shape) is a decimal mark.
+  const groups = head.split(".");
+  const grouped =
+    groups.length > 1 &&
+    /^\d{1,3}$/.test(groups[0] ?? "") &&
+    groups.slice(1).every((g) => /^\d{3}$/.test(g));
+  const numeric = `${grouped ? groups.join("") : head}${frac !== undefined ? `.${frac}` : ""}`;
+  if (numeric === "" || Number.isNaN(Number(numeric))) return null;
+  return Math.max(0, Math.round(Number(numeric) * 100));
+}
+
+/** Click-to-edit deal value — Enter/blur saves, Esc cancels. */
+function DealValue({
+  dealId,
+  valueCents,
+  canWrite,
+  t,
+}: {
+  dealId: string;
+  valueCents: number;
+  canWrite: boolean;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  const commit = () => {
+    const cents = parseValueCents(draft);
+    setEditing(false);
+    if (cents === null || cents === valueCents) return;
+    startTransition(async () => {
+      const result = await updateDealAction({ dealId, valueCents: cents });
+      if (!result.ok) toast.error(result.error);
+      router.refresh();
+    });
+  };
+
+  if (!canWrite) {
+    return <>{valueCents > 0 && ` · ${formatValueCents(valueCents)}`}</>;
+  }
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        inputMode="decimal"
+        className="bg-page border-line w-24 rounded-xs border px-1 text-xs"
+        value={draft}
+        disabled={pending}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        aria-label={t("panel.editValue")}
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="underline decoration-dotted underline-offset-2"
+      title={t("panel.editValue")}
+      data-testid="deal-value"
+      onClick={() => {
+        setDraft(valueCents > 0 ? formatValueCents(valueCents).replace(/[^\d,.-]/g, "") : "");
+        setEditing(true);
+      }}
+    >
+      {" · "}
+      {valueCents > 0 ? formatValueCents(valueCents) : t("panel.setValue")}
+    </button>
+  );
+}
+
 export function ConversationLeadPanel({
   conversationId,
   contactName,
@@ -172,7 +256,12 @@ export function ConversationLeadPanel({
               <p className="font-medium">{deal.title}</p>
               <p className="text-ink-muted text-xs">
                 {deal.funnelName}
-                {deal.valueCents > 0 && ` · ${formatValueCents(deal.valueCents)}`}
+                <DealValue
+                  dealId={deal.id}
+                  valueCents={deal.valueCents}
+                  canWrite={canWrite}
+                  t={t}
+                />
               </p>
             </div>
             <div className="space-y-1.5">

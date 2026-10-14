@@ -35,6 +35,7 @@ export function ObserverSection({
   const [intervalMinutes, setIntervalMinutes] = useState(String(settings.observerIntervalMinutes));
   const [idleMinutes, setIdleMinutes] = useState(String(settings.observerIdleMinutes));
   const [autoDraft, setAutoDraft] = useState(settings.observerAutoDraft);
+  const [transcribeAudio, setTranscribeAudio] = useState(settings.aiTranscribeAudio);
 
   const interval = Number(intervalMinutes);
   const idle = Number(idleMinutes);
@@ -47,6 +48,7 @@ export function ObserverSection({
         observerIntervalMinutes: interval,
         observerIdleMinutes: idle,
         observerAutoDraft: autoDraft,
+        aiTranscribeAudio: transcribeAudio,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -84,6 +86,18 @@ export function ObserverSection({
           onAutoDraft={setAutoDraft}
         />
       )}
+      <div className="space-y-1">
+        <label className="flex items-center gap-2 text-sm">
+          <Switch
+            checked={transcribeAudio}
+            onChange={setTranscribeAudio}
+            disabled={!canManage || pending}
+            data-testid="ai-transcribe-audio"
+          />
+          {t("transcribeAudio")}
+        </label>
+        <p className="text-ink-muted text-xs">{t("transcribeAudioHint")}</p>
+      </div>
       {!hasCredential && mode !== "off" && (
         <p className="text-warning text-xs" data-testid="observer-no-credential">
           {t("noCredential")}

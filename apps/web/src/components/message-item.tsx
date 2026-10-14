@@ -3,11 +3,18 @@
 import type { MessageContent, MessageWithAuthorRow } from "@crm/core/messaging";
 import type { OrgMember } from "@crm/core/organizations";
 import type { TeamWithMembers } from "@crm/core/teams";
+import { Icon } from "@crm/design-system/components/icon";
 import { cn } from "@crm/design-system/lib/utils";
 import Image from "next/image";
 import { getFormatter, getTranslations } from "next-intl/server";
 
-import { EditedIndicator, MessageMenu, RevokedActions } from "@/components/message-extras";
+import { AudioPlayer } from "@/components/audio-player";
+import {
+  EditedIndicator,
+  MessageMenu,
+  ResendButton,
+  RevokedActions,
+} from "@/components/message-extras";
 import { ReactionChips } from "@/components/reaction-chips";
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
@@ -75,33 +82,66 @@ function QuoteBlock({
 /** Media bubble — the proxy route streams bytes from storage or WAHA. */
 function MediaContent({ msg, t, tc }: { msg: MessageWithAuthorRow; t: T; tc: T }) {
   const content = msg.content as Extract<MessageContent, { type: "media" }>;
+  const meta = msg.metadata as { transcript?: string; unsupportedMedia?: boolean };
   const src = `/api/media/${msg.id}`;
+  if (meta.unsupportedMedia) {
+    // Ingest flagged a media event with no fetchable source — a real row
+    // (ordering preserved) rendered as an internal note, not a broken box.
+    return (
+      <p className="text-ink-muted flex items-center gap-1.5 text-xs italic">
+        <Icon name="file" className="size-3.5 shrink-0" />
+        {t("unsupportedMedia")}
+      </p>
+    );
+  }
+  const isSticker = content.mediaKind === "image" && content.mimeType === "image/webp";
   return (
     <div className="space-y-1">
-      {content.mediaKind === "image" && (
-        // Reserved box (message content carries no dimensions) — `fill` +
-        // `object-contain` shows the whole image without a layout shift.
-        <div className="bg-page/60 relative aspect-video w-64 max-w-full overflow-hidden rounded-md">
+      {content.mediaKind === "image" &&
+        (isSticker ? (
+          // Sticker (image/webp): no chrome box — natural size, transparency
+          // kept, animation preserved via unoptimized.
           <Image
             src={src}
-            alt={content.caption ?? t("imageAlt")}
-            fill
-            // eslint-disable-next-line no-restricted-syntax -- next/image sizes attribute (runtime hint, not styling)
-            sizes="256px"
+            alt={t("stickerAlt")}
+            width={160}
+            height={160}
             unoptimized
-            className="object-contain"
+            className="h-auto max-w-40"
+            data-testid="sticker"
           />
-        </div>
-      )}
+        ) : (
+          // Reserved box (message content carries no dimensions) — `fill` +
+          // `object-contain` shows the whole image without a layout shift.
+          <div className="bg-page/60 relative aspect-video w-64 max-w-full overflow-hidden rounded-md">
+            <Image
+              src={src}
+              alt={content.caption ?? t("imageAlt")}
+              fill
+              // eslint-disable-next-line no-restricted-syntax -- next/image sizes attribute (runtime hint, not styling)
+              sizes="256px"
+              unoptimized
+              className="object-contain"
+            />
+          </div>
+        ))}
       {content.mediaKind === "video" && (
         <video controls src={src} className="max-w-full rounded-md">
           <track kind="captions" label={tc("noCaptions")} />
         </video>
       )}
       {content.mediaKind === "audio" && (
-        <audio controls src={src} className="w-64 max-w-full">
-          <track kind="captions" label={tc("noCaptions")} />
-        </audio>
+        <>
+          <AudioPlayer src={src} />
+          {typeof meta.transcript === "string" && meta.transcript !== "" && (
+            <p
+              className="text-ink-muted rounded-xs border-l-2 border-current/40 pl-2 text-xs italic"
+              data-testid="audio-transcript"
+            >
+              {meta.transcript}
+            </p>
+          )}
+        </>
       )}
       {content.mediaKind === "document" && (
         <a
@@ -233,7 +273,12 @@ function BubbleMeta({
           />
         </>
       )}
-      {msg.status === "failed" && ` · ${t("failed")}`}
+      {msg.status === "failed" && (
+        <span className="text-danger">
+          {" "}
+          · {t("failed")} · <ResendButton conversationId={msg.conversationId} messageId={msg.id} />
+        </span>
+      )}
       {outbound && isChannelMessage && <MessageTicks status={msg.status} t={t} />}
       {menu}
     </p>

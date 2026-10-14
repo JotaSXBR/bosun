@@ -1,16 +1,28 @@
-import type { ChannelEvent, RawWebhookRequest } from "@crm/channels";
-import { applyConnectionStatus, resolveWebhookConnection } from "@crm/core/integrations";
+import type { ChannelEvent, ChannelProvider, RawWebhookRequest } from "@crm/channels";
+import {
+  applyConnectionStatus,
+  providerForConnection,
+  resolveWebhookConnection,
+} from "@crm/core/integrations";
 import type { Database, DbExecutor } from "@crm/db";
 import { emitDomainEvent, schema, withTenant } from "@crm/db";
+import { captureException } from "@crm/observability";
 import { eq } from "drizzle-orm";
 
 import { NotFoundError, WebhookVerificationError } from "../../errors";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import { completeStepInTx } from "../onboarding";
-import type { ConversationDetailRow, ConversationListRow, MessageWithAuthorRow } from "./reads";
+import { getUserPreferences } from "../users";
+import type {
+  ContactTicketRow,
+  ConversationDetailRow,
+  ConversationListRow,
+  MessageWithAuthorRow,
+} from "./reads";
 import {
   getConversationDetail as repoGetConversationDetail,
+  listContactTickets as repoListContactTickets,
   listConversations,
   listConversationViewCounts,
   listMessages,
@@ -29,15 +41,22 @@ import {
   updateConversationLastMessage,
   updateMessageStatus,
   upsertContact,
+  upsertConversationRead,
   upsertMessageReaction,
 } from "./repository";
 import type {
+  ContactTicketsInput,
   ConversationIdInput,
   ConversationView,
   ListConversationsInput,
   ListMessagesInput,
 } from "./schemas";
-import { conversationIdInput, listConversationsInput, listMessagesInput } from "./schemas";
+import {
+  contactTicketsInput,
+  conversationIdInput,
+  listConversationsInput,
+  listMessagesInput,
+} from "./schemas";
 
 const { conversations } = schema;
 
@@ -80,7 +99,41 @@ export type ChannelEventEnqueue = (
   },
 ) => Promise<unknown>;
 
-export type IngestDeps = { enqueue?: ChannelEventEnqueue };
+/**
+ * Avatar-fetch enqueue injected by the app layer (same pattern as
+ * ChannelEventEnqueue — automation lives above core).
+ */
+export type ContactAvatarEnqueue = (
+  executor: DbExecutor,
+  payload: {
+    organizationId: string;
+    contactId: string;
+    channelConnectionId: string;
+    channelUserId: string;
+  },
+) => Promise<unknown>;
+
+/**
+ * Audio-transcription enqueue injected by the app layer (same pattern as
+ * enqueueAvatar — automation lives above core).
+ */
+export type TranscribeEnqueue = (
+  executor: DbExecutor,
+  payload: {
+    organizationId: string;
+    messageId: string;
+    channelConnectionId: string;
+  },
+) => Promise<unknown>;
+
+export type IngestDeps = {
+  enqueue?: ChannelEventEnqueue;
+  enqueueAvatar?: ContactAvatarEnqueue;
+  enqueueTranscribe?: TranscribeEnqueue;
+};
+
+/** Re-pull a missing contact photo at most weekly (contacts may add one later). */
+const AVATAR_HEAL_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Pure domain ingest — no HTTP. Runs inside the caller's withTenant
@@ -97,6 +150,20 @@ async function ingestMessageReceived(
     channelUserId: event.from.channelUserId,
     displayName: event.from.displayName,
   });
+  // Avatar heal: enqueue when the contact has no photo and the last
+  // attempt is stale — covers both first-touch and lazy re-pull.
+  const avatarFetchedAt = (contact.metadata as Record<string, unknown>).avatarFetchedAt;
+  const avatarStale =
+    typeof avatarFetchedAt !== "string" ||
+    Date.now() - Date.parse(avatarFetchedAt) > AVATAR_HEAL_AFTER_MS;
+  if (!contact.avatarUrl && avatarStale) {
+    await deps?.enqueueAvatar?.(executor, {
+      organizationId: conn.organizationId,
+      contactId: contact.id,
+      channelConnectionId: conn.id,
+      channelUserId: contact.channelUserId,
+    });
+  }
   const { conversation, created } = await findOrCreateTicket(executor, {
     organizationId: conn.organizationId,
     channelConnectionId: conn.id,
@@ -113,6 +180,13 @@ async function ingestMessageReceived(
     externalId: event.externalMessageId,
     status: "received",
     sentAt: event.timestamp,
+    // Media event without a fetchable source — the row stays real but the
+    // bubble shows an internal "unsupported file" note, never a broken <img>.
+    ...(event.content.type === "media" &&
+    event.content.source.type === "url" &&
+    !event.content.source.url
+      ? { metadata: { unsupportedMedia: true } }
+      : {}),
   });
   await updateConversationLastMessage(executor, conversation.id, event.timestamp, {
     direction: "inbound",
@@ -129,6 +203,19 @@ async function ingestMessageReceived(
       await executor.delete(conversations).where(eq(conversations.id, conversation.id));
     }
     return { eventType: event.type, messageId: null };
+  }
+  // Inbound voice/audio → STT job (no-op without an audio-capable BYOK
+  // credential; spec channel-whatsapp.md §5). Atomic with the insert.
+  if (
+    event.content.type === "media" &&
+    event.content.mediaKind === "audio" &&
+    event.content.source.type === "url"
+  ) {
+    await deps?.enqueueTranscribe?.(executor, {
+      organizationId: conn.organizationId,
+      messageId: message.id,
+      channelConnectionId: conn.id,
+    });
   }
   const transitioned = await applyInboundStatusTransition(
     executor,
@@ -385,6 +472,22 @@ export async function listTenantConversations(
   });
 }
 
+/** Prior tickets of the conversation's contact — aside history. Requires messaging:read. */
+export async function listContactTickets(
+  db: Database,
+  ctx: TenantContext,
+  input: ContactTicketsInput,
+): Promise<ContactTicketRow[]> {
+  assertPermission(ctx, { messaging: ["read"] });
+  const parsed = contactTicketsInput.parse(input);
+  return repoListContactTickets(
+    db,
+    ctx.organizationId,
+    parsed.contactId,
+    parsed.excludeConversationId,
+  );
+}
+
 /** Per-tab counters for the inbox workbench. Requires messaging:read. */
 export async function listConversationCounts(
   db: Database,
@@ -430,6 +533,65 @@ export async function listConversationMessages(
     content: row.revokedAt ? { type: "text" as const, text: "" } : row.content,
     quoted: row.quoted?.revoked ? { ...row.quoted, preview: null } : row.quoted,
   }));
+}
+
+/**
+ * Requires messaging:read. Bumps the caller's read cursor on the
+ * conversation — fired when the pane opens (plan 2 client marker) and
+ * implicitly on send (outbound.ts). Throws NotFoundError on
+ * unknown/cross-tenant id.
+ *
+ * Reading is the blue-tick signal (spec: seen = read, not reply): when the
+ * customer messaged last, the attending human's read marks the chat seen —
+ * pending threads are picked up by whoever opens them to respond, assumed
+ * threads only by their assignee. Automated sends carry their own envelope
+ * (outbound.ts), so this path is the human-read consumer. Best-effort: a
+ * provider failure never blocks the cursor.
+ */
+export async function markConversationRead(
+  db: Database,
+  ctx: TenantContext,
+  input: ConversationIdInput,
+  deps?: { provider?: ChannelProvider },
+): Promise<void> {
+  assertPermission(ctx, { messaging: ["read"] });
+  const parsed = conversationIdInput.parse(input);
+  const conversation = await withTenant(db, ctx.organizationId, async (tx) => {
+    const [row] = await tx
+      .select({
+        id: conversations.id,
+        externalId: conversations.externalId,
+        channelConnectionId: conversations.channelConnectionId,
+        lastMessageDirection: conversations.lastMessageDirection,
+        assigneeId: conversations.assigneeId,
+      })
+      .from(conversations)
+      .where(eq(conversations.id, parsed.conversationId))
+      .limit(1);
+    if (!row) throw new NotFoundError("Conversa");
+    await upsertConversationRead(tx, {
+      organizationId: ctx.organizationId,
+      conversationId: parsed.conversationId,
+      userId: ctx.userId,
+    });
+    return row;
+  });
+  const attending = conversation.assigneeId === null || conversation.assigneeId === ctx.userId;
+  if (conversation.lastMessageDirection !== "inbound" || !attending) return;
+  if (!(await getUserPreferences(db, ctx.userId)).sendSeen) return;
+  // Best-effort end to end — a broken connection or provider must never
+  // break the read cursor (the tick is a nicety, the cursor is not).
+  try {
+    const provider =
+      deps?.provider ??
+      (await providerForConnection(db, ctx.organizationId, conversation.channelConnectionId));
+    await provider.sendSeen?.(conversation.externalId);
+  } catch (error) {
+    captureException(error, {
+      op: "markConversationRead.sendSeen",
+      conversationId: conversation.id,
+    });
+  }
 }
 
 /** Requires messaging:read. Throws NotFoundError on unknown/cross-tenant id. */

@@ -11,6 +11,7 @@ import type {
 } from "@crm/core/messaging";
 import {
   addInternalNote,
+  markConversationRead,
   pickupConversation,
   reopenTicket,
   resolveConversation,
@@ -161,6 +162,23 @@ export async function reopenTicketAction(
     return { ok: true, id: conv.id };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível reabrir o ticket.") };
+  }
+}
+
+/**
+ * Bumps the caller's read cursor — fired by the pane's client marker
+ * (plan 2) and implicitly inside sendOutboundMessage. No revalidate:
+ * unread badges update via SSE refresh, not a fresh render.
+ */
+export async function markConversationReadAction(
+  input: ConversationIdInput,
+): Promise<MessagingActionResult> {
+  const ctx = await requireTenantContext();
+  try {
+    await markConversationRead(getDb(), ctx, input);
+    return { ok: true, id: input.conversationId };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível marcar como lido.") };
   }
 }
 

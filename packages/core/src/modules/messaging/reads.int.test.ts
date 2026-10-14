@@ -1,6 +1,7 @@
 // Integration test — requires Postgres with migrations applied.
 // Run: pnpm infra:up && pnpm db:migrate && pnpm test:integration
 import type { ChannelEvent } from "@crm/channels";
+import { FakeChannelProvider } from "@crm/channels/testing";
 import { getServerEnv } from "@crm/config";
 import type { Database } from "@crm/db";
 import { createDb, schema, withTenant } from "@crm/db";
@@ -16,6 +17,7 @@ import {
   ingestChannelEvent,
   listConversationMessages,
   listTenantConversations,
+  markConversationRead,
 } from "./service";
 
 const { channelConnections, conversations, organizations, users } = schema;
@@ -175,5 +177,86 @@ describe("messaging reads with tenant context", () => {
     await expect(
       getConversationDetail(db, ctx(orgB, "admin"), { conversationId: convs[0]!.id }),
     ).rejects.toThrowError(NotFoundError);
+  });
+});
+
+describe("conversation_reads — per-user unread cursor", () => {
+  it("counts inbound after the cursor and is per-user/per-org", async () => {
+    const [other] = await db
+      .insert(users)
+      .values({
+        name: "IT Read Other",
+        email: `it-rd-o-${crypto.randomUUID().slice(0, 8)}@crm.local`,
+      })
+      .returning({ id: users.id });
+    const otherId = other!.id;
+    const conversationId = await withTenant(db, orgA, async (tx) => {
+      const [conv] = await tx
+        .select({ id: conversations.id })
+        .from(conversations)
+        .where(eq(conversations.externalId, "rd@c.us"));
+      await ingestChannelEvent(tx, connA, {
+        ...inbound,
+        externalMessageId: "false_rd@c.us_R2",
+      });
+      return conv!.id;
+    });
+
+    // No cursor yet → both inbound messages unread for userId.
+    const before = await listTenantConversations(db, ctx(orgA, "agent"), { limit: 10 });
+    expect(before.find((c) => c.id === conversationId)?.unreadCount).toBe(2);
+
+    await markConversationRead(
+      db,
+      ctx(orgA, "agent"),
+      { conversationId },
+      {
+        provider: new FakeChannelProvider(),
+      },
+    );
+    const after = await listTenantConversations(db, ctx(orgA, "agent"), { limit: 10 });
+    expect(after.find((c) => c.id === conversationId)?.unreadCount).toBe(0);
+
+    // Another user has their own cursor — still sees both unread.
+    const otherCtx: TenantContext = {
+      organizationId: orgA,
+      userId: otherId,
+      role: "agent",
+      isPlatformAdmin: false,
+    };
+    const otherRows = await listTenantConversations(db, otherCtx, { limit: 10 });
+    expect(otherRows.find((c) => c.id === conversationId)?.unreadCount).toBe(2);
+
+    // Cross-org: marking org A's conversation from org B is invisible.
+    await expect(
+      markConversationRead(db, ctx(orgB, "admin"), { conversationId }),
+    ).rejects.toThrowError(NotFoundError);
+  });
+
+  it("projects the last message's mediaKind (icon on the row preview)", async () => {
+    const conversationId = await withTenant(db, orgA, async (tx) => {
+      const [conv] = await tx
+        .select({ id: conversations.id })
+        .from(conversations)
+        .where(eq(conversations.externalId, "rd@c.us"));
+      // Voice note as the latest message → mediaKind surfaces on the row.
+      await ingestChannelEvent(tx, connA, {
+        ...inbound,
+        externalMessageId: "false_rd@c.us_R3",
+        content: {
+          type: "media",
+          mediaKind: "audio",
+          source: { type: "url", url: "https://cdn.example.com/n.ogg" },
+        },
+      });
+      return conv!.id;
+    });
+
+    const rows = await listTenantConversations(db, ctx(orgA, "agent"), {
+      view: "all",
+      limit: 50,
+    });
+    const row = rows.find((c) => c.id === conversationId);
+    expect(row?.lastMessageMediaKind).toBe("audio");
   });
 });

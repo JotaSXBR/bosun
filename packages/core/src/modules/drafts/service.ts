@@ -255,8 +255,14 @@ export async function approveDraft(
   // the claim — return its outcome instead of sending again.
   if (!claimed) return reviewedDraftState(db, ctx, suggestionId);
   try {
-    // Sends outside the review tx — provider latency must not hold row locks.
-    await sendOutboundMessage(db, ctx, { conversationId, text: body }, deps);
+    // Sends outside the review tx — provider latency must not hold row
+    // locks. `automated` → anti-ban envelope (the body is AI-generated).
+    await sendOutboundMessage(
+      db,
+      ctx,
+      { conversationId, text: body },
+      { ...deps, automated: true },
+    );
   } catch (error) {
     // Release the claim so a failed send leaves the draft pending.
     await withTenant(db, ctx.organizationId, (tx) => releaseDraftClaim(tx, suggestionId)).catch(

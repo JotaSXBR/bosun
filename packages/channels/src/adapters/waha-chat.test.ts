@@ -203,7 +203,7 @@ describe("WahaChannelProvider — reply and voice notes", () => {
     });
   });
 
-  it("voiceNote audio routes to sendVoice with convert", async () => {
+  it("voiceNote audio routes to sendVoice with convert and ogg target", async () => {
     const { fetch: fetchImpl, calls } = mockFetch(() => ({ json: { id: "m2" } }));
     await provider(fetchImpl).sendMessage({
       to: "7911@c.us",
@@ -213,11 +213,40 @@ describe("WahaChannelProvider — reply and voice notes", () => {
         voiceNote: true,
         source: { type: "url", url: "https://cdn.example.com/a.webm" },
         mimeType: "audio/webm;codecs=opus",
+        filename: "audio.webm",
       },
     });
     expect(calls[0]?.url).toBe("https://waha.example.com/api/sendVoice");
-    const body = JSON.parse(calls[0]?.init?.body ?? "{}") as { convert?: boolean };
+    const body = JSON.parse(calls[0]?.init?.body ?? "{}") as {
+      convert?: boolean;
+      file?: { mimetype?: string; filename?: string };
+    };
     expect(body.convert).toBe(true);
+    // The payload describes the converted target, not the webm source.
+    expect(body.file?.mimetype).toBe("audio/ogg; codecs=opus");
+    expect(body.file?.filename).toBe("audio.ogg");
+  });
+
+  it("fetchContactAvatar downloads the CDN url without the api key", async () => {
+    const { fetch: fetchImpl, calls } = mockFetch((url) =>
+      url.startsWith("https://waha.example.com")
+        ? { json: { profilePictureURL: "https://pps.whatsapp.net/abc.jpg" } }
+        : { json: {} },
+    );
+    const avatar = await provider(fetchImpl).fetchContactAvatar("7911@c.us");
+    expect(avatar).not.toBeNull();
+    expect(calls[0]?.url).toContain("/api/contacts/profile-picture");
+    expect(calls[0]?.init?.headers?.["X-Api-Key"]).toBe("key-1");
+    // CDN hop is anonymous — never send the WAHA key off-host.
+    expect(calls[1]?.url).toBe("https://pps.whatsapp.net/abc.jpg");
+    expect(calls[1]?.init).toBeUndefined();
+  });
+
+  it("fetchContactAvatar returns null when the contact has no photo", async () => {
+    const { fetch: fetchImpl } = mockFetch(() => ({
+      json: { profilePictureURL: null },
+    }));
+    expect(await provider(fetchImpl).fetchContactAvatar("7911@c.us")).toBeNull();
   });
 
   it("plain audio still goes through sendFile", async () => {

@@ -1,4 +1,8 @@
-import { enqueueChannelEventProcessed } from "@crm/automation";
+import {
+  enqueueChannelEventProcessed,
+  enqueueContactAvatar,
+  enqueueTranscribeAudio,
+} from "@crm/automation";
 import { NotFoundError, WebhookVerificationError } from "@crm/core";
 import { ingestChannelWebhook } from "@crm/core/messaging";
 import { getDb } from "@crm/db";
@@ -38,6 +42,8 @@ export async function POST(
       {
         // Job rows commit atomically with each event's ingest transaction.
         enqueue: (executor, payload) => enqueueChannelEventProcessed(payload, executor),
+        enqueueAvatar: (executor, payload) => enqueueContactAvatar(payload, executor),
+        enqueueTranscribe: (executor, payload) => enqueueTranscribeAudio(payload, executor),
       },
     );
     if (result.processed.length === 0) {

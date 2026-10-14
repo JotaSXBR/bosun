@@ -13,6 +13,7 @@ import { isUniqueViolation } from "../../lib/pg-error";
 import type { TenantContext } from "../../tenant/context";
 import { assertPermission } from "../../tenant/context";
 import { findSettings } from "../organizations";
+import { getUserPreferences } from "../users";
 import type { ConversationRow } from "./repository";
 import {
   createFollowupTicket,
@@ -90,8 +91,8 @@ export async function patchTicket(
  * changes hands only via an explicit (audited) transferConversation.
  *
  * sendSeen fires only here — opening/viewing a conversation never marks it
- * read; assuming the ticket does. Best-effort: a provider hiccup must not
- * fail the pickup.
+ * read; assuming the ticket does. The agent's `sendSeen` preference gates
+ * the tick. Best-effort: a provider hiccup must not fail the pickup.
  */
 export async function pickupConversation(
   db: Database,
@@ -110,10 +111,13 @@ export async function pickupConversation(
     });
   });
   try {
-    const provider =
-      deps?.provider ??
-      (await providerForConnection(db, ctx.organizationId, ticket.channelConnectionId));
-    await provider.sendSeen?.(ticket.externalId);
+    const { sendSeen } = await getUserPreferences(db, ctx.userId);
+    if (sendSeen) {
+      const provider =
+        deps?.provider ??
+        (await providerForConnection(db, ctx.organizationId, ticket.channelConnectionId));
+      await provider.sendSeen?.(ticket.externalId);
+    }
   } catch (error) {
     captureException(error, { op: "pickup.sendSeen", conversationId: ticket.id });
   }

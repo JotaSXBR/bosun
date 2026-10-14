@@ -3,8 +3,8 @@ import { z } from "zod";
 /**
  * Personal preferences (users.preferences) — USER scope, never org data
  * (nav spec §6). `theme` mirrors the bosun-theme cookie; `sendSeen` gates the
- * WhatsApp read-tick on ticket pickup (channel consumer lands with E3);
- * `toasts` gates the three InboxLive toasts.
+ * WhatsApp read-tick on pickup and human outbound sends (not the bot's
+ * anti-ban envelope); `toasts` gates the three InboxLive toasts.
  */
 export const userPreferencesSchema = z.object({
   theme: z.enum(["light", "dark"]).default("dark"),

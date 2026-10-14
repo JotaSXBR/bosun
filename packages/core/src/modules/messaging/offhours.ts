@@ -10,6 +10,7 @@ import { emitDomainEvent, schema, sql, withTenant } from "@crm/db";
 
 import type { BusinessHours } from "../organizations";
 import { businessHoursSchema, findSettings } from "../organizations";
+import { sendWithEnvelope } from "./outbound";
 import type { ConversationRow, MessageRow } from "./repository";
 import { getConversation, updateConversationLastMessage } from "./repository";
 
@@ -283,10 +284,8 @@ async function deliverReply(
     (await providerForConnection(db, plan.organizationId, plan.conv.channelConnectionId));
   let sent: { externalId: string; status: string };
   try {
-    sent = await provider.sendMessage({
-      to: plan.conv.externalId,
-      content: { type: "text", text: plan.text },
-    });
+    // Automated reply → full anti-ban envelope (seen → typing → paused → send).
+    sent = await sendWithEnvelope(provider, plan.conv.externalId, plan.text);
   } catch (cause) {
     await withTenant(db, plan.organizationId, (tx) =>
       tx

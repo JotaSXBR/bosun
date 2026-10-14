@@ -27,6 +27,7 @@ import {
   searchContacts,
 } from "@crm/core/leads";
 import type {
+  ContactTicketRow,
   ConversationDetailRow,
   ConversationListRow,
   ConversationView,
@@ -37,6 +38,7 @@ import type {
 import {
   getConversationDetail,
   getConversationLastInboundAt,
+  listContactTickets as svcListContactTickets,
   listConversationCounts as svcListConversationCounts,
   listConversationMessages,
   listMyTransfers as svcListMyTransfers,
@@ -122,6 +124,15 @@ export const getConversation = cache(
   async (ctx: TenantContext, id: string): Promise<ConversationDetailRow> =>
     getConversationDetail(getDb(), ctx, { conversationId: id }),
 );
+
+/** Prior tickets of the contact — aside history (messaging:read). */
+export async function listContactTickets(
+  ctx: TenantContext,
+  contactId: string,
+  excludeConversationId: string,
+): Promise<ContactTicketRow[]> {
+  return svcListContactTickets(getDb(), ctx, { contactId, excludeConversationId });
+}
 
 export async function listMessages(
   ctx: TenantContext,
