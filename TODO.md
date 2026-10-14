@@ -183,8 +183,20 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   URL falho agora cai no por-id e vira 404 (não 500); (b) áudio gravado
   mostrava 0:00 — blob MediaRecorder sem metadado de duração; fix =
   self-heal no `AudioPlayer` (probe currentTime) + `durationHint` com o
-  elapsed medido; preview usa o mesmo `AudioPlayer` do bubble.
-  Aguarda deploy + re-smoke da figurinha/áudio;
+  elapsed medido; preview usa o mesmo `AudioPlayer` do bubble;
+  **re-smoke 2 2026-10-14** (PR #41 deployado): áudio mostrava duração mas
+  **não tocava** (sonda `currentTime` no próprio `<audio>` podia travar o
+  elemento em seeking+muted → `play()` pendia; fix = sonda num elemento
+  destacado + skip quando `durationHint`), figurinhas seguiam quebradas
+  (WAHA salvou a mídia e o `downloadMedia` respondeu 200, mas sem
+  `media.url` aproveitável — fetch por filename nunca acontecia; fix =
+  parse `media.filename`/`media.error` → `/api/files/{filename}` +
+  `logger.warn` por estágio no resolver — a falha era 404 invisível), e
+  **horários saíam em UTC** (`format.dateTime` server-side no container
+  UTC; fix = `LocalDateTime` client nos pontos server-rendered do inbox +
+  `t.rich` com tag `<date>`). Resta: datas server-rendered fora do inbox
+  (audit, contacts, members, ai) — mesmo bug sistêmico, tratar quando
+  surgir; re-smoke da figurinha/áudio/horário;
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);

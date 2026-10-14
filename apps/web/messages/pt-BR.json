@@ -67,7 +67,7 @@
       "document": "Documento",
       "sticker": "Figurinha"
     },
-    "snoozedUntil": "Adiado até {date}",
+    "snoozedUntil": "Adiado até <date></date>",
     "filters": {
       "search": "Buscar por nome, número ou ticket…",
       "channel": "Canal",
@@ -77,7 +77,7 @@
       "awaiting": "Aguardando resposta",
       "ver": "Ver"
     },
-    "ticketSeq": "{seq}º atendimento deste contato · aberto em {date}",
+    "ticketSeq": "{seq}º atendimento deste contato · aberto em <date></date>",
     "previousTicket": "↑ Ticket anterior{number} — ver histórico",
     "presence": {
       "online": "online",
@@ -110,7 +110,7 @@
     "systemEvent": "Evento do sistema",
     "queue": "a fila",
     "transfer": "Transferido de {from} para {to}",
-    "internalNote": "Nota interna · {author} · {date}",
+    "internalNote": "Nota interna · {author} · <date></date>",
     "failed": "falhou",
     "resend": "Reenviar",
     "resending": "Reenviando…",

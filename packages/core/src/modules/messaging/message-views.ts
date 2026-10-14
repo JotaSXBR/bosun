@@ -4,6 +4,7 @@
 import type { MessageContent } from "@crm/channels";
 import type { Database } from "@crm/db";
 import { schema, withTenant } from "@crm/db";
+import { createLogger } from "@crm/observability";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -18,6 +19,11 @@ import { conversationIdInput, messageActionInput } from "./schemas";
 import { canInspectMessageHistory } from "./service";
 
 const { conversations } = schema;
+const logger = createLogger({ bindings: { component: "messaging.media" } });
+
+function errMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 const messageIdInput = z.object({ messageId: z.uuid() });
 
@@ -187,22 +193,35 @@ export async function resolveMessageMedia(
   // is refused or dead, fall back to the provider's by-id download —
   // sticker payloads carry WhatsApp CDN .enc urls that aren't fetchable.
   // Provider failures resolve to null so the proxy answers 404, not 500.
+  // Each stage logs its own error (message only — never the url, which can
+  // carry signed CDN params) or "media unavailable" stays invisible.
   let media: ResolvedMediaBody | null = null;
   if (deps.fetchProviderMedia) {
     try {
       media = await deps.fetchProviderMedia(channelConnectionId, content.source.url);
-    } catch {
+    } catch (error) {
+      logger.warn("media url fetch failed", {
+        messageId: input.messageId,
+        error: errMessage(error),
+      });
       media = null;
     }
   }
   if (!media && deps.fetchMessageMedia && externalId && conversationExternalId) {
     try {
       media = await deps.fetchMessageMedia(channelConnectionId, conversationExternalId, externalId);
-    } catch {
+    } catch (error) {
+      logger.warn("media by-id download failed", {
+        messageId: input.messageId,
+        error: errMessage(error),
+      });
       media = null;
     }
   }
-  if (!media) return null;
+  if (!media) {
+    logger.warn("media unresolved", { messageId: input.messageId });
+    return null;
+  }
   return {
     body: media.body,
     contentType: media.contentType ?? content.mimeType,
