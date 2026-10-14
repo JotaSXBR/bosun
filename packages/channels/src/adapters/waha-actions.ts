@@ -161,10 +161,11 @@ export async function wahaDeleteMessage(
 
 /**
  * What the by-id download endpoint says about the message's media. `url`
- * is the preferred fetch target but is unreliable on GOWS (may be null or
- * the raw WhatsApp CDN .enc); `filename` is the name of the file WAHA
- * saved — servable at /api/files/{filename}; `error` carries WAHA's own
- * download failure detail for diagnostics.
+ * is the preferred fetch target but is unreliable on GOWS (may be null,
+ * the raw WhatsApp CDN .enc, or an S3 pre-signed url); `filename` is the
+ * name of the file WAHA saved — local storage keeps it at
+ * /api/files/{session}/{name}; `error` carries WAHA's own download
+ * failure detail for diagnostics.
  */
 export type WahaMessageMediaRef = {
   url: string | null;

@@ -197,6 +197,25 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   `t.rich` com tag `<date>`). Resta: datas server-rendered fora do inbox
   (audit, contacts, members, ai) — mesmo bug sistêmico, tratar quando
   surgir; re-smoke da figurinha/áudio/horário;
+  **re-smoke 3 2026-10-14** (PR #42 deployado): horários ok; **mas** —
+  (a) áudio seguia sem tocar: os warns novos + repro no chrome-devtools
+  revelaram `MEDIA_ELEMENT_ERROR: Media load rejected by URL safety check`
+  — o CSP do app não tinha `media-src` e caía em `default-src 'self'`,
+  bloqueando **todo** `blob:` de mídia (preview do gravador e previews de
+  vídeo); `img-src` já tinha `blob:` (por isso imagem funcionava). Fix:
+  `media-src 'self' blob:` em `proxy.ts`;
+  (b) figurinha seguia quebrada com causa exposta pelos warns: `media.url`
+  vinha recusado (URL estrangeira — CDN `.enc` ou pré-assinada S3, pois
+  `WAHA_MEDIA_STORAGE`/`WAHA_S3_*` estão setadas) e o fallback por
+  filename 404ava porque `MediaLocalStorage` grava em
+  `{session}/{messageId}.{ext}` — o path montado não tinha o diretório da
+  sessão. Fix: cadeia de candidatos no `fetchMessageMedia` — url pelo
+  guard → url https não-whatsapp **anônima** (S3 presign, sem a key) →
+  `/api/files/{session}/{filename}` → `{session}/{bareId}.{ext}` → flat;
+  **observação ops**: se o storage for S3, alternativa é
+  `WAHA_S3_PROXY_FILES=True` (volta tudo para `/api/files/*` no host);
+  e `WHATSAPP_FILES_LIFETIME` > ~24,8d estoura setTimeout do WAHA
+  (issue #2018 — apaga o arquivo na hora → 404 eterno);
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);
