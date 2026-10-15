@@ -7,12 +7,14 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { listChannelConnections } from "@/server/services";
+import { googleRedirectUri } from "@/app/api/integrations/google/redirect";
+import { getGoogleConnectionStatus, listChannelConnections } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
 
 import { ConnectionActions } from "./connection-actions";
 import { ConnectionHealth } from "./connection-health";
 import { CopyButton } from "./copy-button";
+import { GoogleCard } from "./google-card";
 import { NewConnectionForm } from "./new-connection-form";
 import { WidgetPanel } from "./widget-panel";
 
@@ -27,10 +29,16 @@ const STATUS_TONES: Record<string, "success" | "warning" | "danger" | "neutral">
   error: "danger",
 };
 
-export default async function IntegrationsPage() {
+export default async function IntegrationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ google?: string }>;
+}) {
   const t = await getTranslations("integrations");
   const ctx = await requireTenantContext();
   const connections = await listChannelConnections(ctx);
+  const google = await getGoogleConnectionStatus(ctx);
+  const { google: googleFlash } = await searchParams;
   // §7.7 of the IA spec: integrations:manage — was `role !== "agent"`,
   // which wrongly included the read-only viewer.
   const canManage = ctx.isPlatformAdmin || hasPermission(ctx.role, { integrations: ["manage"] });
@@ -52,6 +60,20 @@ export default async function IntegrationsPage() {
       />
 
       {canManage && <NewConnectionForm />}
+
+      <GoogleCard
+        connection={
+          google && {
+            status: google.status,
+            accountEmail: google.accountEmail,
+            lastCheckedAt: google.lastCheckedAt?.toISOString() ?? null,
+            lastError: google.lastError,
+          }
+        }
+        canManage={canManage}
+        redirectUri={googleRedirectUri()}
+        flash={googleFlash ?? null}
+      />
 
       <Card title={t("connections")}>
         {connections.length === 0 ? (
