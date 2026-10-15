@@ -34,9 +34,9 @@ Plano: `tasks/plan.md`.
 
 ## Task 3: Server actions + callback OAuth
 
-- [ ] `apps/web/src/server/actions/external-connections.ts`
+- [x] `apps/web/src/server/actions/external-connections.ts`
       (`{ ok } | { ok:false, error }`, `revalidatePath`)
-- [ ] `api/integrations/google/callback/route.ts`: valida sessão/org +
+- [x] `api/integrations/google/callback/route.ts`: valida sessão/org +
       state, troca code, redireciona a `/app/settings/channels?google=ok|erro`
 - **Acceptance**: state inválido/org diferente → rejeitado sem gravar token;
   sucesso grava `connected` + conta
@@ -46,14 +46,15 @@ Plano: `tasks/plan.md`.
 
 ## Task 4: Card "Google Contacts" na página de canais
 
-- [ ] Form client id/secret + **Conectar**; status (conta, token, erro);
+- [x] Form client id/secret + **Conectar**; status (conta, token, erro);
       **Verificar**; **Desconectar**; redirect URI copiável
-- [ ] Textos pt-BR em `apps/web/messages/pt-BR.json` (sentence case, sem emoji)
-- [ ] Ações só para `integrations:manage`; demais veem status
+- [x] Textos pt-BR em `apps/web/messages/pt-BR.json` (sentence case, sem emoji)
+- [x] Ações só para `integrations:manage`; demais veem status
 - **Acceptance**: sem conexão → form; `pending`/`connected`/`needs_reauth`
   renderizam estados distintos; tokens do design system (lint verde)
 - **Verify**: `pnpm lint` · `pnpm verify` · checagem manual no `pnpm dev`
   com Google real ou fake
+- **Pendente**: checagem visual/manual da página (`pnpm dev`) ainda não feita.
 - **Deps**: 3 · **Tamanho**: M
 
 ### Checkpoint: final

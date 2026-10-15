@@ -60,13 +60,17 @@ Decisões do gate de esclarecimento (2026-10-15):
 - `apps/web/src/app/app/settings/channels/**`
 - `apps/web/messages/pt-BR.json`
 - `apps/web/e2e/**`
+- `apps/web/src/server/services.ts`
 - `package.json`
 - `codegraph.json`
 - `.prettierignore`
 
 - **Ajuste de tooling autorizado em 2026-10-15** (revisão de custo de tokens/Claude
   Code): `package.json` (turbo `--concurrency=2`), `codegraph.json` e
-  `.prettierignore` entram no Escopo. Skills do projeto removidas: o
+  `.prettierignore` entram no Escopo.
+  `apps/web/src/server/services.ts` entra no Escopo (2026-10-15) para a
+  leitura do status do Google: a regra de lint proíbe a página de
+  importar `@crm/db`. Skills do projeto removidas: o
   ciclo usa só as skills globais do Claude Code (`spec-driven-development`,
   `planning-and-task-breakdown`, `incremental-implementation`,
   `test-driven-development`, `code-review-and-quality`,

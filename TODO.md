@@ -630,6 +630,17 @@ invitation:create`): lista + convites pendentes com **link copiável
   `no-unnecessary-condition` 4, `prefer-nullish-coalescing` 1);
   `complexity` está zerado e já virou `error` na config.
 
+- **P2 — Zerar os warnings de lint (componentes, tamanho, função)** —
+  decidido 2026-10-15: assim que o ship de `feat/google-contacts-connection`
+  (slice 1/3 do Google Contacts) fechar, abrir um plan dedicado
+  (`/plan` com `## Escopo` por pacote) para resolver os avisos de
+  `max-lines`, `max-lines-per-function`, `max-params`, `max-statements`,
+  regras de componente e afins. Medição de 2026-10-15 (warnings por
+  pacote): core 121, web 147, design-system 38, auth 15, storage 8,
+  config 4, db 2, ai 1. Fatiar por pacote/regra (≈100 linhas por commit),
+  sem misturar com feature, e só depois promover a `error`
+  (ver item acima).
+
 ## Concluído
 
 Movido para `docs/changelog.md` (AUD-024) — o histórico de entregas vive

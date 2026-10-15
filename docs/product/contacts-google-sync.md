@@ -80,7 +80,7 @@ New `external_connections` table per `domain-model.md`: org,
 expiry + scopes + account email), status, RLS tenant policy, grants —
 same shape as `channel_connections.credentialsEncrypted`.
 
-`/app/settings/integrations` gets a **Google Contacts** card:
+`/app/settings/channels` (the integrations page) gets a **Google Contacts** card:
 
 - Org pastes its Google OAuth client id/secret (BYOK — org owns the
   consent-screen app), hits **Conectar** → OAuth consent → tokens

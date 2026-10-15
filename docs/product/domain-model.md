@@ -123,10 +123,14 @@ niche-relevant subset — see `external_connections` below.
 
 ## External connections — spec (foundation only)
 
-`external_connections`: org, provider (`google`, ...), encrypted tokens,
-scopes, external account id, status. The OAuth **flow** is deferred —
-endpoints ship with the first Google feature (Contacts sync, Calendar,
-Gmail tools). Table only.
+`external_connections`: org, provider (`google`, ...), one row per
+(org, provider), `bundle_encrypted` (AES-256-GCM `encryptJson`: the org's
+OAuth client id/secret, tokens and the in-flight anti-CSRF state), account
+e-mail, status (`pending` → `connected` → `needs_reauth` | `error`),
+last check/error. Implemented for `google` (Contacts, BYOK): module
+`@crm/core/external-connections`, callback route
+`/api/integrations/google/callback`, card on `/app/settings/channels`.
+Contact sync itself ships in the following slices.
 
 ## Billing — implemented
 
