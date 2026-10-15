@@ -82,11 +82,11 @@ Detalhe de acceptance + verify por task em `tasks/todo.md`.
 
 ## Critérios de pronto
 
-- [ ] `pnpm verify` verde
-- [ ] `pnpm verify:full` verde (toca o módulo de contatos e o banco): integração
+- [x] `pnpm verify` verde
+- [x] `pnpm verify:full` verde (toca o módulo de contatos e o banco): integração
       dos contatos e e2e
-- [ ] Testes: campo inválido rejeitado (URL `javascript:`, data, limite) e
+- [x] Testes: campo inválido rejeitado (URL `javascript:`, data, limite) e
       campo vazio apaga a chave
-- [ ] Docs atualizadas: `docs/product/contacts-google-sync.md` (campos
+- [x] Docs atualizadas: `docs/product/contacts-google-sync.md` (campos
       reais), `docs/product/domain-model.md` se mudar o modelo
-- [ ] `TODO.md`: slice 2/3 concluída, slice 3 listada
+- [x] `TODO.md`: slice 2/3 concluída, slice 3 listada

@@ -5,6 +5,14 @@ a backlog — new entries land here when a `## Concluído` item ages off
 TODO.md (audit AUD-024). `tasks/briefs/` and `tasks/*.done.md` remain the
 local per-task archive.
 
+- **P2 — Google Contacts: perfil do contato (slice 2/3)** ✅ 2026-10-15 —
+  branch `feat/contact-profile`. `contacts.metadata` ganha, em chaves planas e
+  validadas por zod, `company`, `jobTitle`, `address`, `birthday` e `urls`
+  (só `http`/`https`, máx. 5); valor vazio apaga a chave. Edição inline na
+  ficha do inbox e dialog "Editar" por linha em `/app/contacts`. Os dados
+  vivem no Bosun e funcionam sem Google; o espelho é a slice 3. Gate: verify
+  ✅, integração ✅, e2e ✅, build ✅ (ver commits). Plan:
+  `tasks/plan.md`.
 - **P2 — Google Contacts: conexão por workspace (slice 1/3)** ✅ 2026-10-15 —
   branch `feat/google-contacts-connection`. Tabela `external_connections`
   (RLS + FORCE, migração 0034), módulo `@crm/core/external-connections`

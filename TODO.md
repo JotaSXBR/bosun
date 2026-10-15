@@ -572,12 +572,15 @@ invitation:create`): lista + convites pendentes com **link copiável
   provedor inbound), Telegram.
 - **P2 — Google**: slice 1/3 **conexão por workspace** ✅ 2026-10-15
   (`external_connections` + OAuth BYOK + card em `/app/settings/channels`;
-  branch `feat/google-contacts-connection`, aguardando PR/staging).
-  Próximos: slice 2 = perfil do contato (`metadata` zod + edição na ficha),
-  slice 3 = job `contact-google-sync` (push contínuo + bulk inicial, People
-  API) — spec em `docs/product/contacts-google-sync.md`. Depois: Calendar,
-  Gmail tools. Em aberto: toast de retorno duplicado no dev (checar em
-  build de produção).
+  PR #48 mergeado, validar o OAuth real no staging). Slice 2/3 **perfil do
+  contato** ✅ 2026-10-15 (empresa, cargo, endereço, aniversário, sites além
+  de e-mail/telefone/notas; ficha do inbox + dialog "Editar" em
+  `/app/contacts`; branch `feat/contact-profile`, aguardando PR). Próximo:
+  slice 3 = job `contact-google-sync` (push contínuo só com conexão ativa +
+  sync inicial em massa ao conectar, People API) — spec em
+  `docs/product/contacts-google-sync.md`. Depois: Calendar, Gmail tools. Em
+  aberto: toast de retorno do Google duplicado no dev (checar em build de
+  produção).
 - **P3 — LGPD endpoints**: exportar/excluir dados do contato, retenção.
 
 ## Implementação futura (prioridade)
