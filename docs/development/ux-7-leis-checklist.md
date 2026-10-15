@@ -1,8 +1,8 @@
-# Checklist das 7 Leis de UX — gate de `/review`
+# Checklist das 7 Leis de UX — gate do review
 
-Toda tela nova ou alterada passa por este checklist no `/review`, junto do
-`code-review-and-quality`. Se uma tela reprovar, ela volta para `/build`
-antes de seguir para `/ship`.
+Toda tela nova ou alterada passa por este checklist no review, junto do
+`code-review-and-quality`. Se uma tela reprovar, ela volta para o build
+antes do ship.
 
 Fundamento e decisões: `docs/product/ux-7-leis.md`.
 
@@ -32,7 +32,7 @@ Fundamento e decisões: `docs/product/ux-7-leis.md`.
 
 1. Rode o checklist por tela tocada no diff (use o smoke do
    `browser-testing-with-devtools` quando a mudança afetar UI real).
-2. Reprovou em qualquer pergunta → a tela volta para `/build`; registre o
-   achado no relatório do `/review`.
+2. Reprovou em qualquer pergunta → a tela volta para o build; registre o
+   achado no relatório do review.
 3. Exceções (ex.: uma segunda ação primária justificada por domínio) são
    documentadas no review — nunca silenciadas.

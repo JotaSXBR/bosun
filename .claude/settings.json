@@ -1,6 +1,18 @@
 {
   "permissions": {
-    "allow": ["mcp__codegraph__*"],
+    "allow": [
+      "mcp__codegraph__*",
+      "Bash(pnpm verify:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm format:check:*)",
+      "Bash(pnpm --filter:*)",
+      "Bash(pnpm exec vitest:*)",
+      "Bash(pnpm exec prettier:*)",
+      "Bash(pnpm exec eslint:*)",
+      "Bash(pnpm exec tsc:*)"
+    ],
     "deny": [
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",
@@ -23,7 +35,6 @@
       "Edit(./packages/db/migrations/**)",
       "Write(./packages/db/migrations/**)",
       "Bash(git push:*)",
-      "Bash(git commit:*)",
       "Bash(pnpm db:migrate:*)",
       "Bash(pnpm infra:down:*)",
       "mcp__coolify__*"
@@ -37,21 +48,6 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow.mjs\"",
             "timeout": 10
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "codegraph prompt-hook"
-          },
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow.mjs\"",
-            "timeout": 5
           }
         ]
       }

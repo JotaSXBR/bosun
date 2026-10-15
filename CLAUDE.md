@@ -22,10 +22,12 @@ Repo: `github.com/JotaSXBR/bosun` (public, Apache-2.0).
   `pnpm typecheck`/`pnpm lint` while iterating).
 - **Delegate mechanical work.** Fan out mechanical edits/exploration to
   subagents when the user asks; keep planning and review in the main session.
-- **Commits, pushes and PRs only on explicit user request.** Skills that
-  recommend committing per slice (`incremental-implementation`,
-  `git-workflow-and-versioning`) only prepare or describe the commit —
-  never create it unprompted.
+- **Commit locally per verified task; push and PRs only on explicit user
+  request.** Follow `incremental-implementation` /
+  `git-workflow-and-versioning`: once a plan task is done and `pnpm verify`
+  is green, make one atomic Conventional Commit on a feature branch (never
+  directly on `main`). Don't mix tooling/refactor with feature changes in
+  one commit. Never `git push`, open a PR or amend/force-push unprompted.
 
 ## Architecture & layering
 
@@ -46,14 +48,20 @@ kind is each package's `create*Provider`. Detail: `docs/architecture/`.
 
 ## Development workflow
 
-Lifecycle: `/spec` (`docs/product/*`) → `/plan-task` → `/build` → `/test` →
-`/review` → `/ship`. `tasks/plan.md` doubles as the scope contract
-(`## Escopo` globs) enforced by `.claude/hooks/` — full rules and the hook's
-limits in `docs/development/workflow.md`.
-Never hand-write `tasks/plan.md` — run `/plan-task`, using the pre-plan
-skills as needed first: `interview-me` when the ask is underspecified,
-`idea-refine` to stress-test a vague idea, `doubt-driven-development`
-for high-stakes calls.
+Lifecycle, using the global agent-skills (no project-local skills):
+`spec-driven-development` (PRD in `docs/product/*`) →
+`planning-and-task-breakdown` → `incremental-implementation` +
+`test-driven-development` → `pnpm verify` → `code-review-and-quality` →
+`git-workflow-and-versioning` (local commit per verified task). `tasks/plan.md`
+doubles as the scope contract (`## Escopo` globs) enforced by
+`.claude/hooks/` — full rules and the hook's limits in
+`docs/development/workflow.md`.
+Never hand-write `tasks/plan.md` — ask the clarifying questions first
+(`AskUserQuestion`), then use `planning-and-task-breakdown` following
+`docs/development/plan.template.md`; the plan must carry `## Contexto` and
+`## Escopo` or the hook won't gate. Pre-plan skills as needed:
+`interview-me` when the ask is underspecified, `idea-refine` to stress-test
+a vague idea, `doubt-driven-development` for high-stakes calls.
 
 ## Commands
 

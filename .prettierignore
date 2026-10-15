@@ -27,19 +27,6 @@ design-system/lint/adherence.oxlintrc.json
 # Canonical token CSS — byte-identical to the export (drift-checked by test)
 design-system/src/styles/tokens/
 
-# Vendored skill pack (third-party, keep as published) — the 9 local
-# skills stay formatted via the negations below.
-.devin/skills/*/
-!.devin/skills/build/
-!.devin/skills/code-simplify/
-!.devin/skills/context7-docs/
-!.devin/skills/plan-task/
-!.devin/skills/review/
-!.devin/skills/ship/
-!.devin/skills/spec/
-!.devin/skills/test/
-!.devin/skills/webperf/
-
 # Env files (keep the example formatted)
 .env*
 !.env.example
