@@ -282,6 +282,11 @@ codecs=opus` + `convert:true`; pipeline `contact-avatar` →
   volta a ser débito se multi-fuso virar requisito;
   **Tooling 2026-10-14**: `vitest.config.ts` com `isolate:false` +
   `fsModuleCache:true` — suite unitária local 9,7s → ~3,5s;
+  **spec 2026-10-15**: `docs/product/contacts-google-sync.md` — sync de
+  contatos Bosun→Google (People API), push-only contínuo, conexão por
+  workspace configurada/checada via UI (BYOK, `external_connections`),
+  match E.164, sobrescreve só nome, foto nunca, sem customs; futuro:
+  pull bidirecional + delete→rename `Excluído`/`Bloqueado`;
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);

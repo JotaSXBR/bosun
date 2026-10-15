@@ -8,9 +8,8 @@ Coolify host: `https://coolify.example.com` (v4.3.23), single server
 `localhost` (uuid in `deployment.local.md`), Traefik proxy, Let's Encrypt.
 
 Day-to-day operations go through the **Coolify MCP server**
-(`https://coolify.example.com/mcp`, streamable HTTP, bearer token — see
-`.devin/mcp_config.json`; the token lives in gitignored
-`.devin/mcp_config.local.json` / `COOLIFY_API_TOKEN`). Provisioning used the
+(`https://coolify.example.com/mcp`, streamable HTTP, bearer token; configured
+per developer in Claude Code's local MCP scope, never committed). Provisioning used the
 REST API (`/api/v1`) — both are documented below.
 
 > Real hostnames, domains and resource UUIDs live in the gitignored

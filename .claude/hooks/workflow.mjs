@@ -15,7 +15,7 @@ import { join } from "node:path";
 
 import { globMatch, parseScopeLines, toRel } from "./scope.mjs";
 
-const ROOT = process.cwd();
+const ROOT = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 const BRIEF = join(ROOT, "tasks", "plan.md");
 
 const input = JSON.parse(await readStdin());
@@ -64,15 +64,18 @@ switch (event) {
             hookSpecificOutput: {
               hookEventName: "PreToolUse",
               additionalContext:
-                "No tasks/plan.md with an ## Escopo section found. For feature work, run /plan first — the plan is the contract that keeps work in scope.",
+                "No tasks/plan.md with an ## Escopo section found. For feature work, run /plan-task first — the plan is the contract that keeps work in scope.",
             },
           });
         } else if (scope.some((g) => globMatch(g, rel))) {
           emit({});
         } else {
           emit({
-            decision: "block",
-            reason: `Blocked by workflow hook: "${rel}" is outside the plan's Escopo (${scope.join(", ")}). Either revert, or ask the user to expand the Escopo in tasks/plan.md.`,
+            hookSpecificOutput: {
+              hookEventName: "PreToolUse",
+              permissionDecision: "deny",
+              permissionDecisionReason: `Blocked by workflow hook: "${rel}" is outside the plan's Escopo (${scope.join(", ")}). Either revert, or ask the user to expand the Escopo in tasks/plan.md.`,
+            },
           });
         }
       }
@@ -148,9 +151,9 @@ function readScope() {
 }
 
 // Docs/meta are always editable — the trava only governs source & config.
-// (.devin/** stays allowed here because .devin/config.json already guards
+// (.claude/** stays allowed here because .claude/settings.json already guards
 // rule files with `ask` permissions — AUD-004/T2.1.)
 function alwaysAllowed(rel) {
-  const allowed = ["**/*.md", "TODO.md", ".devin/**", "research/**", "**/migrations/meta/**"];
+  const allowed = ["**/*.md", "TODO.md", ".claude/**", "research/**", "**/migrations/meta/**"];
   return allowed.some((g) => globMatch(g, rel));
 }

@@ -1,7 +1,7 @@
 # Development workflow
 
-How work flows in this repo — human + Devin agent. The lifecycle commands
-are thin alias skills in `.devin/skills/` that invoke the installed
+How work flows in this repo — human + Claude Code. The lifecycle commands
+are thin alias skills in `.claude/skills/` that invoke the installed
 `addyosmani/agent-skills` pack, wired to this repo's own gates.
 
 ## The loop
@@ -10,8 +10,8 @@ are thin alias skills in `.devin/skills/` that invoke the installed
 /spec  →  /plan-task  →  /build  →  /test  →  /review  →  /ship
 ```
 
-Mesma sequência do pack upstream. No Devin, slash command = nome do
-diretório da skill; `/plan` é built-in do Devin (modo Plan), então a
+Mesma sequência do pack upstream. No Claude Code, slash command = nome do
+diretório da skill; `/plan` é built-in (modo Plan), então a
 etapa do ciclo chama-se `/plan-task`. Adaptações locais:
 
 - **`/spec`** escreve/edita o PRD em `docs/product/` (o formato do projeto,
@@ -86,19 +86,19 @@ tem resposta de uma frase já escrita em algum lugar, `/spec` primeiro.
 
 ## A trava de escopo (`tasks/plan.md` + hooks)
 
-`.devin/hooks.v1.json` → `.devin/hooks/workflow.mjs` registra:
+`.claude/settings.json` → `.claude/hooks/workflow.mjs` registra:
 
 - **SessionStart**: injeta o resumo deste workflow no contexto.
 - **UserPromptSubmit**: lembra qual plan está ativo.
-- **PreToolUse** (edit/write): **bloqueia** editar arquivo de código/config
+- **PreToolUse** (edit/write): **nega** (`permissionDecision: deny`) editar arquivo de código/config
   fora dos globs de `## Escopo` do `tasks/plan.md`. Markdown/docs são
   sempre livres. Sem plan → só lembrete (edições pontuais/docs não travam).
-  Limites conhecidos: só intercepta `edit`/`write`/`notebook_edit` —
-  comandos de shell (`exec`) não passam pelo hook; `.devin/**` e `**/*.md`
-  ficam sempre livres aqui, mas `AGENTS.md`, `CLAUDE.md`, `**/SKILL.md`,
-  `.devin/**` e `.github/**` estão sob `ask` em `.devin/config.json`.
+  Limites conhecidos: só intercepta `Edit`/`Write`/`NotebookEdit` —
+  comandos de shell (`Bash`) não passam pelo hook; `.claude/**` e `**/*.md`
+  ficam sempre livres aqui, mas `AGENTS.md`, `CLAUDE.md`, `.claude/**` e
+  `.github/**` estão sob `ask` em `.claude/settings.json`.
   O hook é um lembrete com trava, não uma fronteira de segurança —
-  a camada real é `.devin/config.json` + permissões da sessão.
+  a camada real é `.claude/settings.json` + permissões da sessão.
 - **PostToolUse**: marca que a sessão editou arquivos.
 - **Stop**: se a sessão editou, **bloqueia a primeira tentativa de parar**
   exigindo o gate — `pnpm verify` + TODO/docs atualizados. Bloqueia uma
@@ -129,32 +129,33 @@ O CI continua sendo a barreira final (roda os mesmos cheques via turbo).
 
 ## MCP servers do projeto
 
-`.devin/mcp_config.json` (commitado, escopo do projeto):
+`.mcp.json` (commitado, escopo do projeto): **codegraph**.
 
-- **chrome-devtools** (`chrome-devtools-mcp@1.10.1`) — browser real para a
-  skill `browser-testing-with-devtools`: DOM, console, network, screenshots.
-  Sem credenciais. Carrega em novas sessões.
-- **coolify** (transporte http) — painel de deploy; URL real e token ficam
-  em `.devin/mcp_config.local.json` (gitignored). Uso restrito a leitura +
-  deploy/start/stop/restart; tools cobertas por `ask` em
-  `.devin/config.json` — configurações fora disso (envs, fqdn,
+- **coolify** (http) — painel de deploy; URL real e token ficam fora do
+  repo, no escopo local do Claude Code (`claude mcp add --scope local
+--transport http coolify <url> --header "Authorization: Bearer …"`).
+  Uso restrito a leitura + deploy/start/stop/restart; tools cobertas por
+  `ask` em `.claude/settings.json` — configurações fora disso (envs, fqdn,
   healthcheck) escalam ao usuário (ver `deployment-coolify.md`).
+- **chrome-devtools** — não configurado por ora; a skill
+  `browser-testing-with-devtools` só funciona se for adicionado.
 
 Servidor user-level conhecido: `context7` (docs de libs). Qualquer outro
 (github etc.) só vale se configurado na máquina — não é garantido.
 
 ### Atualizando as skills
 
-`.devin/skills/` mistura 9 skills locais (aliases do ciclo + `context7-docs`,
-`.prettierignore` as mantém formatadas) e 25 vendorizadas de
-`addyosmani/agent-skills` (`skills-lock.json`). Atualizar o pack exige PR
-próprio com revisão do diff de `.devin/skills/**` e `ref` fixado no
-lockfile — nunca atualizar no meio de outro trabalho.
+`.claude/skills/` tem só os aliases do ciclo (`spec`, `plan-task`, `build`,
+`test`, `review`, `ship`, `code-simplify`, `webperf`). As 25 skills
+vendorizadas de `addyosmani/agent-skills` vêm da instalação global
+(`~/.agents/skills`, via `npx skills`); `skills-lock.json` registra a
+fonte/hash esperados. Atualizar o pack é decisão própria, nunca no meio de
+outro trabalho.
 
 ## O que NÃO muda
 
 - AGENTS.md continua a fonte de verdade de regras de código/segurança.
 - Sem commit sem pedido explícito. Sem `apps/worker` sem ADR.
 - Sem infra/dependências novas sem justificativa concreta.
-- Secrets só via env — nunca em `.devin/mcp_config.json` (usar
-  `mcp_config.local.json`, gitignored, se um dia precisar).
+- Secrets só via env — nunca em `.mcp.json` (usar o escopo
+  local do `claude mcp add`).
