@@ -204,6 +204,60 @@ describe("contacts service", () => {
     expect(meta2.phone).toBe("+5511900001111");
   });
 
+  it("updateContactProfile stores the extended profile and clears fields independently", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Perfil Completo",
+      phone: "+5511955554444",
+    });
+    const full = await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "Acme Ltda",
+      jobTitle: "Diretora",
+      address: "Rua A, 10\nSão Paulo - SP",
+      birthday: "1990-02-28",
+      urls: ["https://acme.test", "http://acme.test/sobre"],
+    });
+    expect(full.metadata).toMatchObject({
+      company: "Acme Ltda",
+      jobTitle: "Diretora",
+      address: "Rua A, 10\nSão Paulo - SP",
+      birthday: "1990-02-28",
+      urls: ["https://acme.test", "http://acme.test/sobre"],
+      source: "manual",
+    });
+
+    const partial = await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "",
+      urls: [],
+      birthday: "",
+    });
+    expect(partial.metadata.company).toBeUndefined();
+    expect(partial.metadata.urls).toBeUndefined();
+    expect(partial.metadata.birthday).toBeUndefined();
+    expect(partial.metadata.jobTitle).toBe("Diretora");
+    expect(partial.metadata.address).toBe("Rua A, 10\nSão Paulo - SP");
+  });
+
+  it("updateContactProfile rejects a dangerous url without touching the contact", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Url Perigosa",
+      phone: "+5511944443333",
+    });
+    await expect(
+      updateContactProfile(db, agent, {
+        contactId: contact.id,
+        company: "Não deve gravar",
+        urls: ["javascript:alert(1)"],
+      }),
+    ).rejects.toThrow();
+    const after = await getContact(db, agent, contact.id);
+    expect(after.metadata.company).toBeUndefined();
+    expect(after.metadata.urls).toBeUndefined();
+  });
+
   it("updateContactProfile rejects viewer and cross-tenant write", async () => {
     const contact = await createContact(db, ctx(orgA, memberA, "agent"), {
       displayName: "Protegido",

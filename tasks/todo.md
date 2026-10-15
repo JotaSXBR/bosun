@@ -4,12 +4,12 @@ Plano: `tasks/plan.md`.
 
 ## Task 1: Core — campos novos no perfil do contato
 
-- [ ] `updateContactProfileInput`: `company` (≤120), `jobTitle` (≤120),
+- [x] `updateContactProfileInput`: `company` (≤120), `jobTitle` (≤120),
       `address` (≤500), `birthday` (`""` ou `YYYY-MM-DD` válido), `urls`
       (lista de URLs `http`/`https`, máx. 5, cada ≤300)
-- [ ] `updateContactProfileRow` trata as chaves de forma genérica (valor
+- [x] `updateContactProfileRow` trata as chaves de forma genérica (valor
       vazio ou lista vazia apaga a chave; os demais mesclam no `metadata`)
-- [ ] Testes unitários do zod (`schemas.test.ts`) e de integração
+- [x] Testes unitários do zod (`schemas.test.ts`) e de integração
       (`service.int.test.ts`: grava, atualiza e apaga cada campo)
 - **Acceptance**: os cinco campos novos gravam e apagam; `javascript:`/
   `data:`, data inexistente e mais de 5 URLs são rejeitados; campos
@@ -20,7 +20,7 @@ Plano: `tasks/plan.md`.
 
 ### Checkpoint: após a tarefa 1
 
-- [ ] `pnpm verify` e integração do módulo verdes · revisar com o humano
+- [x] `pnpm verify` e integração do módulo verdes · revisar com o humano
 
 ## Task 2: Ficha do inbox — campos novos
 

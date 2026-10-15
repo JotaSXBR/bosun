@@ -2,6 +2,8 @@ import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
 import { and, asc, eq, sql } from "drizzle-orm";
 
+import type { UpdateContactProfileInput } from "./schemas";
+
 const { contacts, conversations } = schema;
 
 export type ContactRow = typeof contacts.$inferSelect;
@@ -54,21 +56,32 @@ export async function findContactById(
   return row;
 }
 
+const PROFILE_KEYS = [
+  "email",
+  "phone",
+  "notes",
+  "company",
+  "jobTitle",
+  "address",
+  "birthday",
+  "urls",
+] as const;
+
 /**
- * Ficha edit (E2) — `displayName` column update plus a metadata jsonb
- * patch for email/phone/notes; empty string removes the key.
+ * Ficha edit — `displayName` column update plus a metadata jsonb patch for
+ * the profile keys; an empty string / empty list removes the key.
  */
 export async function updateContactProfileRow(
   executor: DbExecutor,
   contactId: string,
-  values: { displayName?: string; email?: string; phone?: string; notes?: string },
+  values: Omit<UpdateContactProfileInput, "contactId">,
 ): Promise<void> {
-  const patch: Record<string, string> = {};
+  const patch: Record<string, string | string[]> = {};
   const drops: string[] = [];
-  for (const key of ["email", "phone", "notes"] as const) {
+  for (const key of PROFILE_KEYS) {
     const value = values[key];
     if (value === undefined) continue;
-    if (value === "") drops.push(key);
+    if (value === "" || (Array.isArray(value) && value.length === 0)) drops.push(key);
     else patch[key] = value;
   }
   // `jsonb - text` removes a key; `||` merges the patch — bound params keep
