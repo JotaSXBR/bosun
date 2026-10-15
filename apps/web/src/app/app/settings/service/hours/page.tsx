@@ -29,6 +29,7 @@ export default async function ServiceHoursPage() {
       <HoursForm
         businessHours={businessHoursSchema.parse(settings.businessHours)}
         offHoursMessage={settings.offHoursMessage}
+        unsupportedMediaMessage={settings.unsupportedMediaMessage}
         timezone={settings.timezone}
       />
     </main>

@@ -298,7 +298,14 @@ async function deliverReply(
   await withTenant(db, plan.organizationId, async (tx) => {
     await tx
       .update(messages)
-      .set({ externalId: sent.externalId, status: sent.status, updatedAt: new Date() })
+      .set({
+        externalId: sent.externalId,
+        status: sent.status,
+        // A retry may have sent a newer template than the first attempt —
+        // the marker row mirrors what actually went out.
+        content: { type: "text", text: plan.text },
+        updatedAt: new Date(),
+      })
       .where(sql`${messages.id} = ${marker.id}`);
     await updateConversationLastMessage(tx, plan.conv.id, plan.now, {
       direction: "outbound",

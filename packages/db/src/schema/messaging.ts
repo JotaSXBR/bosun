@@ -233,6 +233,10 @@ export const messages = pgTable(
     uniqueIndex("messages_off_hours_day_idx")
       .on(t.conversationId, sql`(metadata ->> 'autoReplyDay')`)
       .where(sql`${t.metadata} ->> 'system' = 'off_hours'`),
+    // One unsupported-media auto-reply per ticket — same atomic reserve.
+    uniqueIndex("messages_unsupported_media_idx")
+      .on(t.conversationId)
+      .where(sql`${t.metadata} ->> 'system' = 'unsupported_media'`),
     index("messages_conversation_sent_idx").on(t.conversationId, t.sentAt),
     // getLastInboundAt (detail render) orders by created_at — the sent_at
     // index can't serve it. Partial: inbound only, tiny on mixed threads.

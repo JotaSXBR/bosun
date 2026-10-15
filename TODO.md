@@ -141,9 +141,19 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   inbound, pref on; marker re-dispara quando inbound chega com a thread
   aberta); sticker (image/webp) renderiza sem chrome + pseudo-kind
   "sticker" na row; media inbound sem source recebe flag
-  `metadata.unsupportedMedia` → nota interna no bubble — **pendente**:
-  config por-org p/ IA responder "não entendi o arquivo" ou ignorar
-  mídia não suportada (não existe auto-responder ainda);
+  `metadata.unsupportedMedia` → nota interna no bubble — **auto-reply
+  por-org entregue 2026-10-14**: `organization_settings.
+unsupported_media_message` (template editável, vazio = off), envio de
+  sistema 1×/ticket via `maybeSendUnsupportedMediaReply` no job
+  `process-channel-event` (marker `metadata.system="unsupported_media"`,
+  índice único parcial `messages_unsupported_media_idx`), textarea em
+  `/app/settings/service/hours`; sem IA — texto enlatado.
+  **Fixes pós-review (2026-10-15)**: retry pós-falha atualiza `content`
+  da marker com o template corrente (offhours + unsupported-media);
+  precedência por inbound — se o off-hours respondeu, a de mídia não
+  sai (1 bolha de sistema); `vitest.unit.shared.ts` + stub
+  `vitest.config.ts` por pacote levam `isolate:false`/`fsModuleCache`
+  pro `turbo run test` do CI também;
   **mergeado 2026-10-13** — PR #38 squash `366120e` na main (checks
   quality/scan/integration verdes);
   **plano 3 implementado 2026-10-14** (C1/B1/B2/B3 do inbox-ui-review):
@@ -174,7 +184,10 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   defaults do Next (proxy buffer 10 MB + Server Actions 1 MB —
   `media-upload.ts` anunciava 64 MB) → ambos em `65mb` + composer/
   gravador com catch (toast + reset) e checagem de tamanho no client.
-  Resta `sendVoice` mimetype ogg/opus + avatarUrl;
+  ~~Resta `sendVoice` mimetype ogg/opus + avatarUrl~~ — ambos já
+  implementados e confirmados em staging 2026-10-14 (`audio/ogg;
+codecs=opus` + `convert:true`; pipeline `contact-avatar` →
+  `/api/contacts/[id]/avatar`);
   **re-smoke 2026-10-14** (PR #40 deployado): arquivo >10 MB envia ✅,
   mic pede permissão ✅, **mas** (a) figurinha seguia quebrada — GOWS
   emite `media.url` = `mmg.whatsapp.net/….enc` (CDN criptografado, não
@@ -253,6 +266,21 @@ Ordem do produto definida pelo fundador: integrações ✅ → multi-atendimento
   blue ticks pro contato — recibo nativo do WhatsApp sai só em
   interação; no Bosun o `sendSeen` ao abrir o ticket é o caminho
   equivalente;
+  **re-smoke final 2026-10-14** (PR #46 deployado): mídia inbound ✅ —
+  figurinha renderiza (inclusive antigas), áudio toca com waveform
+  navegável, arquivo e imagem com legenda ok, mark-as-read dispara
+  blue ticks (`sendSeen` ao abrir o ticket). **Decisão de storage
+  (2026-10-14)**: mídia inbound fica no WAHA (`WAHA_MEDIA_STORAGE=S3`,
+  `WHATSAPP_FILES_LIFETIME=604800` mantido — expira em 7d); Bosun não
+  copia bytes, `/api/media/[id]` re-busca do WAHA por view. Limitação
+  aceita: mídia >7d vira 404 permanente — cópia pro `tenantObjectKey`
+  descartada por ora (revisitar se doer). **Débito LocalDateTime
+  resolvido via infra**: `TZ=America/Sao_Paulo` nas envs do app no
+  Coolify staging — datas server-rendered fora do inbox (audit/
+  contacts/members/ai) saem em BRT; fix por-usuário (client-side) só
+  volta a ser débito se multi-fuso virar requisito;
+  **Tooling 2026-10-14**: `vitest.config.ts` com `isolate:false` +
+  `fsModuleCache:true` — suite unitária local 9,7s → ~3,5s;
 - **Decisões do estudo de ADRs** (docs/adr do projeto Fluxie, somente
   referência — não-portar às cegas): `channel_event` append-only de
   payload bruto só se fizer com RLS tenant (auditoria/debug/replay);
