@@ -37,11 +37,11 @@ Plano: `tasks/plan.md`.
 
 ## Task 3: Dialog "Editar contato" em `/app/contacts`
 
-- [ ] `contact-edit-dialog.tsx` com todos os campos (nome, e-mail, telefone
+- [x] `contact-edit-dialog.tsx` com todos os campos (nome, e-mail, telefone
       extra, empresa, cargo, endereço, aniversário, sites, notas)
-- [ ] Botão "Editar" por linha (só com `messaging:write`) abrindo o dialog
+- [x] Botão "Editar" por linha (só com `messaging:write`) abrindo o dialog
       com os valores atuais
-- [ ] e2e em `contacts.spec.ts`: criar contato, editar, reabrir e ver os
+- [x] e2e em `contacts.spec.ts`: criar contato, editar, reabrir e ver os
       valores; URL inválida mostra erro
 - **Acceptance**: salvar atualiza a lista e o dialog reabre com os dados;
   erro de validação aparece em toast sem fechar o dialog

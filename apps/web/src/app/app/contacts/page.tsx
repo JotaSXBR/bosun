@@ -7,6 +7,7 @@ import { hasPermission } from "@crm/permissions";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 
+import { EditContactButton } from "@/components/contact-edit-dialog";
 import type { ContactListRow } from "@/server/services";
 import { listContactsPage, listWahaConnections } from "@/server/services";
 import { requireTenantContext } from "@/server/tenant";
@@ -131,6 +132,16 @@ export default async function ContactsPage({
                   <time className="text-ink-muted text-xs">
                     {format.dateTime(contact.createdAt, { dateStyle: "short" })}
                   </time>
+                  {canWrite && (
+                    <EditContactButton
+                      contact={{
+                        id: contact.id,
+                        displayName: contact.displayName,
+                        channelUserId: contact.channelUserId,
+                        metadata: contact.metadata,
+                      }}
+                    />
+                  )}
                   {canWrite && isWhatsAppChatId(contact.channelUserId) && (
                     <StartConversationButton
                       connections={connections}
