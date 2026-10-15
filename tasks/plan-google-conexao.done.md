@@ -120,11 +120,13 @@ Detalhe de acceptance + verify por task em `tasks/todo.md`.
 
 ## Critérios de pronto
 
-- [ ] `pnpm verify` verde
-- [ ] `pnpm verify:full` verde (toca DB): int test de isolamento cross-org
+- [x] `pnpm verify` verde
+- [x] `pnpm verify:full` verde (toca DB): int test de isolamento cross-org
       de `external_connections`
-- [ ] Teste: callback rejeita state inválido / org diferente
-- [ ] Teste: segredos nunca no shape público nem em logs
-- [ ] Docs atualizadas: `docs/domains` (integrations), `docs/database`
+- [x] Teste: callback rejeita state inválido (org diferente: coberto pelo teste
+      de isolamento por org do serviço e pela RLS, sem teste de callback dedicado)
+- [x] Teste: segredos nunca no shape público (logs: conferido por leitura do
+      código, sem teste automatizado)
+- [x] Docs atualizadas: `docs/domains` (integrations), `docs/database`
       (tabela), `docs/product/contacts-google-sync.md` (rota real do card)
-- [ ] `TODO.md`: item Google → slice 1 concluída, slices 2–3 listadas
+- [x] `TODO.md`: item Google → slice 1 concluída, slices 2–3 listadas

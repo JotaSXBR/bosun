@@ -64,5 +64,5 @@ Plano: `tasks/plan.md`.
 
 ### Checkpoint: final
 
-- [ ] `pnpm verify:full` verde · critérios de pronto do plan marcados ·
+- [x] `pnpm verify:full` verde · critérios de pronto do plan marcados ·
       `/review`

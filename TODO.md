@@ -570,8 +570,14 @@ invitation:create`): lista + convites pendentes com **link copiável
   free → por GB).
 - **P2 — Canais seguintes**: Instagram/Facebook (Meta), e-mail (decidir
   provedor inbound), Telegram.
-- **P2 — Google**: fluxo OAuth sobre `external_connections` (tabela entra
-  com a fase de IA) + People/Contacts sync, Calendar, Gmail tools.
+- **P2 — Google**: slice 1/3 **conexão por workspace** ✅ 2026-10-15
+  (`external_connections` + OAuth BYOK + card em `/app/settings/channels`;
+  branch `feat/google-contacts-connection`, aguardando PR/staging).
+  Próximos: slice 2 = perfil do contato (`metadata` zod + edição na ficha),
+  slice 3 = job `contact-google-sync` (push contínuo + bulk inicial, People
+  API) — spec em `docs/product/contacts-google-sync.md`. Depois: Calendar,
+  Gmail tools. Em aberto: toast de retorno duplicado no dev (checar em
+  build de produção).
 - **P3 — LGPD endpoints**: exportar/excluir dados do contato, retenção.
 
 ## Implementação futura (prioridade)
