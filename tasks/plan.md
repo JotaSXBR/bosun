@@ -46,6 +46,17 @@ Decisões do gate de esclarecimento (2026-10-15):
   `needs_reauth` (refresh falhou) | `error`. Escopo OAuth:
   `https://www.googleapis.com/auth/contacts` + `openid email` (para
   exibir a conta conectada).
+- **Ajuste de tooling autorizado em 2026-10-15** (revisão de custo de tokens/Claude
+  Code): `package.json` (turbo `--concurrency=2`), `codegraph.json` e
+  `.prettierignore` entram no Escopo.
+  `apps/web/src/server/services.ts` entra no Escopo (2026-10-15) para a
+  leitura do status do Google: a regra de lint proíbe a página de
+  importar `@crm/db`. Skills do projeto removidas: o
+  ciclo usa só as skills globais do Claude Code (`spec-driven-development`,
+  `planning-and-task-breakdown`, `incremental-implementation`,
+  `test-driven-development`, `code-review-and-quality`,
+  `git-workflow-and-versioning`), e o `tasks/plan.md` segue
+  `docs/development/plan.template.md` (`## Contexto` + `## Escopo`).
 
 ## Escopo
 
@@ -64,18 +75,6 @@ Decisões do gate de esclarecimento (2026-10-15):
 - `package.json`
 - `codegraph.json`
 - `.prettierignore`
-
-- **Ajuste de tooling autorizado em 2026-10-15** (revisão de custo de tokens/Claude
-  Code): `package.json` (turbo `--concurrency=2`), `codegraph.json` e
-  `.prettierignore` entram no Escopo.
-  `apps/web/src/server/services.ts` entra no Escopo (2026-10-15) para a
-  leitura do status do Google: a regra de lint proíbe a página de
-  importar `@crm/db`. Skills do projeto removidas: o
-  ciclo usa só as skills globais do Claude Code (`spec-driven-development`,
-  `planning-and-task-breakdown`, `incremental-implementation`,
-  `test-driven-development`, `code-review-and-quality`,
-  `git-workflow-and-versioning`), e o `tasks/plan.md` segue
-  `docs/development/plan.template.md` (`## Contexto` + `## Escopo`).
 
 ## Fora de escopo
 
