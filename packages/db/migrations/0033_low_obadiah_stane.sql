@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "messages_unsupported_media_idx" ON "messages" USING btree ("conversation_id") WHERE "messages"."metadata" ->> 'system' = 'unsupported_media';

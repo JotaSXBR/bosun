@@ -49,6 +49,10 @@ export const organizationSettings = pgTable(
     // Inbound audio messages get a STT pass (job `transcribe-audio`)
     // when the org has a BYOK credential — spec channel-whatsapp.md §5.
     aiTranscribeAudio: boolean().notNull().default(true),
+    // Org-authored reply sent once per ticket when an inbound media has
+    // no fetchable source (metadata.unsupportedMedia). null = off; the
+    // bubble's internal note always shows regardless.
+    unsupportedMediaMessage: text(),
     // Last time the observer-scan sweep ran for this org (per-org cadence).
     observerLastScanAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

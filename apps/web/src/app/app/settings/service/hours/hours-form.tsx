@@ -199,7 +199,12 @@ function validate(days: Record<string, DayState>, t: HoursT): string | null {
   return null;
 }
 
-function useHoursSubmit(days: Record<string, DayState>, message: string, th: HoursT) {
+function useHoursSubmit(
+  days: Record<string, DayState>,
+  message: string,
+  mediaMessage: string,
+  th: HoursT,
+) {
   const t = useTranslations("settings");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -214,6 +219,7 @@ function useHoursSubmit(days: Record<string, DayState>, message: string, th: Hou
       const result = await updateOrgSettingsAction({
         businessHours: toBusinessHours(days),
         offHoursMessage: message.trim() ? message.trim() : null,
+        unsupportedMediaMessage: mediaMessage.trim() ? mediaMessage.trim() : null,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -244,20 +250,42 @@ function OffHoursCard({ message, onChange }: { message: string; onChange: (v: st
   );
 }
 
+function UnsupportedMediaCard({
+  message,
+  onChange,
+}: {
+  message: string;
+  onChange: (v: string) => void;
+}) {
+  const t = useTranslations("settings");
+  return (
+    <Card title={t("org.unsupportedMedia")} subtitle={t("org.unsupportedMediaHint")}>
+      <Textarea
+        value={message}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={t("org.unsupportedMediaPlaceholder")}
+      />
+    </Card>
+  );
+}
+
 export function HoursForm({
   businessHours,
   offHoursMessage,
+  unsupportedMediaMessage,
   timezone,
 }: {
   businessHours: BusinessHours | null;
   offHoursMessage: string | null;
+  unsupportedMediaMessage: string | null;
   timezone: string;
 }) {
   const t = useTranslations("settings");
   const th = useTranslations("settings.hours");
   const [days, setDays] = useState(() => toDayState(businessHours));
   const [message, setMessage] = useState(offHoursMessage ?? "");
-  const { isPending, onSubmit } = useHoursSubmit(days, message, th);
+  const [mediaMessage, setMediaMessage] = useState(unsupportedMediaMessage ?? "");
+  const { isPending, onSubmit } = useHoursSubmit(days, message, mediaMessage, th);
 
   return (
     <div className="space-y-6" data-testid="hours-form">
@@ -280,6 +308,7 @@ export function HoursForm({
         </p>
       </Card>
       <OffHoursCard message={message} onChange={setMessage} />
+      <UnsupportedMediaCard message={mediaMessage} onChange={setMediaMessage} />
       <div>
         <Button variant="primary" loading={isPending} onClick={onSubmit}>
           {t("org.submit")}

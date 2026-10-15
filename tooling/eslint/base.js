@@ -34,6 +34,10 @@ export default tseslint.config(
       "**/*.tsbuildinfo",
       "**/playwright-report/**",
       "**/test-results/**",
+      // Per-package vitest stubs are 2-line re-exports of
+      // vitest.unit.shared.ts — outside every tsconfig (packages only
+      // include src/), so the typed projectService can't parse them.
+      "**/vitest.config.ts",
     ],
   },
   eslint.configs.recommended,

@@ -128,4 +128,6 @@ export {
   sendWidgetMessage,
   widgetPreFormInput,
 } from "./sitechat";
+export type { UnsupportedMediaResult } from "./unsupported-media";
+export { maybeSendUnsupportedMediaReply } from "./unsupported-media";
 export type { MessageContent } from "@crm/channels";

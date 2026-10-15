@@ -255,7 +255,14 @@ describe("maybeSendOffHoursReply", () => {
     const failed = await markerRows(orgA, conv.id);
     expect(failed[0]!.status).toBe("failed");
 
-    // Job retry: same day, recovered provider → sends through on the row.
+    // Template edited while the marker was failed — the retry sends the
+    // CURRENT text and the row mirrors what actually went out.
+    await withTenant(db, orgA, (tx) =>
+      tx
+        .update(organizationSettings)
+        .set({ offHoursMessage: "Fechado. {proximo_atendimento}." })
+        .where(eq(organizationSettings.organizationId, orgA)),
+    );
     const ok = new FakeChannelProvider();
     const retry = await maybeSendOffHoursReply(
       db,
@@ -267,5 +274,6 @@ describe("maybeSendOffHoursReply", () => {
     const after = await markerRows(orgA, conv.id);
     expect(after).toHaveLength(1);
     expect(after[0]!.status).toBe("sent");
+    expect(after[0]!.content).toEqual({ type: "text", text: "Fechado. amanhã às 09:00." });
   });
 });

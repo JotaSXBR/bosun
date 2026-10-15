@@ -201,6 +201,7 @@ export async function upsertSettings(
   values: {
     businessHours?: unknown;
     offHoursMessage?: string | null;
+    unsupportedMediaMessage?: string | null;
     timezone?: string;
     locale?: string;
     ticketReopenWindowHours?: number;

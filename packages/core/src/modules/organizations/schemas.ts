@@ -20,6 +20,9 @@ export type BusinessHours = z.infer<typeof businessHoursSchema>;
 export const updateOrgSettingsInput = z.object({
   businessHours: businessHoursSchema.optional(),
   offHoursMessage: z.string().trim().max(500).nullish(),
+  // Once-per-ticket reply when inbound media has no fetchable source;
+  // null/empty disables it (internal note still shows).
+  unsupportedMediaMessage: z.string().trim().max(500).nullish(),
   timezone: z.string().trim().min(1).max(64).optional(),
   locale: z.string().trim().min(2).max(16).optional(),
   // Hours a resolved ticket stays reopenable (product rules: 1h–7d).
