@@ -3,6 +3,7 @@ export * from "./audit";
 export * from "./auth";
 export * from "./billing";
 export * from "./brain";
+export * from "./external";
 export * from "./leads";
 export * from "./messaging";
 export * from "./onboarding";
