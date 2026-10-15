@@ -40,7 +40,8 @@ switch (event) {
     if (!filePath) emit({});
     else {
       const rel = toRel(ROOT, filePath);
-      if (alwaysAllowed(rel)) emit({});
+      // Files outside the repo (scratchpad, ~/.claude) are not governed by the plan.
+      if (rel.startsWith("../") || alwaysAllowed(rel)) emit({});
       else {
         const scope = readScope();
         if (!scope) {
