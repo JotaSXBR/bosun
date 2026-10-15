@@ -30,7 +30,12 @@ describe("google oauth client", () => {
       return Promise.resolve(
         url.includes("userinfo")
           ? json({ email: "owner@acme.test" })
-          : json({ access_token: "at", refresh_token: "rt", expires_in: 3600 }),
+          : json({
+              access_token: "at",
+              refresh_token: "rt",
+              expires_in: 3600,
+              scope: "openid https://www.googleapis.com/auth/contacts",
+            }),
       );
     });
     const result = await client.exchangeCode({
@@ -55,9 +60,28 @@ describe("google oauth client", () => {
     ).rejects.toMatchObject({ name: "GoogleOAuthError", code: "invalid_grant" });
   });
 
+  it("rejects an exchange where the user denied the contacts scope (granular consent)", async () => {
+    const client = createGoogleOAuthClient(() =>
+      Promise.resolve(
+        json({ access_token: "at", refresh_token: "rt", expires_in: 3600, scope: "openid email" }),
+      ),
+    );
+    const error = await client
+      .exchangeCode({ clientId: "c", clientSecret: "s", redirectUri: "https://x/cb", code: "c" })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(GoogleOAuthError);
+    expect((error as GoogleOAuthError).code).toBe("scope_not_granted");
+  });
+
   it("rejects an exchange without a refresh token", async () => {
     const client = createGoogleOAuthClient(() =>
-      Promise.resolve(json({ access_token: "at", expires_in: 3600 })),
+      Promise.resolve(
+        json({
+          access_token: "at",
+          expires_in: 3600,
+          scope: "https://www.googleapis.com/auth/contacts",
+        }),
+      ),
     );
     const error = await client
       .exchangeCode({ clientId: "c", clientSecret: "s", redirectUri: "https://x/cb", code: "c" })
