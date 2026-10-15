@@ -24,10 +24,10 @@ Plano: `tasks/plan.md`.
 
 ## Task 2: Ficha do inbox — campos novos
 
-- [ ] `ContactFicha` exibe e edita inline `company`, `jobTitle`, `address`,
+- [x] `ContactFicha` exibe e edita inline `company`, `jobTitle`, `address`,
       `birthday` e `urls` (uma por linha)
-- [ ] `updateContactProfileAction` revalida também `/app/contacts`
-- [ ] Textos pt-BR em `apps/web/messages/pt-BR.json`
+- [x] `updateContactProfileAction` revalida também `/app/contacts`
+- [x] Textos pt-BR em `apps/web/messages/pt-BR.json`
 - **Acceptance**: editar um campo na ficha persiste e reaparece após
   recarregar; esvaziar o campo o apaga; só quem tem `messaging:write` edita
 - **Verify**: `pnpm typecheck` · `pnpm lint` · checagem com Playwright

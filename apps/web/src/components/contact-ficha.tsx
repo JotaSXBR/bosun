@@ -1,5 +1,6 @@
 "use client";
 
+import type { UpdateContactProfileInput } from "@crm/core/contacts";
 import type { LabelRow } from "@crm/core/leads";
 import { Avatar } from "@crm/design-system/components/avatar";
 import { Badge } from "@crm/design-system/components/badge";
@@ -92,6 +93,42 @@ function FichaField({
   );
 }
 
+type ProfileKey =
+  "email" | "phone" | "company" | "jobTitle" | "birthday" | "address" | "urls" | "notes";
+
+/** Profile fields in display order; `urls` is a list edited one per line. */
+const PROFILE_FIELDS: { key: ProfileKey; multiline?: boolean; placeholder?: string }[] = [
+  { key: "email" },
+  { key: "phone" },
+  { key: "company" },
+  { key: "jobTitle" },
+  { key: "birthday", placeholder: "birthdayPlaceholder" },
+  { key: "address", multiline: true },
+  { key: "urls", multiline: true, placeholder: "urlsPlaceholder" },
+  { key: "notes", multiline: true },
+];
+
+function profileValue(metadata: Record<string, unknown>, key: ProfileKey): string {
+  const v = metadata[key];
+  if (Array.isArray(v)) return v.filter((u) => typeof u === "string").join("\n");
+  return typeof v === "string" ? v : "";
+}
+
+function profilePatch(
+  key: ProfileKey,
+  value: string,
+): Omit<UpdateContactProfileInput, "contactId"> {
+  if (key === "urls") {
+    return {
+      urls: value
+        .split("\n")
+        .map((u) => u.trim())
+        .filter(Boolean),
+    };
+  }
+  return { [key]: value };
+}
+
 /**
  * Contact ficha (E2) — avatar, editable name/email/phone/notes, contact
  * tags and the conversation's etiquetas in one card (Google-People-style
@@ -125,17 +162,8 @@ export function ContactFicha({
   const t = useTranslations("inbox.ficha");
   const tl = useTranslations("leads");
 
-  const metaStr = (key: string) => {
-    const v = metadata[key];
-    return typeof v === "string" ? v : "";
-  };
-
-  const saveField = (patch: {
-    displayName?: string;
-    email?: string;
-    phone?: string;
-    notes?: string;
-  }) => updateContactProfileAction({ contactId, ...patch });
+  const saveField = (patch: Omit<UpdateContactProfileInput, "contactId">) =>
+    updateContactProfileAction({ contactId, ...patch });
 
   return (
     <Card bodyClassName="space-y-3 text-sm" title={t("title")} data-testid="contact-ficha">
@@ -156,37 +184,19 @@ export function ContactFicha({
       </div>
 
       <div className="space-y-1.5">
-        <div>
-          <span className="text-ink-muted text-xs">{t("email")}</span>
-          <FichaField
-            label={t("email")}
-            value={metaStr("email")}
-            placeholder={t("add")}
-            canWrite={canWrite}
-            onSave={(v) => saveField({ email: v })}
-          />
-        </div>
-        <div>
-          <span className="text-ink-muted text-xs">{t("phone")}</span>
-          <FichaField
-            label={t("phone")}
-            value={metaStr("phone")}
-            placeholder={t("add")}
-            canWrite={canWrite}
-            onSave={(v) => saveField({ phone: v })}
-          />
-        </div>
-        <div>
-          <span className="text-ink-muted text-xs">{t("notes")}</span>
-          <FichaField
-            label={t("notes")}
-            value={metaStr("notes")}
-            placeholder={t("add")}
-            canWrite={canWrite}
-            multiline
-            onSave={(v) => saveField({ notes: v })}
-          />
-        </div>
+        {PROFILE_FIELDS.map(({ key, multiline, placeholder }) => (
+          <div key={key}>
+            <span className="text-ink-muted text-xs">{t(key)}</span>
+            <FichaField
+              label={t(key)}
+              value={profileValue(metadata, key)}
+              placeholder={t(placeholder ?? "add")}
+              canWrite={canWrite}
+              multiline={multiline}
+              onSave={(v) => saveField(profilePatch(key, v))}
+            />
+          </div>
+        ))}
       </div>
 
       <div className="border-line space-y-1.5 border-t pt-2">
