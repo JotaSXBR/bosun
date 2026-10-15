@@ -153,7 +153,8 @@ unsupported_media_message` (template editável, vazio = off), envio de
   precedência por inbound — se o off-hours respondeu, a de mídia não
   sai (1 bolha de sistema); `vitest.unit.shared.ts` + stub
   `vitest.config.ts` por pacote levam `isolate:false`/`fsModuleCache`
-  pro `turbo run test` do CI também;
+  pro `turbo run test` do CI também. **mergeado 2026-10-15** — PR #47
+  squash na main;
   **mergeado 2026-10-13** — PR #38 squash `366120e` na main (checks
   quality/scan/integration verdes);
   **plano 3 implementado 2026-10-14** (C1/B1/B2/B3 do inbox-ui-review):
