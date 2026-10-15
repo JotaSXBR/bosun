@@ -2,6 +2,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 
 import type { Database } from "@crm/db";
 import { withTenant } from "@crm/db";
+import { captureException } from "@crm/observability";
 
 import { DomainError, NotFoundError } from "../../errors";
 import { decryptJson, encryptJson } from "../../lib/crypto";
@@ -183,14 +184,30 @@ export async function verifyGoogleConnection(
   });
 }
 
-/** Requires integrations:manage. Removes the connection; nothing is touched in Google. */
-export async function disconnectGoogle(db: Database, ctx: TenantContext): Promise<void> {
+/**
+ * Requires integrations:manage. Removes the connection, then revokes the
+ * refresh token at Google (best effort: a failed revoke never blocks the
+ * local disconnect). Contacts already pushed stay in the Google account.
+ */
+export async function disconnectGoogle(
+  db: Database,
+  ctx: TenantContext,
+  oauth: GoogleOAuthClient = createGoogleOAuthClient(),
+): Promise<void> {
   assertPermission(ctx, { integrations: ["manage"] });
-  await withTenant(db, ctx.organizationId, async (tx) => {
+  const refreshToken = await withTenant(db, ctx.organizationId, async (tx) => {
     const row = await findConnection(tx, ctx.organizationId, PROVIDER);
     if (!row) throw new NotFoundError("ExternalConnection");
+    const token = openBundle(row).tokens?.refreshToken;
     await deleteConnection(tx, row.id);
+    return token;
   });
+  if (!refreshToken) return;
+  try {
+    await oauth.revokeToken({ token: refreshToken });
+  } catch (error) {
+    captureException(error, { module: "external-connections", op: "google-revoke" });
+  }
 }
 
 /** Requires integrations:read. Secret material is never returned. */

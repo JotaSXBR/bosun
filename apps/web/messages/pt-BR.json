@@ -504,7 +504,7 @@
       "verify": "Verificar",
       "verified": "Conexão verificada",
       "disconnect": "Desconectar",
-      "disconnectConfirm": "Desconectar o Google? Os contatos já enviados permanecem na conta Google.",
+      "disconnectConfirm": "Desconectar o Google? O acesso do Bosun à conta será revogado; os contatos já enviados permanecem na conta Google.",
       "disconnected": "Google desconectado",
       "flash": {
         "ok": "Conta Google conectada.",

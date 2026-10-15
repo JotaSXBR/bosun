@@ -73,6 +73,30 @@ describe("google oauth client", () => {
     expect((error as GoogleOAuthError).code).toBe("scope_not_granted");
   });
 
+  it("revokes a token through Google's revoke endpoint", async () => {
+    const calls: { url: string; body: string }[] = [];
+    const client = createGoogleOAuthClient((input, init) => {
+      calls.push({
+        url: input instanceof Request ? input.url : input.toString(),
+        body: init?.body instanceof URLSearchParams ? init.body.toString() : "",
+      });
+      return Promise.resolve(new Response(null, { status: 200 }));
+    });
+    await client.revokeToken({ token: "refresh-1" });
+    expect(calls).toEqual([
+      { url: "https://oauth2.googleapis.com/revoke", body: "token=refresh-1" },
+    ]);
+  });
+
+  it("surfaces a failed revoke as GoogleOAuthError", async () => {
+    const client = createGoogleOAuthClient(() =>
+      Promise.resolve(json({ error: "invalid_token" }, 400)),
+    );
+    await expect(client.revokeToken({ token: "x" })).rejects.toMatchObject({
+      code: "invalid_token",
+    });
+  });
+
   it("rejects an exchange without a refresh token", async () => {
     const client = createGoogleOAuthClient(() =>
       Promise.resolve(

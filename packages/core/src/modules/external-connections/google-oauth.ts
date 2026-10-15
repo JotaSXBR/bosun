@@ -7,6 +7,7 @@ import { z } from "zod";
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 
 const CONTACTS_SCOPE = "https://www.googleapis.com/auth/contacts";
 export const GOOGLE_SCOPES = [CONTACTS_SCOPE, "openid", "email"];
@@ -37,6 +38,8 @@ export interface GoogleOAuthClient {
     clientSecret: string;
     refreshToken: string;
   }): Promise<{ accessToken: string; expiresAt: string }>;
+  /** Revokes a refresh or access token (ends the consent at Google). */
+  revokeToken(input: { token: string }): Promise<void>;
 }
 
 const tokenResponse = z.object({
@@ -107,6 +110,18 @@ export function createGoogleOAuthClient(fetchImpl: typeof fetch = fetch): Google
         },
         accountEmail: userinfoResponse.safeParse(body).data?.email ?? null,
       };
+    },
+
+    async revokeToken({ token }) {
+      const response = await fetchImpl(REVOKE_URL, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ token }),
+      });
+      if (response.ok) return;
+      const body: unknown = await response.json().catch(() => null);
+      const parsed = errorResponse.safeParse(body);
+      throw new GoogleOAuthError(parsed.success ? parsed.data.error : `http_${response.status}`);
     },
 
     async refreshAccessToken({ clientId, clientSecret, refreshToken }) {

@@ -55,6 +55,7 @@ function fakeOAuth(overrides: Partial<GoogleOAuthClient> = {}): GoogleOAuthClien
         accessToken: "access-2",
         expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
       }),
+    revokeToken: () => Promise.resolve(),
     ...overrides,
   };
 }
@@ -126,6 +127,70 @@ describe("google connection", () => {
 
     await disconnectGoogle(db, adminA());
     expect(await getGoogleStatus(db, adminA())).toBeNull();
+  });
+
+  it("revokes the refresh token at Google on disconnect, even if revoking fails", async () => {
+    const revoked: string[] = [];
+    const oauth = fakeOAuth({
+      revokeToken: ({ token }) => {
+        revoked.push(token);
+        return Promise.resolve();
+      },
+    });
+    const { authUrl } = await saveGoogleClient(db, adminA(), input, oauth);
+    await completeGoogleAuthorization(
+      db,
+      adminA(),
+      { code: "code", state: stateOf(authUrl), redirectUri: REDIRECT },
+      oauth,
+    );
+    await disconnectGoogle(db, adminA(), oauth);
+    expect(revoked).toEqual(["refresh-1"]);
+    expect(await getGoogleStatus(db, adminA())).toBeNull();
+
+    const failing = fakeOAuth({
+      revokeToken: () => Promise.reject(new GoogleOAuthError("network")),
+    });
+    const second = await saveGoogleClient(db, adminA(), input, failing);
+    await completeGoogleAuthorization(
+      db,
+      adminA(),
+      { code: "code", state: stateOf(second.authUrl), redirectUri: REDIRECT },
+      failing,
+    );
+    await disconnectGoogle(db, adminA(), failing);
+    expect(await getGoogleStatus(db, adminA())).toBeNull();
+  });
+
+  it("does not try to revoke a connection that never got tokens", async () => {
+    const revoked: string[] = [];
+    const oauth = fakeOAuth({
+      revokeToken: ({ token }) => {
+        revoked.push(token);
+        return Promise.resolve();
+      },
+    });
+    await saveGoogleClient(db, adminA(), input, oauth);
+    await disconnectGoogle(db, adminA(), oauth);
+    expect(revoked).toEqual([]);
+  });
+
+  it("marks the connection as error (not needs_reauth) on a non-invalid_grant refresh failure", async () => {
+    const oauth = fakeOAuth();
+    const { authUrl } = await saveGoogleClient(db, adminA(), input, oauth);
+    await completeGoogleAuthorization(
+      db,
+      adminA(),
+      { code: "code", state: stateOf(authUrl), redirectUri: REDIRECT },
+      oauth,
+    );
+    const flaky = fakeOAuth({
+      refreshAccessToken: () => Promise.reject(new GoogleOAuthError("temporarily_unavailable")),
+    });
+    const result = await verifyGoogleConnection(db, adminA(), flaky);
+    expect(result.status).toBe("error");
+    expect(result.lastError).toBe("temporarily_unavailable");
+    await disconnectGoogle(db, adminA(), oauth);
   });
 
   it("stores the bundle encrypted at rest", async () => {
