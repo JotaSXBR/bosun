@@ -1,10 +1,14 @@
 # Development workflow
 
 How work flows in this repo — human + Claude Code. The lifecycle uses the
-globally installed `addyosmani/agent-skills` pack (`~/.agents/skills`,
-registered in `skills-lock.json`), invoked by skill name — there are no
+`agent-skills` plugin (`addyosmani/agent-skills`, marketplace
+`addy-agent-skills`, declared in `.claude/settings.json`; install with
+`/plugin marketplace add addyosmani/agent-skills` then
+`/plugin install agent-skills@addy-agent-skills`). It provides the skills,
+the phase commands (`/spec`, `/plan`, `/build`, `/test`, `/review`, `/ship`,
+`/webperf`, `/code-simplify`) and the reviewer personas — there are no
 project-local alias skills. The repo's own rules (plan template, scope
-contract, gates) live here and in `CLAUDE.md`.
+contract, gates, commit policy) live here and in `CLAUDE.md`.
 
 ## The loop
 
