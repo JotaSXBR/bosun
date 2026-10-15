@@ -54,7 +54,12 @@ Plano: `tasks/plan.md`.
   renderizam estados distintos; tokens do design system (lint verde)
 - **Verify**: `pnpm lint` · `pnpm verify` · checagem manual no `pnpm dev`
   com Google real ou fake
-- **Pendente**: checagem visual/manual da página (`pnpm dev`) ainda não feita.
+- **Verificado (2026-10-15)**: `apps/web/e2e/google-connection.spec.ts` (Playwright, Google
+  interceptado) — card renderiza, consent sai com `client_id`/`state`/
+  `access_type=offline`/escopo de contatos, callback forjado volta com aviso e
+  status `aguardando autorização`.
+- **Em aberto**: o toast de retorno (`?google=…`) apareceu duplicado no dev
+  (causa não confirmada; checar em build de produção).
 - **Deps**: 3 · **Tamanho**: M
 
 ### Checkpoint: final

@@ -138,6 +138,16 @@ Unit `*.test.ts` · integration `*.int.test.ts` (real Postgres/RustFS) ·
 e2e `apps/web/e2e/*.spec.ts` (playwright) · fakes in each package's `testing`
 export. `pnpm test` = local runner; `turbo run test` = CI.
 
+**Browser verification = Playwright specs, not a browser MCP.** To check UI
+or a flow, write/run an `apps/web/e2e/*.spec.ts` and run it with
+`pnpm --filter @crm/web exec playwright test e2e/<file> --reporter=line`
+(stub external hosts with `page.route`). Pass/fail text is all that reaches
+context; open the trace/screenshot under `test-results/` only on failure.
+Do not enable `chrome-devtools` / Playwright MCP / Claude-in-Chrome for this
+repo: their tool definitions (~14–19k tokens) and per-step page snapshots
+are the costly path. The `browser-testing-with-devtools` skill is the
+exception only for live console/network/perf debugging the user asks for.
+
 Docs: `DESIGN.md`, `docs/architecture/`, `docs/adr/`, `docs/domains/`,
 `docs/database/`, `docs/development/` (`workflow.md`, `how-tos.md` — recipes
 for domain modules, providers, jobs, UI — `cicd.md`, `getting-started.md`).
