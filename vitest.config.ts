@@ -14,7 +14,7 @@ export default mergeConfig(
         "packages/**/*.test.ts",
         "apps/**/*.test.ts",
         "design-system/**/*.test.ts",
-        ".devin/hooks/**/*.test.mjs",
+        ".claude/hooks/**/*.test.mjs",
       ],
       exclude: ["**/*.int.test.ts", "**/node_modules/**", "**/.next/**"],
     },

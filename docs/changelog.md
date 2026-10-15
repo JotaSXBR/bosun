@@ -5,6 +5,17 @@ a backlog — new entries land here when a `## Concluído` item ages off
 TODO.md (audit AUD-024). `tasks/briefs/` and `tasks/*.done.md` remain the
 local per-task archive.
 
+- **P2 — Google Contacts: conexão por workspace (slice 1/3)** ✅ 2026-10-15 —
+  branch `feat/google-contacts-connection`. Tabela `external_connections`
+  (RLS + FORCE, migração 0034), módulo `@crm/core/external-connections`
+  (OAuth BYOK do Google sobre `fetch`, `state` de uso único, escopo de
+  contatos exigido no consentimento granular, verificação por refresh,
+  revogação do token ao desconectar), rota `/api/integrations/google/callback`
+  (redirect sem corpo, `no-referrer`/`no-store`), server actions e card em
+  `/app/settings/channels`. Tooling: migração Devin→Claude Code, plugin
+  `agent-skills`, spec Playwright como verificação de navegador. Gate:
+  verify ✅ (229), integração 315+ ✅, e2e 18/18 ✅, build ✅. Plan:
+  `tasks/plan.md`. Ainda sem sincronização de contatos (slices 2–3).
 - **P1 — Correções da auditoria CRMv2 (plano v1.0)** ✅ 2026-10-13 —
   branch `chore/audit-plano-v1`, 21 commits, 59 arquivos. Segurança:
   histórico do widget escopado à sessão + expiração 30d (AUD-010/012),

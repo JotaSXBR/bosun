@@ -4,6 +4,7 @@ dist/
 out/
 build/
 !.devin/skills/build/
+!.claude/skills/build/
 coverage/
 .turbo/
 *.tsbuildinfo
@@ -38,3 +39,8 @@ research/agent-skills/
 
 # Local-only copies of internal endpoints/topology (public repo hygiene)
 *.local.md
+
+# CodeGraph index (local, per-machine) + Claude Code local overrides
+.codegraph/
+.codegraph-wsl/
+.claude/settings.local.json

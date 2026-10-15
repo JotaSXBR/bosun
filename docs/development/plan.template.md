@@ -1,7 +1,7 @@
 # Plan — <nome do item>
 
 - **Origem**: `TODO.md` → <item> · `docs/product/<doc>.md`
-- **Lifecycle**: /spec → /plan-task → /build → /test → /review → /ship
+- **Lifecycle**: spec → plan → build → test → review → ship
 - **Data**:
 
 ## Objetivo

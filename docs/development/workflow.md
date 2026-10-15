@@ -1,54 +1,65 @@
 # Development workflow
 
-How work flows in this repo — human + Devin agent. The lifecycle commands
-are thin alias skills in `.devin/skills/` that invoke the installed
-`addyosmani/agent-skills` pack, wired to this repo's own gates.
+How work flows in this repo — human + Claude Code. The lifecycle uses the
+`agent-skills` plugin (`addyosmani/agent-skills`, marketplace
+`addy-agent-skills`, declared in `.claude/settings.json`; install with
+`/plugin marketplace add addyosmani/agent-skills` then
+`/plugin install agent-skills@addy-agent-skills`). It provides the skills,
+the phase commands (`/spec`, `/plan`, `/build`, `/test`, `/review`, `/ship`,
+`/webperf`, `/code-simplify`) and the reviewer personas — there are no
+project-local alias skills. The repo's own rules (plan template, scope
+contract, gates, commit policy) live here and in `CLAUDE.md`.
 
 ## The loop
 
 ```
-/spec  →  /plan-task  →  /build  →  /test  →  /review  →  /ship
+spec  →  plan  →  build  →  test  →  review  →  ship
 ```
 
-Mesma sequência do pack upstream. No Devin, slash command = nome do
-diretório da skill; `/plan` é built-in do Devin (modo Plan), então a
-etapa do ciclo chama-se `/plan-task`. Adaptações locais:
+Mesma sequência do pack upstream, cada fase carregando as skills da tabela
+abaixo. Adaptações locais:
 
-- **`/spec`** escreve/edita o PRD em `docs/product/` (o formato do projeto,
-  não `SPEC.md` na raiz); quando o item já é coberto por um doc, `/spec`
-  pode ser pulado — ver "Quando /spec é obrigatório".
-- **`/plan-task`** escreve `tasks/plan.md`, que **também carrega o contrato
-  de escopo** (`## Escopo` globs) que o hook enforça — o plano é o
-  contrato. Não existe passo de "brief" separado.
+- **spec** (`spec-driven-development`) escreve/edita o PRD em
+  `docs/product/` (o formato do projeto, não `SPEC.md` na raiz); quando o
+  item já é coberto por um doc, o spec pode ser pulado — ver "Quando o spec
+  é obrigatório".
+- **plan** (`planning-and-task-breakdown`) escreve `tasks/plan.md` seguindo
+  `docs/development/plan.template.md`, que **também carrega o contrato de
+  escopo** (`## Escopo` globs) que o hook enforça — o plano é o contrato;
+  sem `## Escopo` o hook não trava. Não existe passo de "brief" separado.
+- **test** é o gate `pnpm verify` (ver "Gates de qualidade").
+- **commit**: local, por tarefa verificada (`pnpm verify` verde), atômico e em
+  Conventional Commits numa feature branch; push/PR só quando o usuário pedir.
 
 Skills por fase (espelha `skills.addy.ie/lifecycle`): cada comando carrega
 o **conjunto da fase** — as "sempre" definem o método da fase; as
 condicionais se aplicam quando o trabalho toca o eixo delas.
 
-| Stage  | Command      | Skills — sempre                                                                                                                                               | Skills — quando o eixo se aplica                                                                                                                                                                                                                                           |
-| ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Spec   | `/spec`      | `spec-driven-development` (PRD em `docs/product/`; ver "Quando /spec é obrigatório")                                                                          | `interview-me`, `idea-refine` — ideia crua/ambígua                                                                                                                                                                                                                         |
-| Plan   | `/plan-task` | `planning-and-task-breakdown` → `tasks/plan.md` (template: `docs/development/plan.template.md`; carrega `## Contexto` + `## Escopo`) + gate de esclarecimento | —                                                                                                                                                                                                                                                                          |
-| Build  | `/build`     | `incremental-implementation` (slices finos), `test-driven-development` (teste junto)                                                                          | `frontend-ui-engineering` (UI), `api-and-interface-design` (contratos novos), `source-driven-development` + `context7-docs` (API de lib/framework — checar docs oficiais), `doubt-driven-development` (decisão arriscada), `context-engineering` (setup de contexto/rules) |
-| Test   | `/test`      | `debugging-and-error-recovery` (triage de falha)                                                                                                              | `browser-testing-with-devtools` — evidência real no browser via chrome-devtools MCP quando há UI/fluxo                                                                                                                                                                     |
-| Review | `/review`    | `code-review-and-quality` (diff review antes de commit) + checklist UX das 7 leis (`docs/development/ux-7-leis-checklist.md`) para telas novas/alteradas      | `code-simplification` (complexidade acumulada), `security-and-hardening` (auth/webhooks/dados/deps), `performance-optimization` (queries, N+1, bundle)                                                                                                                     |
-| Ship   | `/ship`      | `git-workflow-and-versioning` (commit convencional — só quando o usuário pedir), `shipping-and-launch` (checklist/rollback)                                   | `ci-cd-and-automation` (pipeline), `documentation-and-adrs` (docs/ADR), `observability-and-instrumentation` (logs/métricas), `deprecation-and-migration` (remoções/migrações)                                                                                              |
+| Stage  | Comando | Skills — sempre                                                                                                                                               | Skills — quando o eixo se aplica                                                                                                                                                                                                                                          |
+| ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Spec   | —       | `spec-driven-development` (PRD em `docs/product/`; ver "Quando o spec é obrigatório")                                                                         | `interview-me`, `idea-refine` — ideia crua/ambígua                                                                                                                                                                                                                        |
+| Plan   | —       | `planning-and-task-breakdown` → `tasks/plan.md` (template: `docs/development/plan.template.md`; carrega `## Contexto` + `## Escopo`) + gate de esclarecimento | —                                                                                                                                                                                                                                                                         |
+| Build  | —       | `incremental-implementation` (slices finos), `test-driven-development` (teste junto)                                                                          | `frontend-ui-engineering` (UI), `api-and-interface-design` (contratos novos), `source-driven-development` + `context7-mcp` (API de lib/framework — checar docs oficiais), `doubt-driven-development` (decisão arriscada), `context-engineering` (setup de contexto/rules) |
+| Test   | —       | `debugging-and-error-recovery` (triage de falha)                                                                                                              | evidência real no browser via spec Playwright (`apps/web/e2e`, `--reporter=line`) quando há UI/fluxo — sem MCP de browser (ver `CLAUDE.md`); `browser-testing-with-devtools` só para debug ao vivo                                                                        |
+| Review | —       | `code-review-and-quality` (diff review antes de commit) + checklist UX das 7 leis (`docs/development/ux-7-leis-checklist.md`) para telas novas/alteradas      | `code-simplification` (complexidade acumulada), `security-and-hardening` (auth/webhooks/dados/deps), `performance-optimization` (queries, N+1, bundle)                                                                                                                    |
+| Ship   | —       | `git-workflow-and-versioning` (commit convencional local por tarefa verificada; push/PR só a pedido), `shipping-and-launch` (checklist/rollback)              | `ci-cd-and-automation` (pipeline), `documentation-and-adrs` (docs/ADR), `observability-and-instrumentation` (logs/métricas), `deprecation-and-migration` (remoções/migrações)                                                                                             |
 
-Comandos standalone fora do loop principal: `/webperf` (audit de
-performance) e `/code-simplify` (rodada de simplificação).
+Standalone fora do loop principal: `performance-optimization` (audit —
+achados em `docs/audits/perf-<escopo>-<data>.md`) e `code-simplification`
+(rodada de simplificação).
 
 Skills fora de fase (upstream, standalone): `using-agent-skills`
 (meta — roteamento de skill) e `constraint-driven-development` (barra
 de qualidade como contrato escrito; invocar quando o projeto não tem
 padrões escritos ou agentes silenciam checks pra chegar no verde).
 
-Skill local (não-upstream): `context7-docs` (docs de libs via Context7
-MCP — companheira de `source-driven-development` no Build).
+Docs de libs: MCP `context7` + skill global `context7-mcp`
+(companheira de `source-driven-development` no Build).
 
 Fonte de verdade do pack: `github.com/addyosmani/agent-skills` — clone
 de referência em `research/agent-skills` (gitignored, re-cloneable).
 
-## Gate de esclarecimento (antes de /plan-task, sempre)
+## Gate de esclarecimento (antes do plan, sempre)
 
 Trabalho não-trivial **começa com perguntas, não com código**. Mudança feita
 sobre suposição é a definição de risco (CRAP: complexo × sem cobertura de
@@ -56,7 +67,7 @@ entendimento). Regra:
 
 - Antes de escrever o plan, o agente identifica ambiguidades que afetam
   **escopo ou arquitetura** e pergunta ao usuário (menu de múltipla escolha
-  com opção de texto livre — `ask_user_question`).
+  com opção de texto livre — `AskUserQuestion`).
 - Pergunta só o que muda decisão — preferências cosméticas seguem o default
   documentado e são registradas no plan como decisões provisórias.
 - As respostas entram no `## Contexto` do `tasks/plan.md` — fica o registro
@@ -67,39 +78,39 @@ entendimento). Regra:
 - `interview-me` e `spec-driven-development` são as skills para quando a
   ambiguidade é de produto, não de implementação.
 
-## Quando `/spec` é obrigatório
+## Quando o spec é obrigatório
 
-Todo item entra pelo `/plan-task` — o que varia é se antes disso um spec
+Todo item entra pelo plan — o que varia é se antes disso um spec
 precisa ser escrito:
 
-- **`/spec` obrigatório** (PRD em `docs/product/` via
+- **Spec obrigatório** (PRD em `docs/product/` via
   `spec-driven-development`): feature nova com comportamento visível ao
   usuário, item do TODO sem decisões registradas, ou qualquer ambiguidade
   de produto que o gate de esclarecimento não resolve em 1-2 perguntas.
-- **`/spec` pode ser pulado** (vai direto ao `/plan-task`, que ainda
+- **Spec pode ser pulado** (vai direto ao plan, que ainda
   registra as decisões no `## Contexto`): chore/hardening já especificado — findings de
   review com decisões tomadas, itens do TODO com decisão datada, fixes
   mecânicos — e todo item já coberto por um doc em `docs/product/`.
 
 Regra prática: se a pergunta "o que deve existir quando isso terminar?" não
-tem resposta de uma frase já escrita em algum lugar, `/spec` primeiro.
+tem resposta de uma frase já escrita em algum lugar, o spec primeiro.
 
 ## A trava de escopo (`tasks/plan.md` + hooks)
 
-`.devin/hooks.v1.json` → `.devin/hooks/workflow.mjs` registra:
+`.claude/settings.json` → `.claude/hooks/workflow.mjs` registra:
 
 - **SessionStart**: injeta o resumo deste workflow no contexto.
-- **UserPromptSubmit**: lembra qual plan está ativo.
-- **PreToolUse** (edit/write): **bloqueia** editar arquivo de código/config
+- **PreToolUse** (edit/write): **nega** (`permissionDecision: deny`) editar arquivo de código/config
   fora dos globs de `## Escopo` do `tasks/plan.md`. Markdown/docs são
   sempre livres. Sem plan → só lembrete (edições pontuais/docs não travam).
-  Limites conhecidos: só intercepta `edit`/`write`/`notebook_edit` —
-  comandos de shell (`exec`) não passam pelo hook; `.devin/**` e `**/*.md`
-  ficam sempre livres aqui, mas `AGENTS.md`, `CLAUDE.md`, `**/SKILL.md`,
-  `.devin/**` e `.github/**` estão sob `ask` em `.devin/config.json`.
+  Limites conhecidos: só intercepta `Edit`/`Write`/`NotebookEdit` —
+  comandos de shell (`Bash`) não passam pelo hook; `.claude/**` e `**/*.md`
+  ficam sempre livres aqui, mas `AGENTS.md`, `CLAUDE.md`, `.claude/**` e
+  `.github/**` estão sob `ask` em `.claude/settings.json`.
   O hook é um lembrete com trava, não uma fronteira de segurança —
-  a camada real é `.devin/config.json` + permissões da sessão.
-- **PostToolUse**: marca que a sessão editou arquivos.
+  a camada real é `.claude/settings.json` + permissões da sessão.
+- **PostToolUse**: marca que a sessão editou código/config (docs e `.md` não
+  contam — sessões só de docs não disparam o gate).
 - **Stop**: se a sessão editou, **bloqueia a primeira tentativa de parar**
   exigindo o gate — `pnpm verify` + TODO/docs atualizados. Bloqueia uma
   vez por sessão (não faz loop).
@@ -129,32 +140,33 @@ O CI continua sendo a barreira final (roda os mesmos cheques via turbo).
 
 ## MCP servers do projeto
 
-`.devin/mcp_config.json` (commitado, escopo do projeto):
+`.mcp.json` (commitado, escopo do projeto): **codegraph**.
 
-- **chrome-devtools** (`chrome-devtools-mcp@1.10.1`) — browser real para a
-  skill `browser-testing-with-devtools`: DOM, console, network, screenshots.
-  Sem credenciais. Carrega em novas sessões.
-- **coolify** (transporte http) — painel de deploy; URL real e token ficam
-  em `.devin/mcp_config.local.json` (gitignored). Uso restrito a leitura +
-  deploy/start/stop/restart; tools cobertas por `ask` em
-  `.devin/config.json` — configurações fora disso (envs, fqdn,
+- **coolify** (http) — painel de deploy; URL real e token ficam fora do
+  repo, no escopo local do Claude Code (`claude mcp add --scope local
+--transport http coolify <url> --header "Authorization: Bearer …"`).
+  Uso restrito a leitura + deploy/start/stop/restart; tools cobertas por
+  `ask` em `.claude/settings.json` — configurações fora disso (envs, fqdn,
   healthcheck) escalam ao usuário (ver `deployment-coolify.md`).
+- **chrome-devtools** — não configurado por ora; a skill
+  `browser-testing-with-devtools` só funciona se for adicionado.
 
 Servidor user-level conhecido: `context7` (docs de libs). Qualquer outro
 (github etc.) só vale se configurado na máquina — não é garantido.
 
 ### Atualizando as skills
 
-`.devin/skills/` mistura 9 skills locais (aliases do ciclo + `context7-docs`,
-`.prettierignore` as mantém formatadas) e 25 vendorizadas de
-`addyosmani/agent-skills` (`skills-lock.json`). Atualizar o pack exige PR
-próprio com revisão do diff de `.devin/skills/**` e `ref` fixado no
-lockfile — nunca atualizar no meio de outro trabalho.
+`.claude/skills/` tem só os aliases do ciclo (`spec`, `plan-task`, `build`,
+`test`, `review`, `ship`, `code-simplify`, `webperf`). As 25 skills
+vendorizadas de `addyosmani/agent-skills` vêm da instalação global
+(`~/.agents/skills`, via `npx skills`); `skills-lock.json` registra a
+fonte/hash esperados. Atualizar o pack é decisão própria, nunca no meio de
+outro trabalho.
 
 ## O que NÃO muda
 
 - AGENTS.md continua a fonte de verdade de regras de código/segurança.
-- Sem commit sem pedido explícito. Sem `apps/worker` sem ADR.
+- Commit local por tarefa verificada; push/PR só a pedido. Sem `apps/worker` sem ADR.
 - Sem infra/dependências novas sem justificativa concreta.
-- Secrets só via env — nunca em `.devin/mcp_config.json` (usar
-  `mcp_config.local.json`, gitignored, se um dia precisar).
+- Secrets só via env — nunca em `.mcp.json` (usar o escopo
+  local do `claude mcp add`).

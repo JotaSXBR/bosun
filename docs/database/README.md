@@ -13,6 +13,9 @@ PostgreSQL 18 + pgvector, Drizzle ORM, postgres.js.
   Cloud). `credentials_encrypted` holds AES-256-GCM JSON
   (`CHANNEL_CREDENTIALS_KEY`); `webhook_token` (unique) authenticates inbound
   webhooks at `/api/webhooks/channels/<token>`.
+- **`external_connections`**: tenant-scoped, one row per (org, provider);
+  `bundle_encrypted` holds the org's OAuth client + tokens (never returned
+  by reads). RLS + `FORCE ROW LEVEL SECURITY`.
 - **`contacts`**: tenant-scoped channel contacts, unique per
   (organization_id, channel_user_id).
 - **`conversations`**: tenant-scoped threads, unique per

@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
-    "typecheck": "turbo typecheck",
+    "lint": "turbo lint --concurrency=2",
+    "typecheck": "turbo typecheck --concurrency=2",
     "test": "vitest run",
     "test:integration": "vitest run --typecheck.enabled=false -c vitest.integration.config.ts",
     "test:e2e": "turbo test:e2e",

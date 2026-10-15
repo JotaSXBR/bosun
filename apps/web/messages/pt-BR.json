@@ -478,6 +478,42 @@
       "right": "Direita",
       "left": "Esquerda",
       "save": "Salvar widget"
+    },
+    "google": {
+      "title": "Google Contatos",
+      "description": "Conecte a conta Google que vai receber os contatos. Sua organização usa o próprio app OAuth do Google; o envio dos contatos entra na próxima etapa.",
+      "status": {
+        "pending": "aguardando autorização",
+        "connected": "conectado",
+        "needs_reauth": "reautorização necessária",
+        "error": "erro"
+      },
+      "errors": {
+        "invalid_grant": "O acesso foi revogado ou expirou. Conecte de novo.",
+        "scope_not_granted": "A permissão de contatos não foi concedida. Marque-a na tela do Google.",
+        "invalid_client": "O Google recusou o client ID ou o client secret.",
+        "missing_refresh_token": "O Google não devolveu um token de renovação. Conecte de novo."
+      },
+      "lastChecked": "Verificado em {date}",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "redirectUri": "URI de redirecionamento",
+      "redirectHelp": "Cadastre esta URI no console do Google Cloud antes de conectar.",
+      "connect": "Conectar com o Google",
+      "reconnect": "Conectar de novo",
+      "verify": "Verificar",
+      "verified": "Conexão verificada",
+      "disconnect": "Desconectar",
+      "disconnectConfirm": "Desconectar o Google? O acesso do Bosun à conta será revogado; os contatos já enviados permanecem na conta Google.",
+      "disconnected": "Google desconectado",
+      "flash": {
+        "ok": "Conta Google conectada.",
+        "denied": "Autorização cancelada no Google.",
+        "invalid": "Resposta inválida do Google. Tente de novo.",
+        "state": "Autorização expirada. Conecte de novo.",
+        "failed": "Não foi possível concluir a conexão.",
+        "forbidden": "Você não tem permissão para conectar integrações."
+      }
     }
   },
   "settings": {
