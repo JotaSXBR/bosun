@@ -12,6 +12,8 @@ import { useState, useTransition } from "react";
 
 import { updateContactProfileAction } from "@/server/actions/contacts";
 
+import { changedProfileFields, type ProfileForm } from "./contact-edit-patch";
+
 type EditableContact = {
   id: string;
   displayName: string | null;
@@ -19,18 +21,7 @@ type EditableContact = {
   metadata: Record<string, unknown>;
 };
 
-type FormState = Record<
-  | "displayName"
-  | "email"
-  | "phone"
-  | "company"
-  | "jobTitle"
-  | "birthday"
-  | "address"
-  | "urls"
-  | "notes",
-  string
->;
+type FormState = ProfileForm;
 
 function initialForm(contact: EditableContact): FormState {
   const str = (key: string) => {
@@ -51,31 +42,31 @@ function initialForm(contact: EditableContact): FormState {
   };
 }
 
-/** Row action for /app/contacts: edits the whole profile; empty fields clear. */
+/** Row action for /app/contacts: edits the profile; saves only what changed, empty clears. */
 export function EditContactButton({ contact }: { contact: EditableContact }) {
   const t = useTranslations("contacts.edit");
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [form, setFormState] = useState<FormState>(() => initialForm(contact));
+  const [baseline, setBaseline] = useState<FormState>(() => initialForm(contact));
+  const [form, setFormState] = useState<FormState>(baseline);
   const [pending, startTransition] = useTransition();
   const setForm = (patch: Partial<FormState>) => setFormState((prev) => ({ ...prev, ...patch }));
 
   function openDialog() {
-    setFormState(initialForm(contact));
+    const fresh = initialForm(contact);
+    setBaseline(fresh);
+    setFormState(fresh);
     setOpen(true);
   }
 
   function submit() {
+    const patch = changedProfileFields(baseline, form);
+    if (Object.keys(patch).length === 0) {
+      setOpen(false);
+      return;
+    }
     startTransition(async () => {
-      const { urls, ...rest } = form;
-      const result = await updateContactProfileAction({
-        contactId: contact.id,
-        ...rest,
-        urls: urls
-          .split("\n")
-          .map((u) => u.trim())
-          .filter(Boolean),
-      });
+      const result = await updateContactProfileAction({ contactId: contact.id, ...patch });
       if (!result.ok) {
         toast.error(result.error);
         return;
