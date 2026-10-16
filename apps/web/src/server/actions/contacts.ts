@@ -38,7 +38,7 @@ export async function createContactAction(
   }
 }
 
-/** Ficha edit (E2) — name + metadata fields, local only (no channel sync). */
+/** Ficha edit — name + profile fields in metadata, local only (no channel sync). */
 export async function updateContactProfileAction(
   input: UpdateContactProfileInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -46,6 +46,7 @@ export async function updateContactProfileAction(
   try {
     await updateContactProfile(getDb(), ctx, input);
     revalidatePath("/app/inbox");
+    revalidatePath("/app/contacts");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível atualizar o contato.") };

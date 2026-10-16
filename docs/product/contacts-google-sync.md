@@ -47,25 +47,32 @@ following the org-BYOK precedent (`org_llm_credentials`).
 
 ## Contact model
 
-`contacts` gains a typed profile carrying the standard People fields —
-stored in `metadata` under a zod-validated shape (the ficha's existing
-pattern), no bespoke columns per field:
+`contacts` carries a profile with the standard People fields — stored
+**flat** in `metadata` (no `profile` nesting, so no data migration and the
+site_chat ingest keeps working), validated by zod in
+`updateContactProfileInput`, no bespoke columns per field. Implemented in
+slice 2; the data lives in Bosun and works with or without a Google
+connection:
 
-| Bosun                   | People `personFields`       |
-| ----------------------- | --------------------------- |
-| `displayName`           | `names.displayName`         |
-| `channelUserId` (E.164) | `phoneNumbers[0].value`     |
-| `profile.email`         | `emailAddresses`            |
-| `profile.phone` (ficha) | `phoneNumbers` (additional) |
-| `profile.company`/role  | `organizations`             |
-| `profile.address`       | `addresses`                 |
-| `profile.notes`         | `biographies`               |
-| `profile.birthday`      | `birthdays`                 |
-| `profile.urls`          | `urls`                      |
+| Bosun (`metadata` key)    | People `personFields`       |
+| ------------------------- | --------------------------- |
+| `displayName` (column)    | `names.displayName`         |
+| `channelUserId` (E.164)   | `phoneNumbers[0].value`     |
+| `email`                   | `emailAddresses`            |
+| `phone` (additional)      | `phoneNumbers` (additional) |
+| `company` + `jobTitle`    | `organizations`             |
+| `address` (free text)     | `addresses`                 |
+| `notes`                   | `biographies`               |
+| `birthday` (`YYYY-MM-DD`) | `birthdays`                 |
+| `urls` (list, max 5)      | `urls`                      |
 
-The contact ficha (aside + `/app/contacts`) exposes these fields for
-editing — updating any of them enqueues a push. Fields the ficha
-doesn't expose simply don't sync; nothing custom is ever written.
+Empty values clear the key. `urls` accept only `http`/`https` (the value is
+mirrored to Google). The contact ficha (inbox aside, inline) and the
+"Editar" dialog on `/app/contacts` edit these fields. In slice 3, updating
+any of them enqueues a push **only when a Google connection exists**; when
+Google is connected later, the initial bulk sync mirrors what is already in
+Bosun. Fields the ficha doesn't expose simply don't sync; nothing custom is
+ever written.
 
 Sync state rides on the contact row (`metadata.google`:
 `resourceName`, `etag`, `lastSyncedAt`, payload hash for no-op skips).

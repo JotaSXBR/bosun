@@ -16,8 +16,10 @@ export const listContactsInput = z.object({
 export type ListContactsInput = z.input<typeof listContactsInput>;
 
 /**
- * Ficha fields (E2) — `displayName` is a column; email/secondary phone/notes
- * live in `contacts.metadata`. Empty string clears the metadata key.
+ * Ficha fields — `displayName` is a column; the rest live flat in
+ * `contacts.metadata` (the standard People-API-shaped profile). An empty
+ * string / empty list clears the key. `urls` is user data that will be
+ * mirrored to Google, so only http(s) is accepted.
  */
 export const updateContactProfileInput = z.object({
   contactId: z.uuid(),
@@ -25,5 +27,13 @@ export const updateContactProfileInput = z.object({
   email: z.union([z.literal(""), z.email()]).optional(),
   phone: z.string().trim().max(32).optional(),
   notes: z.string().max(4000).optional(),
+  company: z.string().trim().max(120).optional(),
+  jobTitle: z.string().trim().max(120).optional(),
+  address: z.string().trim().max(500).optional(),
+  birthday: z.union([z.literal(""), z.iso.date()]).optional(),
+  urls: z
+    .array(z.url({ protocol: /^https?$/ }).max(300))
+    .max(5)
+    .optional(),
 });
 export type UpdateContactProfileInput = z.input<typeof updateContactProfileInput>;

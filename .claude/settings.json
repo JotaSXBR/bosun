@@ -25,21 +25,14 @@
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
       "Edit(./.env*)",
-      "Write(./.env*)",
-      "Edit(./.coolify-secrets.tmp)",
-      "Write(./.coolify-secrets.tmp)"
+      "Edit(./.coolify-secrets.tmp)"
     ],
     "ask": [
       "Edit(./AGENTS.md)",
-      "Write(./AGENTS.md)",
       "Edit(./CLAUDE.md)",
-      "Write(./CLAUDE.md)",
       "Edit(./.claude/**)",
-      "Write(./.claude/**)",
       "Edit(./.github/**)",
-      "Write(./.github/**)",
       "Edit(./packages/db/migrations/**)",
-      "Write(./packages/db/migrations/**)",
       "Bash(git push:*)",
       "Bash(pnpm db:migrate:*)",
       "Bash(pnpm infra:down:*)",

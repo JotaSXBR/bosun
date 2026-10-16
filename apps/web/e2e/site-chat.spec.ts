@@ -55,4 +55,25 @@ test("site chat: visitor pre-form → message → agent reply reaches the widget
 
   // The widget's SSE ping triggers a refresh — agent reply shows up live.
   await expect(msgs).toContainText("Claro, já estou ajudando", { timeout: 15_000 });
+
+  // Ficha: the extended contact profile edits inline and persists.
+  const ficha = page.getByTestId("contact-ficha");
+  await ficha.getByTitle("Empresa").click();
+  await ficha.getByRole("textbox", { name: "Empresa" }).fill("Acme E2E");
+  // The ficha shows no success toast: wait for the server action before reloading.
+  const saved = page.waitForResponse((r) => r.request().method() === "POST");
+  await ficha.getByRole("textbox", { name: "Empresa" }).press("Enter");
+  await saved;
+  await page.reload();
+  await expect(page.getByTestId("contact-ficha").getByTitle("Empresa")).toHaveText("Acme E2E");
+
+  // A non-http(s) site is refused and nothing is saved.
+  await ficha.getByTitle("Sites").click();
+  await ficha.getByRole("textbox", { name: "Sites" }).fill("javascript:alert(1)");
+  await ficha.getByRole("textbox", { name: "Sites" }).blur();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId("contact-ficha").getByTitle("Sites")).toHaveText(
+    "Um site por linha (https://…)",
+  );
 });

@@ -90,6 +90,13 @@
       "namePlaceholder": "Nome do contato",
       "email": "E-mail",
       "phone": "Telefone",
+      "company": "Empresa",
+      "jobTitle": "Cargo",
+      "birthday": "Aniversário",
+      "address": "Endereço",
+      "urls": "Sites",
+      "birthdayPlaceholder": "AAAA-MM-DD",
+      "urlsPlaceholder": "Um site por linha (https://…)",
       "notes": "Notas",
       "add": "Adicionar",
       "contactTags": "Tags do contato",
@@ -223,7 +230,23 @@
     "noConnection": "Nenhuma conexão WhatsApp conectada. Configure em Integrações.",
     "pagination": "Paginação de contatos",
     "previousPage": "Anterior",
-    "nextPage": "Próxima"
+    "nextPage": "Próxima",
+    "edit": {
+      "button": "Editar",
+      "title": "Editar contato",
+      "submit": "Salvar",
+      "saved": "Contato atualizado.",
+      "name": "Nome",
+      "email": "E-mail",
+      "phone": "Telefone extra",
+      "company": "Empresa",
+      "jobTitle": "Cargo",
+      "birthday": "Aniversário",
+      "address": "Endereço",
+      "urls": "Sites",
+      "urlsHint": "Um site por linha, começando com http:// ou https://.",
+      "notes": "Notas"
+    }
   },
   "nav": {
     "home": "Início",

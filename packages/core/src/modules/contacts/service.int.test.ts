@@ -204,6 +204,121 @@ describe("contacts service", () => {
     expect(meta2.phone).toBe("+5511900001111");
   });
 
+  it("updateContactProfile stores the extended profile and clears fields independently", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Perfil Completo",
+      phone: "+5511955554444",
+    });
+    const full = await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "Acme Ltda",
+      jobTitle: "Diretora",
+      address: "Rua A, 10\nSão Paulo - SP",
+      birthday: "1990-02-28",
+      urls: ["https://acme.test", "http://acme.test/sobre"],
+    });
+    expect(full.metadata).toMatchObject({
+      company: "Acme Ltda",
+      jobTitle: "Diretora",
+      address: "Rua A, 10\nSão Paulo - SP",
+      birthday: "1990-02-28",
+      urls: ["https://acme.test", "http://acme.test/sobre"],
+      source: "manual",
+    });
+
+    const partial = await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "",
+      urls: [],
+      birthday: "",
+    });
+    expect(partial.metadata.company).toBeUndefined();
+    expect(partial.metadata.urls).toBeUndefined();
+    expect(partial.metadata.birthday).toBeUndefined();
+    expect(partial.metadata.jobTitle).toBe("Diretora");
+    expect(partial.metadata.address).toBe("Rua A, 10\nSão Paulo - SP");
+  });
+
+  it("updateContactProfile keeps unrelated metadata, treats {} as a no-op and mixes clear + set", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Metadata Viva",
+      phone: "+5511933332222",
+    });
+    await withTenant(db, orgA, (tx) =>
+      tx
+        .update(contacts)
+        .set({ metadata: sql`${contacts.metadata} || '{"googleResourceName":"people/c1"}'::jsonb` })
+        .where(sql`${contacts.id} = ${contact.id}`),
+    );
+    await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "Acme",
+      jobTitle: "X",
+    });
+
+    const noop = await updateContactProfile(db, agent, { contactId: contact.id });
+    expect(noop.metadata).toMatchObject({ company: "Acme", jobTitle: "X" });
+
+    const mixed = await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "",
+      jobTitle: "Y",
+      urls: [],
+    });
+    expect(mixed.metadata.company).toBeUndefined();
+    expect(mixed.metadata.jobTitle).toBe("Y");
+    expect(mixed.metadata.googleResourceName).toBe("people/c1");
+    expect(mixed.metadata.source).toBe("manual");
+  });
+
+  it("updateContactProfile clears a field set to whitespace only", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Espaço Vazio",
+      phone: "+5511922221111",
+    });
+    await updateContactProfile(db, agent, { contactId: contact.id, company: "Acme" });
+    const cleared = await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "   ",
+    });
+    expect(cleared.metadata.company).toBeUndefined();
+  });
+
+  it("updateContactProfile keeps both keys when two edits of different fields race", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Edição Dupla",
+      phone: "+5511911110000",
+    });
+    await Promise.all([
+      updateContactProfile(db, agent, { contactId: contact.id, company: "Acme" }),
+      updateContactProfile(db, agent, { contactId: contact.id, jobTitle: "Diretora" }),
+    ]);
+    const after = await getContact(db, agent, contact.id);
+    expect(after.metadata).toMatchObject({ company: "Acme", jobTitle: "Diretora" });
+  });
+
+  it("updateContactProfile rejects a dangerous url without touching the contact", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Url Perigosa",
+      phone: "+5511944443333",
+    });
+    await expect(
+      updateContactProfile(db, agent, {
+        contactId: contact.id,
+        company: "Não deve gravar",
+        urls: ["javascript:alert(1)"],
+      }),
+    ).rejects.toThrow();
+    const after = await getContact(db, agent, contact.id);
+    expect(after.metadata.company).toBeUndefined();
+    expect(after.metadata.urls).toBeUndefined();
+  });
+
   it("updateContactProfile rejects viewer and cross-tenant write", async () => {
     const contact = await createContact(db, ctx(orgA, memberA, "agent"), {
       displayName: "Protegido",

@@ -33,6 +33,32 @@ test("contacts: manual creation, search and the outbound dialog without WAHA", a
   await expect(list).toContainText("5511988887777@c.us");
   await expect(list).toContainText(`maria-${suffix}@example.com`);
 
+  // Edit the extended profile from the list; reopening shows what was saved.
+  await page.getByRole("button", { name: "Editar", exact: true }).first().click();
+  const edit = page.getByRole("dialog");
+  await edit.getByLabel("Empresa").fill("Acme E2E");
+  await edit.getByLabel("Cargo").fill("Diretora");
+  await edit.getByLabel("Aniversário").fill("1990-02-28");
+  await edit.getByLabel("Sites").fill("https://acme.test\nhttps://acme.test/sobre");
+  // Wait for the server action, then reload: reopening must show what was persisted.
+  const saved = page.waitForResponse((r) => r.request().method() === "POST");
+  await edit.getByRole("button", { name: "Salvar" }).click();
+  await saved;
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page.reload();
+  await page.getByRole("button", { name: "Editar", exact: true }).first().click();
+  await expect(edit.getByLabel("Empresa")).toHaveValue("Acme E2E");
+  await expect(edit.getByLabel("Cargo")).toHaveValue("Diretora");
+  await expect(edit.getByLabel("Aniversário")).toHaveValue("1990-02-28");
+  await expect(edit.getByLabel("Sites")).toHaveValue("https://acme.test\nhttps://acme.test/sobre");
+
+  // A non-http(s) site is refused: toast error and the dialog stays open.
+  await edit.getByLabel("Sites").fill("javascript:alert(1)");
+  await edit.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(edit).toBeVisible();
+  await page.keyboard.press("Escape");
+
   // Search by name filters the list.
   await page.getByPlaceholder("Buscar por nome ou número…").fill("Maria");
   await page.getByPlaceholder("Buscar por nome ou número…").press("Enter");
