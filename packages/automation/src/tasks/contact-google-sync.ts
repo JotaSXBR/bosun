@@ -13,15 +13,21 @@ export type ContactGoogleSyncPayload = z.infer<typeof contactGoogleSyncPayload>;
 /**
  * Mirrors one contact into the org's Google account. Always completes: the
  * queue is `key_strict_fifo`, so a failed job would hold the whole org's
- * key. Google errors are recorded on the contact by the sync itself.
+ * key (a `failed` job keeps its key blocked). Google errors are recorded on
+ * the contact by the sync itself; unexpected errors (DB, bad payload) are
+ * reported and NOT retried — the contact syncs on its next edit or "sync now".
  */
 export async function contactGoogleSyncHandler(payload: unknown): Promise<{ ok: boolean }> {
-  const parsed = contactGoogleSyncPayload.parse(payload);
+  const parsed = contactGoogleSyncPayload.safeParse(payload);
+  if (!parsed.success) {
+    captureException(parsed.error, { job: "contact-google-sync", reason: "invalid-payload" });
+    return { ok: false };
+  }
   try {
-    await syncContactToGoogle(getDb(), parsed);
+    await syncContactToGoogle(getDb(), parsed.data);
     return { ok: true };
   } catch (error) {
-    captureException(error, { job: "contact-google-sync", contactId: parsed.contactId });
+    captureException(error, { job: "contact-google-sync", contactId: parsed.data.contactId });
     return { ok: false };
   }
 }
