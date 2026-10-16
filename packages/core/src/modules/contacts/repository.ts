@@ -125,6 +125,21 @@ export async function updateContactAvatar(
 }
 
 /**
+ * Stores the Google mirror state under `metadata.google`. Deliberately leaves
+ * `updated_at` alone — a sync is not a user edit.
+ */
+export async function updateContactGoogleSync(
+  executor: DbExecutor,
+  contactId: string,
+  google: Record<string, unknown>,
+): Promise<void> {
+  await executor
+    .update(contacts)
+    .set({ metadata: sql`${contacts.metadata} || ${JSON.stringify({ google })}::jsonb` })
+    .where(eq(contacts.id, contactId));
+}
+
+/**
  * Contacts page rows — one row per contact with the count of tickets it
  * ever had, name/id search, alphabetical order. The count comes from a
  * grouped LEFT JOIN (single scan), not a per-row correlated subquery —

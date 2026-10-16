@@ -48,15 +48,15 @@ Plano: `tasks/plan.md`.
 
 ## Task 4: Job `contact-google-sync`
 
-- [ ] `contactGoogleSyncHandler({ organizationId, contactId })`: conexão
+- [x] `contactGoogleSyncHandler({ organizationId, contactId })`: conexão
       `connected`, token válido, `resourceName` conhecido ou busca com igualdade
       exata, create/update com etag (uma releitura), pula se o hash não mudou
-- [ ] Grava `metadata.google` (`resourceName`, `etag`, `payloadHash`,
+- [x] Grava `metadata.google` (`resourceName`, `etag`, `payloadHash`,
       `lastSyncedAt`) sem alterar `updated_at`
-- [ ] Fila criada em `boss.ts` com `policy: 'key_strict_fifo'` + `enqueueContactGoogleSync`
+- [x] Fila criada em `boss.ts` com `policy: 'key_strict_fifo'` + `enqueueContactGoogleSync`
       sempre com `singletonKey: google:<organizationId>`; erro de um contato
       grava `lastError` e conclui o job (nunca deixa `failed`)
-- [ ] Teste de integração com o cliente falso (criar, atualizar, sem mudança,
+- [x] Teste de integração com o cliente falso (criar, atualizar, sem mudança,
       conflito de etag, token revogado, sem conexão = no-op)
 - **Acceptance**: sem conexão `connected` nada é chamado; repetir o job não
   duplica nem chama o Google; `invalid_grant` marca `needs_reauth`
