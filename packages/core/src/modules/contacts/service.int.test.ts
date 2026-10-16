@@ -240,6 +240,67 @@ describe("contacts service", () => {
     expect(partial.metadata.address).toBe("Rua A, 10\nSão Paulo - SP");
   });
 
+  it("updateContactProfile keeps unrelated metadata, treats {} as a no-op and mixes clear + set", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Metadata Viva",
+      phone: "+5511933332222",
+    });
+    await withTenant(db, orgA, (tx) =>
+      tx
+        .update(contacts)
+        .set({ metadata: sql`${contacts.metadata} || '{"googleResourceName":"people/c1"}'::jsonb` })
+        .where(sql`${contacts.id} = ${contact.id}`),
+    );
+    await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "Acme",
+      jobTitle: "X",
+    });
+
+    const noop = await updateContactProfile(db, agent, { contactId: contact.id });
+    expect(noop.metadata).toMatchObject({ company: "Acme", jobTitle: "X" });
+
+    const mixed = await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "",
+      jobTitle: "Y",
+      urls: [],
+    });
+    expect(mixed.metadata.company).toBeUndefined();
+    expect(mixed.metadata.jobTitle).toBe("Y");
+    expect(mixed.metadata.googleResourceName).toBe("people/c1");
+    expect(mixed.metadata.source).toBe("manual");
+  });
+
+  it("updateContactProfile clears a field set to whitespace only", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Espaço Vazio",
+      phone: "+5511922221111",
+    });
+    await updateContactProfile(db, agent, { contactId: contact.id, company: "Acme" });
+    const cleared = await updateContactProfile(db, agent, {
+      contactId: contact.id,
+      company: "   ",
+    });
+    expect(cleared.metadata.company).toBeUndefined();
+  });
+
+  it("updateContactProfile keeps both keys when two edits of different fields race", async () => {
+    const agent = ctx(orgA, memberA, "agent");
+    const contact = await createContact(db, agent, {
+      displayName: "Edição Dupla",
+      phone: "+5511911110000",
+    });
+    await Promise.all([
+      updateContactProfile(db, agent, { contactId: contact.id, company: "Acme" }),
+      updateContactProfile(db, agent, { contactId: contact.id, jobTitle: "Diretora" }),
+    ]);
+    const after = await getContact(db, agent, contact.id);
+    expect(after.metadata).toMatchObject({ company: "Acme", jobTitle: "Diretora" });
+  });
+
   it("updateContactProfile rejects a dangerous url without touching the contact", async () => {
     const agent = ctx(orgA, memberA, "agent");
     const contact = await createContact(db, agent, {

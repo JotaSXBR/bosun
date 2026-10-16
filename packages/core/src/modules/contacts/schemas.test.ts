@@ -43,6 +43,14 @@ describe("updateContactProfileInput — profile fields", () => {
     },
   );
 
+  it.each(["2024-02-29", "1900-01-01"])("accepts the birthday %j", (birthday) => {
+    expect(parse({ birthday }).success).toBe(true);
+  });
+
+  it.each(["2023-02-29", "2026-04-31"])("rejects the impossible birthday %j", (birthday) => {
+    expect(parse({ birthday }).success).toBe(false);
+  });
+
   it("enforces the length limits", () => {
     expect(parse({ company: "a".repeat(121) }).success).toBe(false);
     expect(parse({ jobTitle: "a".repeat(121) }).success).toBe(false);
