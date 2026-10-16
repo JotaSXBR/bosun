@@ -4,11 +4,11 @@ Plano: `tasks/plan.md`.
 
 ## Task 1: Endurecer o perfil do contato
 
-- [ ] `updateContactProfileInput` e `createContactInput` rejeitam caracteres de
+- [x] `updateContactProfileInput` e `createContactInput` rejeitam caracteres de
       controle (exceto `\n` em `address`/`notes`) e marcas bidi em
       `displayName`, `company`, `jobTitle`, `address`, `notes`
-- [ ] `urls` rejeita credenciais embutidas (`https://user:pass@host`)
-- [ ] Testes unitários (`schemas.test.ts`) e de integração (nada é gravado)
+- [x] `urls` rejeita credenciais embutidas (`https://user:pass@host`)
+- [x] Testes unitários (`schemas.test.ts`) e de integração (nada é gravado)
 - **Acceptance**: valores com NUL, `\r` ou bidi são recusados; `https://acme.test`
   continua válido; `https://u:p@acme.test` é recusado
 - **Verify**: `pnpm --filter @crm/core test` · integração dos contatos

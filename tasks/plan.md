@@ -70,13 +70,14 @@ Decisões do gate de esclarecimento (2026-10-16):
 Regra do projeto: decisão sobre biblioteca ou API externa se apoia em
 documentação atual da versão em uso, não em memória.
 
-| Tema                  | Versão / alvo            | Fonte                                                                                                 | Data       | O que confirmou                                                                                      |
-| --------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
-| People API (contatos) | REST v1                  | `developers.google.com/people/api/rest/v1/people/{updateContact,searchContacts,createContact,batch*}` | 2026-10-16 | etag/`failedPrecondition`, `updatePersonFields` substitutivo, mutates sequenciais, aquecimento, ≤200 |
-| OAuth do Google       | web server flow          | `developers.google.com/identity/protocols/oauth2/web-server`                                          | 2026-10-15 | state, refresh, `invalid_grant`, revoke, consentimento granular                                      |
-| pg-boss               | 12.35.0 (`package.json`) | tipos instalados `node_modules/pg-boss/dist/types.d.ts` (Context7 indisponível: chave inválida)       | 2026-10-16 | `policy: 'key_strict_fifo'`, `singletonKey`, `localConcurrency`, `retry*`, job `failed` segura chave |
-| zod                   | 4.6.5                    | a consultar antes da tarefa 1 (controle/bidi, credenciais em URL)                                     | —          | pendente                                                                                             |
+| Tema                  | Versão / alvo            | Fonte                                                                                                 | Data       | O que confirmou                                                                                                                                                             |
+| --------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| People API (contatos) | REST v1                  | `developers.google.com/people/api/rest/v1/people/{updateContact,searchContacts,createContact,batch*}` | 2026-10-16 | etag/`failedPrecondition`, `updatePersonFields` substitutivo, mutates sequenciais, aquecimento, ≤200                                                                        |
+| OAuth do Google       | web server flow          | `developers.google.com/identity/protocols/oauth2/web-server`                                          | 2026-10-15 | state, refresh, `invalid_grant`, revoke, consentimento granular                                                                                                             |
+| pg-boss               | 12.35.0 (`package.json`) | tipos instalados `node_modules/pg-boss/dist/types.d.ts` (Context7 indisponível: chave inválida)       | 2026-10-16 | `policy: 'key_strict_fifo'`, `singletonKey`, `localConcurrency`, `retry*`, job `failed` segura chave                                                                        |
+| zod                   | 4.6.5 (`package.json`)   | Context7 `/colinhacks/zod` (API REST, chave nova)                                                     | 2026-10-16 | `z.httpUrl()` (= `z.url` http(s) + hostname de domínio), sem opção de credenciais → `.refine` com `new URL()`, refine devolve falso e nunca lança, mensagem via `{ error }` |
 
+Context7 reconfigurado em 2026-10-16 (a chave antiga era inválida); as ferramentas MCP só valem após reiniciar a sessão, até lá consulta-se a API REST oficial do Context7.
 Novas dúvidas de API durante o build entram nesta tabela **antes** do código.
 
 ## Escopo
