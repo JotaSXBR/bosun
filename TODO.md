@@ -572,10 +572,12 @@ invitation:create`): lista + convites pendentes com **link copiável
   provedor inbound), Telegram.
 - **P2 — Google**: slice 1/3 **conexão por workspace** ✅ 2026-10-15
   (`external_connections` + OAuth BYOK + card em `/app/settings/channels`;
-  PR #48 mergeado, validar o OAuth real no staging). Slice 2/3 **perfil do
+  PR #48 mergeado; OAuth real validado no staging em 2026-10-16: conexão com o
+  Google concluída, com o aviso esperado de "app não verificado" do modo
+  Testing — a verificação do app fica para o fim do desenvolvimento). Slice 2/3 **perfil do
   contato** ✅ 2026-10-15 (empresa, cargo, endereço, aniversário, sites além
   de e-mail/telefone/notas; ficha do inbox + dialog "Editar" em
-  `/app/contacts`; branch `feat/contact-profile`, aguardando PR). Próximo:
+  `/app/contacts`; PR #49 mergeado). Próximo:
   slice 3 = job `contact-google-sync` (push contínuo só com conexão ativa +
   sync inicial em massa ao conectar, People API) — spec em
   `docs/product/contacts-google-sync.md`. Depois: Calendar, Gmail tools. Em
