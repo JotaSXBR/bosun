@@ -434,4 +434,61 @@ describe("syncContactToGoogle", () => {
       await db.delete(organizations).where(eq(organizations.id, other!.id));
     }
   });
+
+  it("clears in Google a field emptied in Bosun, but only sends present fields when adopting", async () => {
+    await connect();
+    const sent: string[][] = [];
+    const people = fakePeople({
+      updateContact: ({ current, fields }) => {
+        sent.push(fields);
+        return Promise.resolve({ ...current, source: { ...current.source!, etag: "etag-9" } });
+      },
+    });
+    const id = await newContact({ channelUserId: "5511999990021@c.us", displayName: "Lia" });
+    await withTenant(db, orgId, (tx) =>
+      tx
+        .update(contacts)
+        .set({ metadata: sql`${contacts.metadata} || '{"company":"Acme"}'::jsonb` })
+        .where(eq(contacts.id, id)),
+    );
+    await syncContactToGoogle(db, { organizationId: orgId, contactId: id }, { oauth, people });
+    await withTenant(db, orgId, (tx) =>
+      tx
+        .update(contacts)
+        .set({ metadata: sql`${contacts.metadata} - 'company'` })
+        .where(eq(contacts.id, id)),
+    );
+
+    const outcome = await syncContactToGoogle(
+      db,
+      { organizationId: orgId, contactId: id },
+      { oauth, people },
+    );
+    expect(outcome).toBe("updated");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain("organizations"); // absent in the payload, still in the mask => cleared
+
+    const adopting = fakePeople({
+      searchContacts: () =>
+        Promise.resolve([
+          {
+            resourceName: "people/theirs",
+            source: { type: "CONTACT", id: "theirs", etag: "e" },
+            phones: ["+5511999990022"],
+            emails: [],
+          },
+        ]),
+      updateContact: ({ current, fields }) => {
+        sent.push(fields);
+        return Promise.resolve(current);
+      },
+    });
+    const other = await newContact({ channelUserId: "5511999990022@c.us", displayName: "Teo" });
+    await syncContactToGoogle(
+      db,
+      { organizationId: orgId, contactId: other },
+      { oauth, people: adopting },
+    );
+    expect(sent[1]).not.toContain("organizations"); // first adoption never wipes their data
+  });
 });

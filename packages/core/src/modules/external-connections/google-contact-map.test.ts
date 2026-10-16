@@ -154,3 +154,28 @@ describe("payloadHash / personFields", () => {
     );
   });
 });
+
+describe("toPerson sanitization (data that never went through the profile schema)", () => {
+  it("drops a display name with bidi or control characters", () => {
+    expect(toPerson(contact({ displayName: "Maria \u202Eevil" })).names).toBeUndefined();
+    expect(toPerson(contact({ displayName: "Ma\u0000ria" })).names).toBeUndefined();
+  });
+
+  it("drops unsafe single-line fields but keeps line breaks in notes and address", () => {
+    const person = toPerson(contact({}, { company: "Acme\u202D", notes: "linha 1\nlinha 2" }));
+    expect(person.organizations).toEqual([{ title: "Diretora" }]);
+    expect(person.biographies).toEqual([{ value: "linha 1\nlinha 2", contentType: "TEXT_PLAIN" }]);
+    expect(toPerson(contact({}, { notes: "oi\u202E" })).biographies).toBeUndefined();
+  });
+
+  it("keeps only public http(s) urls without credentials", () => {
+    const urls = [
+      "https://acme.test",
+      "https://user:pass@acme.test",
+      "javascript:alert(1)",
+      "ftp://acme.test",
+      "not a url",
+    ];
+    expect(toPerson(contact({}, { urls })).urls).toEqual([{ value: "https://acme.test" }]);
+  });
+});

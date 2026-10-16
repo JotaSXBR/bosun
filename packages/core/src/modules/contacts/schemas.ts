@@ -9,7 +9,7 @@ const isBidiControl = (code: number) =>
  * fields keep tab, LF and CR. (A code-point scan instead of a regex: ESLint's
  * no-control-regex forbids control characters in patterns.)
  */
-function hasUnsafeChars(value: string, multiline: boolean): boolean {
+export function hasUnsafeChars(value: string, multiline: boolean): boolean {
   for (const char of value) {
     const code = char.codePointAt(0) ?? 0;
     const control = code < 0x20 || code === 0x7f;

@@ -2,7 +2,13 @@ import type { Database } from "@crm/db";
 import { withTenant } from "@crm/db";
 
 import { findContactById, updateContactGoogleSync } from "../contacts";
-import { isEligible, payloadHash, personFields, toPerson } from "./google-contact-map";
+import {
+  isEligible,
+  MIRRORED_FIELDS,
+  payloadHash,
+  personFields,
+  toPerson,
+} from "./google-contact-map";
 import type { GoogleOAuthClient } from "./google-oauth";
 import { GoogleOAuthError } from "./google-oauth";
 import type { GooglePeopleClient, GooglePerson, GooglePersonInput } from "./google-people";
@@ -49,10 +55,14 @@ async function push(
   accessToken: string,
   person: GooglePersonInput,
   current: GooglePerson | null,
+  ours: boolean,
 ): Promise<GooglePerson> {
   if (!current) return people.createContact({ accessToken, person });
+  // A contact we already mirror gets the full mask, so a field emptied in
+  // Bosun is cleared in Google; a first adoption only touches what we send.
+  const fields = ours ? MIRRORED_FIELDS : personFields(person);
   const update = (target: GooglePerson) =>
-    people.updateContact({ accessToken, current: target, person, fields: personFields(person) });
+    people.updateContact({ accessToken, current: target, person, fields });
   try {
     return await update(current);
   } catch (error) {
@@ -98,7 +108,7 @@ export async function syncContactToGoogle(
       : null;
     const current = known ?? (await findCandidate(people, accessToken, person));
 
-    const saved = await push(people, accessToken, person, current);
+    const saved = await push(people, accessToken, person, current, known !== null);
     await save({
       resourceName: saved.resourceName,
       etag: saved.source?.etag ?? null,

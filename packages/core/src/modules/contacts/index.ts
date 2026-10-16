@@ -8,5 +8,10 @@ export {
   updateContactProfileRow,
 } from "./repository";
 export type { CreateContactInput, ListContactsInput, UpdateContactProfileInput } from "./schemas";
-export { createContactInput, listContactsInput, updateContactProfileInput } from "./schemas";
+export {
+  createContactInput,
+  hasUnsafeChars,
+  listContactsInput,
+  updateContactProfileInput,
+} from "./schemas";
 export { createContact, getContact, listOrgContacts, updateContactProfile } from "./service";

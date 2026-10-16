@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { hasUnsafeChars } from "../contacts";
 import type { GooglePersonField, GooglePersonInput } from "./google-people";
 
 /** The slice of a contact row the Google mirror reads. */
@@ -14,8 +15,22 @@ const CHANNEL_PHONE = /^([1-9]\d{7,14})@c\.us$/;
 const BIRTHDAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MAX_URLS = 5;
 
-const text = (value: unknown): string | undefined =>
-  typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
+/**
+ * Trimmed non-empty string, or undefined. Values with control/bidi characters
+ * are dropped: metadata can predate (or bypass) the profile schema's guard,
+ * and this is the single exit towards Google.
+ */
+const text = (value: unknown, multiline = false): string | undefined => {
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  return hasUnsafeChars(value, multiline) ? undefined : value.trim();
+};
+
+/** Public http(s) site without credentials — same rule as the profile schema. */
+const safeUrl = (value: string): boolean => {
+  if (!URL.canParse(value)) return false;
+  const url = new URL(value);
+  return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password;
+};
 
 const digits = (value: string) => value.replace(/\D/g, "");
 
@@ -56,12 +71,12 @@ const organizations = (c: MappableContact): GooglePersonInput => {
 };
 
 const addresses = (c: MappableContact): GooglePersonInput => {
-  const formattedValue = text(c.metadata.address);
+  const formattedValue = text(c.metadata.address, true);
   return formattedValue ? { addresses: [{ formattedValue }] } : {};
 };
 
 const biographies = (c: MappableContact): GooglePersonInput => {
-  const value = text(c.metadata.notes);
+  const value = text(c.metadata.notes, true);
   return value ? { biographies: [{ value, contentType: "TEXT_PLAIN" }] } : {};
 };
 
@@ -83,8 +98,8 @@ const urls = (c: MappableContact): GooglePersonInput => {
   const raw = c.metadata.urls;
   const list = Array.isArray(raw) ? raw : [];
   const values = list
-    .map(text)
-    .filter((v): v is string => v !== undefined)
+    .map((v) => text(v))
+    .filter((v): v is string => v !== undefined && safeUrl(v))
     .slice(0, MAX_URLS);
   return values.length > 0 ? { urls: values.map((value) => ({ value })) } : {};
 };
@@ -107,7 +122,19 @@ export function toPerson(contact: MappableContact): GooglePersonInput {
   };
 }
 
-/** The `updatePersonFields` mask: exactly what we send, so empty fields are never wiped. */
+/** Every field Bosun owns on a Person. */
+export const MIRRORED_FIELDS: GooglePersonField[] = [
+  "names",
+  "phoneNumbers",
+  "emailAddresses",
+  "organizations",
+  "addresses",
+  "biographies",
+  "birthdays",
+  "urls",
+];
+
+/** The mask for a first adoption: exactly what we send, so a person's own data is never wiped. */
 export function personFields(person: GooglePersonInput): GooglePersonField[] {
   return Object.keys(person) as GooglePersonField[];
 }
