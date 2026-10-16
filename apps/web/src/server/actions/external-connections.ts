@@ -1,8 +1,10 @@
 "use server";
 
+import { enqueueContactGoogleSync } from "@crm/automation";
 import { DomainError } from "@crm/core";
 import {
   disconnectGoogle,
+  listGoogleSyncContactIds,
   saveGoogleClient,
   verifyGoogleConnection,
 } from "@crm/core/external-connections";
@@ -20,6 +22,9 @@ export type GoogleConnectResult = { ok: true; authUrl: string } | { ok: false; e
 export type GoogleVerifyResult =
   { ok: true; status: string; error: string | null } | { ok: false; error: string };
 export type GoogleActionResult = { ok: true } | { ok: false; error: string };
+export type GoogleSyncResult = { ok: true; queued: number } | { ok: false; error: string };
+
+const SYNC_PAGE_SIZE = 200;
 
 function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof z.ZodError) {
@@ -70,5 +75,35 @@ export async function disconnectGoogleAction(): Promise<GoogleActionResult> {
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error, "Não foi possível desconectar.") };
+  }
+}
+
+/** Queues one Google sync job per eligible contact (the job skips what is unchanged). */
+export async function syncGoogleContactsAction(): Promise<GoogleSyncResult> {
+  const ctx = await requireTenantContext();
+  try {
+    let queued = 0;
+    let after: string | undefined;
+    do {
+      const page = await listGoogleSyncContactIds(getDb(), ctx, { after, limit: SYNC_PAGE_SIZE });
+      for (const contactId of page.ids) {
+        const { skipped } = await enqueueContactGoogleSync({
+          organizationId: ctx.organizationId,
+          contactId,
+        });
+        if (skipped) {
+          return {
+            ok: false,
+            error: "A fila de sincronização não está disponível. Tente de novo.",
+          };
+        }
+        queued += 1;
+      }
+      after = page.next ?? undefined;
+    } while (after);
+    revalidatePath(CHANNELS_PATH);
+    return { ok: true, queued };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, "Não foi possível iniciar a sincronização.") };
   }
 }

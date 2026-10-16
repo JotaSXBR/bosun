@@ -12,6 +12,7 @@ import { useEffect, useState, useTransition } from "react";
 import {
   connectGoogleAction,
   disconnectGoogleAction,
+  syncGoogleContactsAction,
   verifyGoogleAction,
 } from "@/server/actions/external-connections";
 
@@ -23,6 +24,8 @@ export type GoogleConnectionView = {
   lastCheckedAt: string | null;
   lastError: string | null;
 };
+
+export type GoogleSyncView = { eligible: number; synced: number; lastSyncedAt: string | null };
 
 const TONES: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   pending: "neutral",
@@ -40,13 +43,26 @@ const FLASH_TOASTS = {
   forbidden: "error",
 } as const;
 
+function SyncSummary({ sync }: { sync: GoogleSyncView }) {
+  const t = useTranslations("integrations.google");
+  return (
+    <p className="text-ink-muted text-sm" data-testid="google-sync-summary">
+      {t("syncSummary", { eligible: sync.eligible, synced: sync.synced })}
+      {sync.lastSyncedAt &&
+        ` · ${t("lastSynced", { date: new Date(sync.lastSyncedAt).toLocaleString() })}`}
+    </p>
+  );
+}
+
 export function GoogleCard({
   connection,
+  sync,
   canManage,
   redirectUri,
   flash,
 }: {
   connection: GoogleConnectionView | null;
+  sync: GoogleSyncView | null;
   canManage: boolean;
   redirectUri: string;
   flash: string | null;
@@ -79,6 +95,17 @@ export function GoogleCard({
       if (!result.ok) toast.error(result.error);
       else if (result.status === "connected") toast.success(t("verified"));
       else toast.warning(t(`status.${result.status}`));
+    });
+  }
+
+  function syncNow() {
+    if (!sync || !connection) return;
+    const account = connection.accountEmail ?? "";
+    if (!window.confirm(t("syncConfirm", { count: sync.eligible, account }))) return;
+    startTransition(async () => {
+      const result = await syncGoogleContactsAction();
+      if (!result.ok) toast.error(result.error);
+      else toast.success(t("syncQueued", { count: result.queued }));
     });
   }
 
@@ -120,8 +147,19 @@ export function GoogleCard({
           </p>
         )}
 
+        {sync && <SyncSummary sync={sync} />}
+
         {canManage && connected && (
           <div className="flex gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={syncNow}
+              loading={pending}
+              disabled={!sync || sync.eligible === 0}
+            >
+              {t("syncNow")}
+            </Button>
             <Button variant="secondary" size="sm" onClick={verify} loading={pending}>
               {t("verify")}
             </Button>

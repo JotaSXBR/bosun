@@ -69,10 +69,10 @@ Plano: `tasks/plan.md`.
 
 ## Task 5: Botão "Sincronizar agora" no card
 
-- [ ] Action `syncGoogleContactsAction` (manage) enfileira um job por contato
+- [x] Action `syncGoogleContactsAction` (manage) enfileira um job por contato
       elegível, em páginas
-- [ ] Card mostra elegíveis / sincronizados / última sincronização e o botão
-- [ ] Textos pt-BR; só `integrations:manage` vê o botão
+- [x] Card mostra elegíveis / sincronizados / última sincronização e o botão
+- [x] Textos pt-BR; só `integrations:manage` vê o botão
 - **Acceptance**: o clique enfileira N jobs e o card atualiza; sem conexão o
   botão não aparece; viewer não vê o botão
 - **Verify**: `pnpm verify` · integração da action · teste manual no staging
