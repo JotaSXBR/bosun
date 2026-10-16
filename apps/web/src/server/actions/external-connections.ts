@@ -78,11 +78,14 @@ export async function disconnectGoogleAction(): Promise<GoogleActionResult> {
   }
 }
 
-/** Queues one Google sync job per eligible contact (the job skips what is unchanged). */
+/**
+ * Queues one Google sync job per eligible contact (the job skips what is
+ * unchanged). A failure midway reports how many were already queued.
+ */
 export async function syncGoogleContactsAction(): Promise<GoogleSyncResult> {
   const ctx = await requireTenantContext();
+  let queued = 0;
   try {
-    let queued = 0;
     let after: string | undefined;
     do {
       const page = await listGoogleSyncContactIds(getDb(), ctx, { after, limit: SYNC_PAGE_SIZE });
@@ -91,19 +94,18 @@ export async function syncGoogleContactsAction(): Promise<GoogleSyncResult> {
           organizationId: ctx.organizationId,
           contactId,
         });
-        if (skipped) {
-          return {
-            ok: false,
-            error: "A fila de sincronização não está disponível. Tente de novo.",
-          };
-        }
+        if (skipped)
+          throw new DomainError("GOOGLE_QUEUE_UNAVAILABLE", "A fila não está disponível.");
         queued += 1;
       }
       after = page.next ?? undefined;
     } while (after);
-    revalidatePath(CHANNELS_PATH);
     return { ok: true, queued };
   } catch (error) {
-    return { ok: false, error: errorMessage(error, "Não foi possível iniciar a sincronização.") };
+    const message = errorMessage(error, "Não foi possível iniciar a sincronização.");
+    const partial = queued > 0 ? ` ${queued} contatos já foram enfileirados.` : "";
+    return { ok: false, error: `${message}${partial}` };
+  } finally {
+    revalidatePath(CHANNELS_PATH);
   }
 }

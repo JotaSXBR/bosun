@@ -49,8 +49,47 @@ function SyncSummary({ sync }: { sync: GoogleSyncView }) {
     <p className="text-ink-muted text-sm" data-testid="google-sync-summary">
       {t("syncSummary", { eligible: sync.eligible, synced: sync.synced })}
       {sync.lastSyncedAt &&
-        ` · ${t("lastSynced", { date: new Date(sync.lastSyncedAt).toLocaleString() })}`}
+        ` · ${t("lastSynced", { date: new Date(sync.lastSyncedAt).toLocaleString("pt-BR") })}`}
     </p>
+  );
+}
+
+/** Disabled after a successful queue: jobs finish later, so the counts above lag behind. */
+function SyncButton({
+  sync,
+  connection,
+}: {
+  sync: GoogleSyncView;
+  connection: GoogleConnectionView | null;
+}) {
+  const account = connection?.accountEmail ?? "";
+  const t = useTranslations("integrations.google");
+  const [pending, startTransition] = useTransition();
+  const [queued, setQueued] = useState(false);
+
+  function syncNow() {
+    if (!window.confirm(t("syncConfirm", { count: sync.eligible, account }))) return;
+    startTransition(async () => {
+      const result = await syncGoogleContactsAction();
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setQueued(true);
+      toast.success(t("syncQueued", { count: result.queued }));
+    });
+  }
+
+  return (
+    <Button
+      variant="primary"
+      size="sm"
+      onClick={syncNow}
+      loading={pending}
+      disabled={queued || sync.eligible === 0}
+    >
+      {t("syncNow")}
+    </Button>
   );
 }
 
@@ -98,17 +137,6 @@ export function GoogleCard({
     });
   }
 
-  function syncNow() {
-    if (!sync || !connection) return;
-    const account = connection.accountEmail ?? "";
-    if (!window.confirm(t("syncConfirm", { count: sync.eligible, account }))) return;
-    startTransition(async () => {
-      const result = await syncGoogleContactsAction();
-      if (!result.ok) toast.error(result.error);
-      else toast.success(t("syncQueued", { count: result.queued }));
-    });
-  }
-
   function disconnect() {
     if (!window.confirm(t("disconnectConfirm"))) return;
     startTransition(async () => {
@@ -151,15 +179,7 @@ export function GoogleCard({
 
         {canManage && connected && (
           <div className="flex gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={syncNow}
-              loading={pending}
-              disabled={!sync || sync.eligible === 0}
-            >
-              {t("syncNow")}
-            </Button>
+            {sync && <SyncButton sync={sync} connection={connection} />}
             <Button variant="secondary" size="sm" onClick={verify} loading={pending}>
               {t("verify")}
             </Button>
