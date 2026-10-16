@@ -32,10 +32,10 @@ Plano: `tasks/plan.md`.
 
 ## Task 3: Mapeamento Bosun → Person
 
-- [ ] `toPerson(contact)` puro: `names`, `phoneNumbers` (canal + `phone`),
+- [x] `toPerson(contact)` puro: `names`, `phoneNumbers` (canal + `phone`),
       `emailAddresses`, `organizations`, `addresses`, `biographies`,
       `birthdays`, `urls`
-- [ ] `isEligible(contact)` e `payloadHash(person)` (sha256 do JSON canônico)
+- [x] `isEligible(contact)` e `payloadHash(person)` (sha256 do JSON canônico)
 - **Acceptance**: no máximo um valor em `names`/`birthdays`/`biographies`;
   sem telefone `@c.us` nem e-mail → inelegível; nome ausente → sem `names`;
   mesmo contato → mesmo hash; campo alterado → hash diferente
@@ -44,7 +44,7 @@ Plano: `tasks/plan.md`.
 
 ### Checkpoint: após as tarefas 1–3
 
-- [ ] `pnpm verify` verde · revisar com o humano
+- [x] `pnpm verify` verde · revisar com o humano
 
 ## Task 4: Job `contact-google-sync`
 
