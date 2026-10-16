@@ -1,5 +1,7 @@
 export type { MappableContact } from "./google-contact-map";
 export { isEligible, payloadHash, personFields, toPerson } from "./google-contact-map";
+export type { GoogleSyncSummary } from "./google-sync-contacts";
+export { getGoogleSyncSummary, listGoogleSyncContactIds } from "./google-sync-contacts";
 export type { GoogleSyncOutcome } from "./google-contact-sync";
 export { syncContactToGoogle } from "./google-contact-sync";
 export type { GoogleOAuthClient, GoogleTokens } from "./google-oauth";

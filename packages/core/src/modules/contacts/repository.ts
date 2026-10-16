@@ -1,6 +1,6 @@
 import type { DbExecutor } from "@crm/db";
 import { schema } from "@crm/db";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, gt, sql } from "drizzle-orm";
 
 import type { UpdateContactProfileInput } from "./schemas";
 
@@ -137,6 +137,24 @@ export async function updateContactGoogleSync(
     .update(contacts)
     .set({ metadata: sql`${contacts.metadata} || ${JSON.stringify({ google })}::jsonb` })
     .where(eq(contacts.id, contactId));
+}
+
+/** Keyset page of contacts (ordered by id) for the Google sync scan — call inside withTenant. */
+export async function pageContactsForSync(
+  executor: DbExecutor,
+  options: { after?: string | undefined; limit: number },
+): Promise<Pick<ContactRow, "id" | "channelUserId" | "displayName" | "metadata">[]> {
+  return executor
+    .select({
+      id: contacts.id,
+      channelUserId: contacts.channelUserId,
+      displayName: contacts.displayName,
+      metadata: contacts.metadata,
+    })
+    .from(contacts)
+    .where(options.after ? gt(contacts.id, options.after) : undefined)
+    .orderBy(contacts.id)
+    .limit(options.limit);
 }
 
 /**
