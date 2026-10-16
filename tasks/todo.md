@@ -16,14 +16,14 @@ Plano: `tasks/plan.md`.
 
 ## Task 2: Cliente da People API
 
-- [ ] Interface `GooglePeopleClient`: `searchByPhoneOrEmail` (com aquecimento
+- [x] Interface `GooglePeopleClient`: `searchByPhoneOrEmail` (com aquecimento
       único), `createContact`, `getContact`, `updateContact` (etag +
       `updatePersonFields`)
-- [ ] Backoff em 429/5xx (injeção de `sleep` para teste), erros tipados
+- [x] Backoff em 429/5xx (injeção de `sleep` para teste), erros tipados
       (`failedPrecondition`, `unauthorized`, `rate_limited`)
-- [ ] `getValidAccessToken(db, ctx)` no serviço: renova o token expirado,
+- [x] `getValidAccessToken(db, ctx)` no serviço: renova o token expirado,
       persiste, `invalid_grant` → `needs_reauth`
-- [ ] Fake para testes; testes com `fetch` falso
+- [x] Fake para testes; testes com `fetch` falso
 - **Acceptance**: URLs/parâmetros batem com a doc; 429 repete com backoff e
   desiste após N; 400 `failedPrecondition` vira erro tipado; token expirado é
   renovado antes da chamada
