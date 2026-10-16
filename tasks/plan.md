@@ -151,13 +151,13 @@ Detalhe de acceptance + verify por task em `tasks/todo.md`.
 
 ## Critérios de pronto
 
-- [ ] `pnpm verify` verde
-- [ ] `pnpm verify:full` verde (toca job, banco e UI)
-- [ ] Testes: elegibilidade, mapeamento (singletons), igualdade exata no match,
+- [x] `pnpm verify` verde
+- [x] `pnpm verify:full` verde (toca job, banco e UI)
+- [x] Testes: elegibilidade, mapeamento (singletons), igualdade exata no match,
       conflito de etag, 429 com backoff, token revogado, hash sem mudança =
       sem chamada ao Google
 - [ ] Teste manual no staging: Sincronizar agora cria os contatos no Google e
       repetir não duplica
-- [ ] Docs atualizadas: `docs/product/contacts-google-sync.md` (LGPD, botão,
+- [x] Docs atualizadas: `docs/product/contacts-google-sync.md` (LGPD, botão,
       fila sequencial) e `docs/domains` se mudar o modelo
-- [ ] `TODO.md`: slice 3a concluída, 3b listada
+- [x] `TODO.md`: slice 3a concluída, 3b listada

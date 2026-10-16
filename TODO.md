@@ -577,9 +577,14 @@ invitation:create`): lista + convites pendentes com **link copiável
   Testing — a verificação do app fica para o fim do desenvolvimento). Slice 2/3 **perfil do
   contato** ✅ 2026-10-15 (empresa, cargo, endereço, aniversário, sites além
   de e-mail/telefone/notas; ficha do inbox + dialog "Editar" em
-  `/app/contacts`; PR #49 mergeado). Próximo:
-  slice 3 = job `contact-google-sync` (push contínuo só com conexão ativa +
-  sync inicial em massa ao conectar, People API) — spec em
+  `/app/contacts`; PR #49 mergeado). Slice 3a **motor de sync manual** ✅
+  2026-10-16 (job `contact-google-sync` em fila `key_strict_fifo` por org +
+  botão "Sincronizar agora"; falta o teste manual no staging com o Google
+  real). **Slice 3b** (próxima): gatilho automático nas edições, varredura
+  periódica, `batchCreate/UpdateContacts`, resumo do card em uma consulta
+  SQL, contador/faixa de falhas, enfileirar em job único (hoje sequencial
+  na requisição), `metadata.google` fora do navegador (passar só as chaves
+  do perfil), cliente People em cache no handler. Spec em
   `docs/product/contacts-google-sync.md`. Depois: Calendar, Gmail tools. Em
   aberto: toast de retorno do Google duplicado no dev (checar em build de
   produção). **Antes/dentro da slice 3** (achados do review pré-ship da
