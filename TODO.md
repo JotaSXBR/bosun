@@ -580,7 +580,15 @@ invitation:create`): lista + convites pendentes com **link copiável
   sync inicial em massa ao conectar, People API) — spec em
   `docs/product/contacts-google-sync.md`. Depois: Calendar, Gmail tools. Em
   aberto: toast de retorno do Google duplicado no dev (checar em build de
-  produção).
+  produção). **Antes/dentro da slice 3** (achados do review pré-ship da
+  slice 2): rejeitar caracteres de controle/bidi em `company`, `jobTitle`
+  e `address` e credenciais embutidas em `urls` (`https://user:pass@…`)
+  antes de espelhar no Google; decidir se endereço e aniversário (dados
+  pessoais, LGPD) são espelhados por padrão ou por opt-in da organização;
+  se `urls` virarem links, usar `rel="noopener noreferrer"`; teste e2e de
+  que `viewer` não vê o botão "Editar" (precisa de um usuário viewer no
+  seed do e2e); passar ao dialog só as chaves do perfil, não todo o
+  `metadata`.
 - **P3 — LGPD endpoints**: exportar/excluir dados do contato, retenção.
 
 ## Implementação futura (prioridade)
