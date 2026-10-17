@@ -171,7 +171,7 @@ function retryDelay(attempt: number, retryAfter: string | null, random: () => nu
 type Request = { method: string; url: URL; accessToken: string; body?: unknown };
 type Transport = (request: Request) => Promise<unknown>;
 
-/** `fetch` with a timeout, bounded exponential backoff on 429/5xx/network errors, typed errors. */
+/** `fetch` with a timeout, bounded exponential backoff on 429/5xx/network errors (429 only for POST), typed errors. */
 function createTransport(options: GooglePeopleClientOptions): Transport {
   const fetchImpl = options.fetch ?? fetch;
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
@@ -192,7 +192,12 @@ function createTransport(options: GooglePeopleClientOptions): Transport {
     for (let attempt = 1; ; attempt += 1) {
       const response = await attemptOnce(request).catch(() => null);
       if (response?.ok) return response.json().catch(() => null);
-      const retryable = response === null || RETRYABLE_STATUS.has(response.status);
+      // A POST that errored after Google may have created the person would be
+      // retried into a duplicate, so only an explicit 429 (nothing processed) retries it.
+      const retryable =
+        request.method === "POST"
+          ? response?.status === 429
+          : response === null || RETRYABLE_STATUS.has(response.status);
       if (retryable && attempt < MAX_ATTEMPTS) {
         await sleep(retryDelay(attempt, response?.headers.get("retry-after") ?? null, random));
         continue;

@@ -132,6 +132,12 @@ export async function enqueueContactGoogleSync(
   }
   await boss.send(QUEUES.contactGoogleSync, payload, {
     singletonKey: `google:${payload.organizationId}`,
+    // A job past this limit lands in `failed`, which holds the org's key; the
+    // default (15 min) would stall the org for that long. A client call
+    // (4 attempts, 15 s each + backoff) fits well inside it.
+    // shortcut: no sweep for `failed` jobs, add one if a stuck key is ever seen.
+    expireInSeconds: 120,
+    retryLimit: 0,
     ...(tx ? { db: fromDrizzle(tx, sql) } : {}),
   });
   return { skipped: false };

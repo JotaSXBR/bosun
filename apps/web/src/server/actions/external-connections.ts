@@ -78,12 +78,21 @@ export async function disconnectGoogleAction(): Promise<GoogleActionResult> {
   }
 }
 
+const SYNC_COOLDOWN_MS = 60_000;
+// shortcut: per-process memory, so N instances allow N requests per window; move to the DB if abused.
+const lastSyncRequest = new Map<string, number>();
+
 /**
  * Queues one Google sync job per eligible contact (the job skips what is
  * unchanged). A failure midway reports how many were already queued.
  */
 export async function syncGoogleContactsAction(): Promise<GoogleSyncResult> {
   const ctx = await requireTenantContext();
+  const last = lastSyncRequest.get(ctx.organizationId);
+  if (last !== undefined && Date.now() - last < SYNC_COOLDOWN_MS) {
+    return { ok: false, error: "A sincronização já foi iniciada. Aguarde um minuto." };
+  }
+  lastSyncRequest.set(ctx.organizationId, Date.now());
   let queued = 0;
   try {
     let after: string | undefined;

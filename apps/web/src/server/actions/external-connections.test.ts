@@ -44,13 +44,30 @@ vi.mock("@/server/tenant", () => ({ requireTenantContext: () => Promise.resolve(
 import { syncGoogleContactsAction } from "./external-connections";
 
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(Date.now() + 10 * 60_000 * ++run); // clear the per-org cooldown between tests
   listGoogleSyncContactIds.mockReset();
   enqueueContactGoogleSync.mockReset();
   revalidatePath.mockReset();
   enqueueContactGoogleSync.mockResolvedValue({ skipped: false });
 });
 
+let run = 0;
+
 describe("syncGoogleContactsAction", () => {
+  it("rejects a repeat request inside the cooldown without enqueueing again", async () => {
+    listGoogleSyncContactIds.mockResolvedValue({ ids: ["a"], next: null });
+    await syncGoogleContactsAction();
+    enqueueContactGoogleSync.mockClear();
+
+    const result = await syncGoogleContactsAction();
+
+    expect(result.ok).toBe(false);
+    expect(enqueueContactGoogleSync).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(61_000);
+    await expect(syncGoogleContactsAction()).resolves.toMatchObject({ ok: true });
+  });
+
   it("queues every page for the session's organization and passes the cursor forward", async () => {
     listGoogleSyncContactIds
       .mockResolvedValueOnce({ ids: ["a", "b"], next: "b" })

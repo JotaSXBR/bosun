@@ -160,10 +160,28 @@ describe("google people client", () => {
       json({ error: { code: 503, status: "UNAVAILABLE" } }, 503, { "retry-after": "3" }),
       json(person()),
     ]);
-    const created = await client.createContact({ accessToken: token, person: {} });
-    expect(created.resourceName).toBe("people/c123");
+    const found = await client.getContact({ accessToken: token, resourceName: "people/c123" });
+    expect(found?.resourceName).toBe("people/c123");
     expect(calls).toHaveLength(3);
     expect(sleeps).toEqual([1000, 3000]);
+  });
+
+  it("retries a POST on 429 but never on 5xx or a network failure (no duplicate contacts)", async () => {
+    const rate = harness([googleError(429, "RESOURCE_EXHAUSTED"), json(person())]);
+    await rate.client.createContact({ accessToken: token, person: {} });
+    expect(rate.calls).toHaveLength(2);
+
+    const server = harness([json({ error: { code: 503, status: "UNAVAILABLE" } }, 503)]);
+    await expect(
+      server.client.createContact({ accessToken: token, person: {} }),
+    ).rejects.toMatchObject({ code: "unavailable" });
+    expect(server.calls).toHaveLength(1);
+
+    const network = harness([new TypeError("fetch failed")]);
+    await expect(
+      network.client.createContact({ accessToken: token, person: {} }),
+    ).rejects.toMatchObject({ code: "unavailable" });
+    expect(network.calls).toHaveLength(1);
   });
 
   it("gives up after the attempt limit with a typed rate_limited error", async () => {
@@ -181,9 +199,9 @@ describe("google people client", () => {
     const { client, calls } = harness(
       Array.from({ length: 4 }, () => new TypeError("fetch failed")),
     );
-    await expect(client.createContact({ accessToken: token, person: {} })).rejects.toMatchObject({
-      code: "unavailable",
-    });
+    await expect(
+      client.getContact({ accessToken: token, resourceName: "people/c123" }),
+    ).rejects.toMatchObject({ code: "unavailable" });
     expect(calls).toHaveLength(4);
   });
 
