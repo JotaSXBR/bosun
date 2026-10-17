@@ -1,5 +1,6 @@
 import type { Database } from "@crm/db";
 import { withTenant } from "@crm/db";
+import { z } from "zod";
 
 import { findContactById, updateContactGoogleSync } from "../contacts";
 import {
@@ -13,11 +14,15 @@ import type { GoogleOAuthClient } from "./google-oauth";
 import { GoogleOAuthError } from "./google-oauth";
 import type { GooglePeopleClient, GooglePerson, GooglePersonInput } from "./google-people";
 import { createGooglePeopleClient, GooglePeopleError } from "./google-people";
-import { getGoogleAccessToken } from "./service";
+import { getGoogleAccessToken, markGoogleNeedsReauth } from "./service";
 
 export type GoogleSyncOutcome = "created" | "updated" | "unchanged" | "skipped" | "failed";
 
-type MirrorState = Record<string, unknown> & { resourceName?: string; payloadHash?: string };
+const mirrorSchema = z.looseObject({
+  resourceName: z.string().optional(),
+  payloadHash: z.string().optional(),
+});
+type MirrorState = z.infer<typeof mirrorSchema>;
 
 const digits = (value: string) => value.replace(/\D/g, "");
 
@@ -87,15 +92,20 @@ export async function syncContactToGoogle(
 ): Promise<GoogleSyncOutcome> {
   const { organizationId, contactId } = input;
   const contact = await withTenant(db, organizationId, (tx) => findContactById(tx, contactId));
-  if (!contact || !isEligible(contact)) return "skipped";
+  if (!contact || contact.organizationId !== organizationId || !isEligible(contact)) {
+    return "skipped";
+  }
 
-  const mirror = (contact.metadata.google ?? {}) as MirrorState;
+  // Corrupted jsonb is treated as "never synced" instead of crashing the job.
+  const mirror: MirrorState = mirrorSchema.catch({}).parse(contact.metadata.google ?? {});
   const person = toPerson(contact);
   const hash = payloadHash(person);
   if (mirror.resourceName && mirror.payloadHash === hash) return "unchanged";
 
   const save = (google: Record<string, unknown>) =>
-    withTenant(db, organizationId, (tx) => updateContactGoogleSync(tx, contactId, google));
+    withTenant(db, organizationId, (tx) =>
+      updateContactGoogleSync(tx, organizationId, contactId, google),
+    );
 
   try {
     const token = await getGoogleAccessToken(db, organizationId, deps.oauth);
@@ -119,6 +129,12 @@ export async function syncContactToGoogle(
   } catch (error) {
     if (!(error instanceof GooglePeopleError || error instanceof GoogleOAuthError)) throw error;
     await save({ ...mirror, lastError: error.code });
+    if (
+      error instanceof GooglePeopleError &&
+      (error.code === "unauthorized" || error.code === "forbidden")
+    ) {
+      await markGoogleNeedsReauth(db, organizationId, error.code);
+    }
     return "failed";
   }
 }

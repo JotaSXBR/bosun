@@ -247,6 +247,27 @@ export async function getGoogleAccessToken(
 }
 
 /**
+ * Internal — trusted system path. Google rejected a valid-looking token
+ * (revoked consent or scope): flag the connection so the UI asks to reconnect
+ * instead of every contact failing silently.
+ */
+export async function markGoogleNeedsReauth(
+  db: Database,
+  organizationId: string,
+  lastError: string,
+): Promise<void> {
+  await withTenant(db, organizationId, async (tx) => {
+    const row = await findConnection(tx, organizationId, PROVIDER);
+    if (row?.status !== "connected") return;
+    await updateConnection(tx, row.id, {
+      status: "needs_reauth",
+      lastCheckedAt: new Date(),
+      lastError,
+    });
+  });
+}
+
+/**
  * Requires integrations:manage. Removes the connection, then revokes the
  * refresh token at Google (best effort: a failed revoke never blocks the
  * local disconnect). Contacts already pushed stay in the Google account.

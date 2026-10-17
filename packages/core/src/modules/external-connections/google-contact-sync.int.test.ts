@@ -491,4 +491,52 @@ describe("syncContactToGoogle", () => {
     );
     expect(sent[1]).not.toContain("organizations"); // first adoption never wipes their data
   });
+  it.each(["unauthorized", "forbidden"] as const)(
+    "flags the connection needs_reauth when the People API answers %s",
+    async (code) => {
+      await connect();
+      const id = await newContact({
+        channelUserId: `55119999900${code === "forbidden" ? 41 : 31}@c.us`,
+        displayName: "Uma",
+      });
+      const people = fakePeople({
+        searchContacts: () => Promise.reject(new GooglePeopleError(code, 401)),
+      });
+      const outcome = await syncContactToGoogle(
+        db,
+        { organizationId: orgId, contactId: id },
+        { oauth, people },
+      );
+      expect(outcome).toBe("failed");
+      expect((await stored(id)).metadata.google).toMatchObject({ lastError: code });
+      expect(await getGoogleStatus(db, ctx)).toMatchObject({ status: "needs_reauth" });
+    },
+  );
+
+  it("rethrows an unexpected error without recording lastError", async () => {
+    await connect();
+    const id = await newContact({ channelUserId: "5511999990032@c.us", displayName: "Vik" });
+    const people = fakePeople({ createContact: () => Promise.reject(new TypeError("boom")) });
+    await expect(
+      syncContactToGoogle(db, { organizationId: orgId, contactId: id }, { oauth, people }),
+    ).rejects.toThrow("boom");
+    expect((await stored(id)).metadata.google).toBeUndefined();
+  });
+
+  it("treats corrupted mirror metadata as never synced", async () => {
+    await connect();
+    const id = await newContact({ channelUserId: "5511999990033@c.us", displayName: "Wal" });
+    await withTenant(db, orgId, (tx) =>
+      tx
+        .update(contacts)
+        .set({ metadata: sql`jsonb_build_object('google', 'garbage')` })
+        .where(eq(contacts.id, id)),
+    );
+    const outcome = await syncContactToGoogle(
+      db,
+      { organizationId: orgId, contactId: id },
+      { oauth, people: fakePeople() },
+    );
+    expect(outcome).toBe("created");
+  });
 });

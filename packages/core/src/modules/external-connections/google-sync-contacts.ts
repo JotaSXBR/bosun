@@ -35,7 +35,7 @@ export async function getGoogleSyncSummary(
   let after: string | undefined;
   for (;;) {
     const page = await withTenant(db, ctx.organizationId, (tx) =>
-      pageContactsForSync(tx, { after, limit: SCAN_PAGE }),
+      pageContactsForSync(tx, ctx.organizationId, { after, limit: SCAN_PAGE }),
     );
     for (const contact of page) {
       if (!isEligible(contact)) continue;
@@ -65,7 +65,9 @@ export async function listGoogleSyncContactIds(
   if ((await getGoogleStatus(db, ctx))?.status !== "connected") {
     throw new DomainError("GOOGLE_NOT_CONNECTED", "Nenhuma conta Google conectada.");
   }
-  const page = await withTenant(db, ctx.organizationId, (tx) => pageContactsForSync(tx, options));
+  const page = await withTenant(db, ctx.organizationId, (tx) =>
+    pageContactsForSync(tx, ctx.organizationId, options),
+  );
   return {
     ids: page.filter(isEligible).map((contact) => contact.id),
     next: page.length < options.limit ? null : page[page.length - 1]!.id,

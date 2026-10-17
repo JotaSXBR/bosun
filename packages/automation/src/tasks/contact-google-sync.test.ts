@@ -34,10 +34,12 @@ describe("contactGoogleSyncHandler", () => {
   });
 
   it("reports an unexpected error and still completes the job", async () => {
-    const boom = new Error("db down");
-    syncContactToGoogle.mockRejectedValue(boom);
+    syncContactToGoogle.mockRejectedValue(
+      new Error('Failed query: update "contacts" ... params: {"phone":"+5511999990001"}'),
+    );
     await expect(contactGoogleSyncHandler(payload)).resolves.toEqual({ ok: false });
-    expect(captureException).toHaveBeenCalledWith(boom, {
+    // The reported error carries no SQL/params (contact PII), only the class and ids.
+    expect(captureException).toHaveBeenCalledWith(new Error("contact-google-sync failed: Error"), {
       job: "contact-google-sync",
       contactId: payload.contactId,
     });

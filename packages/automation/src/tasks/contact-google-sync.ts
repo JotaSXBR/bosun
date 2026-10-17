@@ -20,14 +20,22 @@ export type ContactGoogleSyncPayload = z.infer<typeof contactGoogleSyncPayload>;
 export async function contactGoogleSyncHandler(payload: unknown): Promise<{ ok: boolean }> {
   const parsed = contactGoogleSyncPayload.safeParse(payload);
   if (!parsed.success) {
-    captureException(parsed.error, { job: "contact-google-sync", reason: "invalid-payload" });
+    captureException(new Error("contact-google-sync: invalid payload"), {
+      job: "contact-google-sync",
+      reason: "invalid-payload",
+    });
     return { ok: false };
   }
   try {
     await syncContactToGoogle(getDb(), parsed.data);
     return { ok: true };
   } catch (error) {
-    captureException(error, { job: "contact-google-sync", contactId: parsed.data.contactId });
+    // Drizzle errors embed the failed SQL with its params (contact data, ciphertext):
+    // report only the error class, keep the ids for correlation.
+    captureException(
+      new Error(`contact-google-sync failed: ${error instanceof Error ? error.name : "unknown"}`),
+      { job: "contact-google-sync", contactId: parsed.data.contactId },
+    );
     return { ok: false };
   }
 }

@@ -130,18 +130,20 @@ export async function updateContactAvatar(
  */
 export async function updateContactGoogleSync(
   executor: DbExecutor,
+  organizationId: string,
   contactId: string,
   google: Record<string, unknown>,
 ): Promise<void> {
   await executor
     .update(contacts)
     .set({ metadata: sql`${contacts.metadata} || ${JSON.stringify({ google })}::jsonb` })
-    .where(eq(contacts.id, contactId));
+    .where(and(eq(contacts.id, contactId), eq(contacts.organizationId, organizationId)));
 }
 
 /** Keyset page of contacts (ordered by id) for the Google sync scan — call inside withTenant. */
 export async function pageContactsForSync(
   executor: DbExecutor,
+  organizationId: string,
   options: { after?: string | undefined; limit: number },
 ): Promise<Pick<ContactRow, "id" | "channelUserId" | "displayName" | "metadata">[]> {
   return executor
@@ -152,7 +154,12 @@ export async function pageContactsForSync(
       metadata: contacts.metadata,
     })
     .from(contacts)
-    .where(options.after ? gt(contacts.id, options.after) : undefined)
+    .where(
+      and(
+        eq(contacts.organizationId, organizationId),
+        options.after ? gt(contacts.id, options.after) : undefined,
+      ),
+    )
     .orderBy(contacts.id)
     .limit(options.limit);
 }
