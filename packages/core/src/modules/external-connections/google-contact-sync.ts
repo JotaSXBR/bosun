@@ -54,6 +54,11 @@ async function findCandidate(
   return null;
 }
 
+/** Google refused a token that looked valid (consent or scope revoked): reconnect needed. */
+const rejectsCredentials = (error: unknown): error is GooglePeopleError =>
+  error instanceof GooglePeopleError &&
+  (error.code === "unauthorized" || error.code === "forbidden");
+
 /** Creates, or updates with the etag; on a conflict rereads once and retries. */
 async function push(
   people: GooglePeopleClient,
@@ -92,9 +97,7 @@ export async function syncContactToGoogle(
 ): Promise<GoogleSyncOutcome> {
   const { organizationId, contactId } = input;
   const contact = await withTenant(db, organizationId, (tx) => findContactById(tx, contactId));
-  if (!contact || contact.organizationId !== organizationId || !isEligible(contact)) {
-    return "skipped";
-  }
+  if (contact?.organizationId !== organizationId || !isEligible(contact)) return "skipped";
 
   // Corrupted jsonb is treated as "never synced" instead of crashing the job.
   const mirror: MirrorState = mirrorSchema.catch({}).parse(contact.metadata.google ?? {});
@@ -129,12 +132,7 @@ export async function syncContactToGoogle(
   } catch (error) {
     if (!(error instanceof GooglePeopleError || error instanceof GoogleOAuthError)) throw error;
     await save({ ...mirror, lastError: error.code });
-    if (
-      error instanceof GooglePeopleError &&
-      (error.code === "unauthorized" || error.code === "forbidden")
-    ) {
-      await markGoogleNeedsReauth(db, organizationId, error.code);
-    }
+    if (rejectsCredentials(error)) await markGoogleNeedsReauth(db, organizationId, error.code);
     return "failed";
   }
 }
